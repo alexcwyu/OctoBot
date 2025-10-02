@@ -32,6 +32,7 @@ import pyiceberg.table.sorting
 
 import octobot_commons.logging as commons_logging
 import octobot_commons.enums as commons_enums
+import octobot_commons.constants as commons_constants
 import octobot.constants as constants
 import octobot.community.history_backend.historical_backend_client as historical_backend_client
 import octobot.community.history_backend.util as history_backend_util
@@ -80,39 +81,63 @@ class IcebergHistoricalBackendClient(historical_backend_client.HistoricalBackend
     async def fetch_candles_history(
         self,
         exchange: str,
-        symbol: str,
-        time_frame: commons_enums.TimeFrames,
-        first_open_time: float,
-        last_open_time: float
+        symbol: typing.Optional[str] = None,
+        time_frame: typing.Optional[commons_enums.TimeFrames] = None,
+        first_open_time: typing.Optional[float] = None,
+        last_open_time: typing.Optional[float] = None,
     ) -> list[list[float]]:
         return await self._run_in_executor(
             self._sync_fetch_candles_history, 
-            exchange, symbol, time_frame, first_open_time, last_open_time
+            exchange, symbol, time_frame, first_open_time, last_open_time,
+            False
+        )
+
+    async def fetch_extended_candles_history(
+        self,
+        exchange: str,
+        symbol: typing.Optional[str] = None,
+        time_frame: typing.Optional[commons_enums.TimeFrames] = None,
+        first_open_time: typing.Optional[float] = None,
+        last_open_time: typing.Optional[float] = None,
+    ) -> list[list[float]]:
+        return await self._run_in_executor(
+            self._sync_fetch_candles_history, 
+            exchange, symbol, time_frame, first_open_time, last_open_time,
+            True
         )
 
     def _sync_fetch_candles_history(
         self,
         exchange: str,
-        symbol: str,
-        time_frame: commons_enums.TimeFrames,
-        first_open_time: float,
-        last_open_time: float
+        symbol: typing.Optional[str],
+        time_frame: typing.Optional[commons_enums.TimeFrames],
+        first_open_time: typing.Optional[float],
+        last_open_time: typing.Optional[float],
+        extended: bool,
     ) -> list[list[float]]:
         table = self.get_or_create_table(TableNames.OHLCV_HISTORY)
-        filter = pyiceberg.expressions.And(
-            pyiceberg.expressions.EqualTo("time_frame", time_frame.value),
+        and_filters = [
             pyiceberg.expressions.EqualTo("exchange_internal_name", exchange),
-            pyiceberg.expressions.EqualTo("symbol", symbol),
-            pyiceberg.expressions.GreaterThanOrEqual("timestamp", self._get_formatted_time(first_open_time)),
-            pyiceberg.expressions.LessThanOrEqual("timestamp", self._get_formatted_time(last_open_time))
-        )
+        ]
+        if time_frame:
+            and_filters.append(pyiceberg.expressions.EqualTo("time_frame", time_frame.value))
+        if symbol:
+            and_filters.append(pyiceberg.expressions.EqualTo("symbol", symbol))
+        if first_open_time:
+            and_filters.append(pyiceberg.expressions.GreaterThanOrEqual("timestamp", self.get_formatted_time(first_open_time)))
+        if last_open_time:
+            and_filters.append(pyiceberg.expressions.LessThanOrEqual("timestamp", self.get_formatted_time(last_open_time)))
+        filter = pyiceberg.expressions.And(*and_filters)
+        selected_fields = ["timestamp", "open", "high", "low", "close", "volume"]
+        if extended:
+            selected_fields = ["time_frame", "symbol"] + selected_fields
         result = table.scan(
             row_filter=filter,
-            selected_fields=("timestamp", "open", "high", "low", "close", "volume"),
+            selected_fields=selected_fields,
             case_sensitive=True,
         )
 
-        return self._format_ohlcvs(result.to_arrow())
+        return self._format_ohlcvs(result.to_arrow(), extended)
 
     async def fetch_candles_history_range(
         self,
@@ -141,19 +166,18 @@ class IcebergHistoricalBackendClient(historical_backend_client.HistoricalBackend
             row_filter=filter,
             selected_fields=("timestamp", ),
             case_sensitive=True,
+            limit=1,
         )
-        res = result.to_arrow()
-        # impossible to select the min and max timestamp from the query, 
-        # select all and parse the minimum instead
-        batches = list(res.to_batches(max_chunksize=10))
-        if batches:
-            min_ts = batches[0].to_pydict()['timestamp'][0]
-            max_ts = batches[-1].to_pydict()['timestamp'][-1]
-            return (
-                history_backend_util.get_utc_timestamp_from_datetime(min_ts),
-                history_backend_util.get_utc_timestamp_from_datetime(max_ts)
-            )
-        return 0, 0
+        rows_count = result.count()
+        if rows_count == 0:
+            return 0, 0
+        # max timestamp is the first one as ohlcvs are sorted by timestamp in descending order
+        max_ts = result.to_arrow()['timestamp'][0]
+        max_ts_seconds = history_backend_util.get_utc_timestamp_from_datetime(max_ts)
+        # approximate the min timestamp using the total rows count and time frame
+        tf_seconds = commons_enums.TimeFramesMinutes[time_frame] * commons_constants.MINUTE_TO_SECONDS
+        approximated_min_ts_seconds = max_ts_seconds - (rows_count - 1) * tf_seconds
+        return approximated_min_ts_seconds, max_ts_seconds
 
     async def fetch_all_candles_for_exchange(self, exchange: str) -> list[list[float]]:
         return await self._run_in_executor(
@@ -178,7 +202,8 @@ class IcebergHistoricalBackendClient(historical_backend_client.HistoricalBackend
                 batch_dict['timestamp'], batch_dict['symbol'], batch_dict['time_frame'], batch_dict['open'], batch_dict['high'], batch_dict['low'], batch_dict['close'], batch_dict['volume']
             )
         ]
-        return ohlcvs
+        # return result in ascending order
+        return list(reversed(ohlcvs))
 
     async def insert_candles_history(self, rows: list, column_names: list) -> None:
         await self._run_in_executor(
@@ -187,17 +212,20 @@ class IcebergHistoricalBackendClient(historical_backend_client.HistoricalBackend
         )
 
     def _sync_insert_candles_history(self, rows: list, column_names: list) -> None:
-        if not rows:
-            return
+        # if not rows:
+        #     return
         schema = self._pyarrow_get_ohlcv_schema()
+        table_by_ns = {ns: self.catalog.list_tables(ns) for ns in self.catalog.list_namespaces()}
+        # for table in ["ohlcv_history", "ohlcv_history2", "ohlcv_history3", "ohlcv_history4", "ohlcv_history5", "ohlcv_history6"]:
+        #     self.drop_table(table)
+        # return
         table = self.get_or_create_table(TableNames.OHLCV_HISTORY)
-        timestamp_fields = [name for name in column_names if isinstance(schema.field(name).type, pyarrow.TimestampType)]
         pa_arrays = [
             pyarrow.array([
-                self._get_formatted_time(row[i]) if name in timestamp_fields else row[i]
+                row[i]
                 for row in rows
             ]) 
-            for i, name in enumerate(column_names)
+            for i, _ in enumerate(column_names)
         ]
         pa_table = pyarrow.Table.from_arrays(pa_arrays, schema=schema)
         # warning: try not to insert duplicate candles, duplicates will be deduplicated later on anyway
@@ -211,13 +239,13 @@ class IcebergHistoricalBackendClient(historical_backend_client.HistoricalBackend
         )
 
     @staticmethod
-    def _get_formatted_time(timestamp: float) -> str:
+    def get_formatted_time(timestamp: float) -> str:
         return datetime.datetime.fromtimestamp(
             timestamp, tz=datetime.timezone.utc
         ).isoformat(sep='T').replace("+00:00", "")
 
     @staticmethod
-    def _format_ohlcvs(ohlcvs_table: pyarrow.Table) -> list[list[float]]:
+    def _format_ohlcvs(ohlcvs_table: pyarrow.Table, extended: bool) -> list[list[typing.Union[float, str]]]:
         # uses PriceIndexes order
         # IND_PRICE_TIME = 0
         # IND_PRICE_OPEN = 1
@@ -227,6 +255,14 @@ class IcebergHistoricalBackendClient(historical_backend_client.HistoricalBackend
         # IND_PRICE_VOL = 5
         ohlcvs = [
             # convert table into list of candles
+            [tf, s, history_backend_util.get_utc_timestamp_from_datetime(t), o, h, l, c, v]
+            for batch in ohlcvs_table.to_batches()
+            if (batch_dict := batch.to_pydict())
+            for tf, s, t, o, h, l, c, v in zip(
+                batch_dict['time_frame'], batch_dict['symbol'], batch_dict['timestamp'], batch_dict['open'], batch_dict['high'], batch_dict['low'], batch_dict['close'], batch_dict['volume']
+            )
+        ] if extended else [
+            # convert table into list of candles
             [history_backend_util.get_utc_timestamp_from_datetime(t), o, h, l, c, v]
             for batch in ohlcvs_table.to_batches()
             if (batch_dict := batch.to_pydict())
@@ -234,6 +270,8 @@ class IcebergHistoricalBackendClient(historical_backend_client.HistoricalBackend
                 batch_dict['timestamp'], batch_dict['open'], batch_dict['high'], batch_dict['low'], batch_dict['close'], batch_dict['volume']
             )
         ]
+        # ohlcv are ordered in descending timestamp, we want to opposite: reverse order
+        ohlcvs = list(reversed(ohlcvs))
         # ensure no duplicates as they can happen due to no unicity constraint
         ohlcvs = history_backend_util.deduplicate(ohlcvs, 0)
         return ohlcvs
@@ -245,7 +283,7 @@ class IcebergHistoricalBackendClient(historical_backend_client.HistoricalBackend
             self._ensure_namespace(catalog)
         self.get_logger().info(f"PyIceberg catalog '{constants.ICEBERG_CATALOG_NAME}' initialized successfully")
         return catalog
-    
+
     def drop_table(self, table_name: str) -> None:
         self.catalog.purge_table(f"{self.namespace}.{table_name}")
         self.get_logger().info(f"Table {table_name} deleted successfully")
@@ -265,7 +303,7 @@ class IcebergHistoricalBackendClient(historical_backend_client.HistoricalBackend
                     sort_order=pyiceberg.table.sorting.SortOrder(
                         pyiceberg.table.sorting.SortField(
                             source_id=1,
-                            direction=pyiceberg.table.sorting.SortDirection.ASC,
+                            direction=pyiceberg.table.sorting.SortDirection.DESC,
                         )
                     )
                 )
@@ -321,7 +359,6 @@ class IcebergHistoricalBackendClient(historical_backend_client.HistoricalBackend
             pyiceberg.types.NestedField(7, "low", pyiceberg.types.DoubleType(), required=True),
             pyiceberg.types.NestedField(8, "close", pyiceberg.types.DoubleType(), required=True),
             pyiceberg.types.NestedField(9, "volume", pyiceberg.types.DoubleType(), required=True),
-            pyiceberg.types.NestedField(10, "updated_at", pyiceberg.types.TimestampType(), required=False, initial_default=None),
         )
     @staticmethod
     def _pyarrow_get_ohlcv_schema() -> pyarrow.schema:
@@ -336,7 +373,6 @@ class IcebergHistoricalBackendClient(historical_backend_client.HistoricalBackend
             pyarrow.field("low", pyarrow.float64(), False),
             pyarrow.field("close", pyarrow.float64(), False),
             pyarrow.field("volume", pyarrow.float64(), False),
-            pyarrow.field("updated_at", pyarrow.timestamp("us"), True),
         ])
 
     @classmethod

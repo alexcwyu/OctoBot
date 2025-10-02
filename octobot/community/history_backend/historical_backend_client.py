@@ -51,4 +51,4 @@ class HistoricalBackendClient:
 
     @staticmethod
     def get_formatted_time(timestamp: float):
-        raise NotImplementedError("insert_candles_history is not implemented")
+        raise NotImplementedError("get_formatted_time is not implemented")
