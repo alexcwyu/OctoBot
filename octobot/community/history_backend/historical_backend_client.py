@@ -13,6 +13,7 @@
 #
 #  You should have received a copy of the GNU General Public
 #  License along with OctoBot. If not, see <https://www.gnu.org/licenses/>.
+import typing
 import octobot_commons.enums as commons_enums
 
 
@@ -34,6 +35,16 @@ class HistoricalBackendClient:
         last_open_time: float
     ) -> list[list[float]]:
         raise NotImplementedError("fetch_candles_history is not implemented")
+
+    async def fetch_extended_candles_history(
+        self,
+        exchange: str,
+        symbols: list[str],
+        time_frames: list[commons_enums.TimeFrames],
+        first_open_time: typing.Optional[float] = None,
+        last_open_time: typing.Optional[float] = None,
+    ) -> list[list[typing.Union[float, str]]]:
+        raise NotImplementedError("fetch_extended_candles_history is not implemented")
 
     async def fetch_candles_history_range(
         self,

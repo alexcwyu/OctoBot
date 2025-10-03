@@ -81,28 +81,28 @@ class IcebergHistoricalBackendClient(historical_backend_client.HistoricalBackend
     async def fetch_candles_history(
         self,
         exchange: str,
-        symbol: typing.Optional[str] = None,
-        time_frame: typing.Optional[commons_enums.TimeFrames] = None,
-        first_open_time: typing.Optional[float] = None,
-        last_open_time: typing.Optional[float] = None,
+        symbol: str,
+        time_frame: commons_enums.TimeFrames,
+        first_open_time: float,
+        last_open_time: float
     ) -> list[list[float]]:
         return await self._run_in_executor(
             self._sync_fetch_candles_history, 
-            exchange, symbol, time_frame, first_open_time, last_open_time,
+            exchange, symbol, time_frame, None, None, first_open_time, last_open_time,
             False
         )
 
     async def fetch_extended_candles_history(
         self,
         exchange: str,
-        symbol: typing.Optional[str] = None,
-        time_frame: typing.Optional[commons_enums.TimeFrames] = None,
+        symbols: list[str],
+        time_frames: list[commons_enums.TimeFrames],
         first_open_time: typing.Optional[float] = None,
         last_open_time: typing.Optional[float] = None,
-    ) -> list[list[float]]:
+    ) -> list[list[typing.Union[float, str]]]:
         return await self._run_in_executor(
             self._sync_fetch_candles_history, 
-            exchange, symbol, time_frame, first_open_time, last_open_time,
+            exchange, None, None, symbols, time_frames, first_open_time, last_open_time,
             True
         )
 
@@ -111,18 +111,34 @@ class IcebergHistoricalBackendClient(historical_backend_client.HistoricalBackend
         exchange: str,
         symbol: typing.Optional[str],
         time_frame: typing.Optional[commons_enums.TimeFrames],
+        symbols: typing.Optional[list[str]],
+        time_frames: typing.Optional[list[commons_enums.TimeFrames]],
         first_open_time: typing.Optional[float],
         last_open_time: typing.Optional[float],
         extended: bool,
-    ) -> list[list[float]]:
+    ) -> list[list[typing.Union[float, str]]]:
         table = self.get_or_create_table(TableNames.OHLCV_HISTORY)
         and_filters = [
             pyiceberg.expressions.EqualTo("exchange_internal_name", exchange),
         ]
         if time_frame:
             and_filters.append(pyiceberg.expressions.EqualTo("time_frame", time_frame.value))
+        elif time_frames:
+            and_filters.append(
+                pyiceberg.expressions.Or(*(
+                    pyiceberg.expressions.EqualTo("time_frame", _time_frame.value)
+                    for _time_frame in time_frames
+                ))
+            )
         if symbol:
             and_filters.append(pyiceberg.expressions.EqualTo("symbol", symbol))
+        elif symbols:
+            and_filters.append(
+                pyiceberg.expressions.Or(*(
+                    pyiceberg.expressions.EqualTo("symbol", _symbol)
+                    for _symbol in symbols
+                ))
+            )
         if first_open_time:
             and_filters.append(pyiceberg.expressions.GreaterThanOrEqual("timestamp", self.get_formatted_time(first_open_time)))
         if last_open_time:
@@ -137,7 +153,9 @@ class IcebergHistoricalBackendClient(historical_backend_client.HistoricalBackend
             case_sensitive=True,
         )
 
-        return self._format_ohlcvs(result.to_arrow(), extended)
+        formatted = self._format_ohlcvs(result.to_arrow(), extended)
+        # ensure no duplicates as they can happen due to no unicity constraint
+        return history_backend_util.deduplicate(formatted, [0, 1, 2] if extended else [0])
 
     async def fetch_candles_history_range(
         self,
@@ -193,17 +211,7 @@ class IcebergHistoricalBackendClient(historical_backend_client.HistoricalBackend
             selected_fields=("timestamp", "symbol", "time_frame", "open", "high", "low", "close", "volume"),
             case_sensitive=True,
         )
-        ohlcvs = [
-            # convert table into list of candles
-            [history_backend_util.get_utc_timestamp_from_datetime(t), exchange, s, tf, o, h, l, c, v]
-            for batch in result.to_arrow().to_batches()
-            if (batch_dict := batch.to_pydict())
-            for t, s, tf, o, h, l, c, v in zip(
-                batch_dict['timestamp'], batch_dict['symbol'], batch_dict['time_frame'], batch_dict['open'], batch_dict['high'], batch_dict['low'], batch_dict['close'], batch_dict['volume']
-            )
-        ]
-        # return result in ascending order
-        return list(reversed(ohlcvs))
+        return self._format_ohlcvs(result.to_arrow(), True)
 
     async def insert_candles_history(self, rows: list, column_names: list) -> None:
         await self._run_in_executor(
@@ -246,15 +254,16 @@ class IcebergHistoricalBackendClient(historical_backend_client.HistoricalBackend
 
     @staticmethod
     def _format_ohlcvs(ohlcvs_table: pyarrow.Table, extended: bool) -> list[list[typing.Union[float, str]]]:
-        # uses PriceIndexes order
-        # IND_PRICE_TIME = 0
-        # IND_PRICE_OPEN = 1
-        # IND_PRICE_HIGH = 2
-        # IND_PRICE_LOW = 3
-        # IND_PRICE_CLOSE = 4
-        # IND_PRICE_VOL = 5
         ohlcvs = [
-            # convert table into list of candles
+            # time frame
+            # symbol
+            # then uses PriceIndexes order
+            # IND_PRICE_TIME = 0
+            # IND_PRICE_OPEN = 1
+            # IND_PRICE_HIGH = 2
+            # IND_PRICE_LOW = 3
+            # IND_PRICE_CLOSE = 4
+            # IND_PRICE_VOL = 5
             [tf, s, history_backend_util.get_utc_timestamp_from_datetime(t), o, h, l, c, v]
             for batch in ohlcvs_table.to_batches()
             if (batch_dict := batch.to_pydict())
@@ -262,7 +271,13 @@ class IcebergHistoricalBackendClient(historical_backend_client.HistoricalBackend
                 batch_dict['time_frame'], batch_dict['symbol'], batch_dict['timestamp'], batch_dict['open'], batch_dict['high'], batch_dict['low'], batch_dict['close'], batch_dict['volume']
             )
         ] if extended else [
-            # convert table into list of candles
+            # uses PriceIndexes order
+            # IND_PRICE_TIME = 0
+            # IND_PRICE_OPEN = 1
+            # IND_PRICE_HIGH = 2
+            # IND_PRICE_LOW = 3
+            # IND_PRICE_CLOSE = 4
+            # IND_PRICE_VOL = 5
             [history_backend_util.get_utc_timestamp_from_datetime(t), o, h, l, c, v]
             for batch in ohlcvs_table.to_batches()
             if (batch_dict := batch.to_pydict())
@@ -272,8 +287,6 @@ class IcebergHistoricalBackendClient(historical_backend_client.HistoricalBackend
         ]
         # ohlcv are ordered in descending timestamp, we want to opposite: reverse order
         ohlcvs = list(reversed(ohlcvs))
-        # ensure no duplicates as they can happen due to no unicity constraint
-        ohlcvs = history_backend_util.deduplicate(ohlcvs, 0)
         return ohlcvs
     
     def _load_catalog(self) -> pyiceberg.catalog.Catalog:
