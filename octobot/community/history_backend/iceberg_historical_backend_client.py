@@ -79,6 +79,8 @@ class IcebergHistoricalBackendClient(historical_backend_client.HistoricalBackend
     async def close(self):
         if self._executor is not None:
             if self._has_metadata_to_update():
+                # should always be called when metadata have to be updated 
+                # otherwise their update will be lost and candle ranges won't be updated
                 await self._update_metadata()
             self._updated_min_max_per_symbol_per_time_frame_per_exchange = None
             self._executor.shutdown()
@@ -178,7 +180,8 @@ class IcebergHistoricalBackendClient(historical_backend_client.HistoricalBackend
         time_frame: commons_enums.TimeFrames,
     ) -> tuple[float, float]:
         if self._updated_min_max_per_symbol_per_time_frame_per_exchange is None:
-            table = self.get_or_create_table(TableNames.OHLCV_HISTORY)
+            # fetches table metadata: do it in executor to avoid blocking the main thread
+            table = await self._run_in_executor(self.get_or_create_table, TableNames.OHLCV_HISTORY)
             self._updated_min_max_per_symbol_per_time_frame_per_exchange = self._parse_min_max_per_symbol_per_time_frame_per_exchange(
                 table
             )
