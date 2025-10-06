@@ -20,6 +20,8 @@ import os
 import asyncio
 import concurrent.futures
 import logging
+import json
+import time
 
 import pyarrow
 import pyiceberg.catalog
@@ -29,6 +31,7 @@ import pyiceberg.exceptions
 import pyiceberg.expressions
 import pyiceberg.table
 import pyiceberg.table.sorting
+import pyiceberg.table.statistics
 
 import octobot_commons.logging as commons_logging
 import octobot_commons.enums as commons_enums
@@ -36,6 +39,7 @@ import octobot_commons.constants as commons_constants
 import octobot.constants as constants
 import octobot.community.history_backend.historical_backend_client as historical_backend_client
 import octobot.community.history_backend.util as history_backend_util
+import octobot_commons.os_util as os_util
 
 
 # avoid "Loaded FileIO: pyiceberg.io.pyarrow.PyArrowFileIO" info logs
@@ -48,6 +52,7 @@ class TableNames(enum.Enum):
 
 # pyiceberg itself uses a thread pool so each thread will create children threads, limit the number of "master" threads
 _MAX_EXECUTOR_WORKERS = min(4, (os.cpu_count() or 1)) # use a max of 4 workers
+_METADATA_SEPARATOR = "|"
 
 
 class IcebergHistoricalBackendClient(historical_backend_client.HistoricalBackendClient):
@@ -56,10 +61,15 @@ class IcebergHistoricalBackendClient(historical_backend_client.HistoricalBackend
         self.namespace: typing.Optional[str] = None
         self.catalog: pyiceberg.catalog.Catalog = None # type: ignore
         self._executor: typing.Optional[concurrent.futures.ThreadPoolExecutor] = None # only availble when client is open
-        
+        self._updated_min_max_per_symbol_per_time_frame_per_exchange: typing.Optional[dict[str, dict[str, dict[str, tuple[float, float]]]]] = None
+
     async def open(self):
         try:
-            self._executor = concurrent.futures.ThreadPoolExecutor(max_workers=_MAX_EXECUTOR_WORKERS)
+            self._updated_min_max_per_symbol_per_time_frame_per_exchange = None
+            self._executor = concurrent.futures.ThreadPoolExecutor(
+                max_workers=_MAX_EXECUTOR_WORKERS,
+                thread_name_prefix="IcebergHistoricalBackendClient"
+            )
             self.catalog = self._load_catalog()
         except Exception as err:
             message = f"Error when connecting to Iceberg server, {err.__class__.__name__}: {err}"
@@ -68,6 +78,9 @@ class IcebergHistoricalBackendClient(historical_backend_client.HistoricalBackend
 
     async def close(self):
         if self._executor is not None:
+            if self._has_metadata_to_update():
+                await self._update_metadata()
+            self._updated_min_max_per_symbol_per_time_frame_per_exchange = None
             self._executor.shutdown()
         self._executor = None
 
@@ -106,6 +119,18 @@ class IcebergHistoricalBackendClient(historical_backend_client.HistoricalBackend
             True
         )
 
+    def _get_filter(
+        self, element: str, value: typing.Union[None, str, list[str]]
+    ) -> typing.Optional[pyiceberg.expressions.BooleanExpression]:
+        if value is None:
+            return None
+        if isinstance(value, list):
+            if len(value) > 1:
+                return pyiceberg.expressions.Or(*(pyiceberg.expressions.EqualTo(element, _value) for _value in value))
+            return pyiceberg.expressions.EqualTo(element, value[0])
+        return pyiceberg.expressions.EqualTo(element, value)
+
+
     def _sync_fetch_candles_history(
         self,
         exchange: str,
@@ -121,24 +146,13 @@ class IcebergHistoricalBackendClient(historical_backend_client.HistoricalBackend
         and_filters = [
             pyiceberg.expressions.EqualTo("exchange_internal_name", exchange),
         ]
-        if time_frame:
-            and_filters.append(pyiceberg.expressions.EqualTo("time_frame", time_frame.value))
-        elif time_frames:
-            and_filters.append(
-                pyiceberg.expressions.Or(*(
-                    pyiceberg.expressions.EqualTo("time_frame", _time_frame.value)
-                    for _time_frame in time_frames
-                ))
-            )
-        if symbol:
-            and_filters.append(pyiceberg.expressions.EqualTo("symbol", symbol))
-        elif symbols:
-            and_filters.append(
-                pyiceberg.expressions.Or(*(
-                    pyiceberg.expressions.EqualTo("symbol", _symbol)
-                    for _symbol in symbols
-                ))
-            )
+        if tf_filter := self._get_filter(
+            "time_frame", 
+            [tf.value for tf in time_frames] if time_frames else time_frame.value if time_frame else None
+        ):
+            and_filters.append(tf_filter)
+        if symbol_filter := self._get_filter("symbol", symbol or symbols):
+            and_filters.append(symbol_filter)
         if first_open_time:
             and_filters.append(pyiceberg.expressions.GreaterThanOrEqual("timestamp", self.get_formatted_time(first_open_time)))
         if last_open_time:
@@ -161,41 +175,21 @@ class IcebergHistoricalBackendClient(historical_backend_client.HistoricalBackend
         self,
         exchange: str,
         symbol: str,
-        time_frame: commons_enums.TimeFrames
+        time_frame: commons_enums.TimeFrames,
     ) -> tuple[float, float]:
-        return await self._run_in_executor(
-            self._sync_fetch_candles_history_range,
-            exchange, symbol, time_frame
-        )
+        if self._updated_min_max_per_symbol_per_time_frame_per_exchange is None:
+            table = self.get_or_create_table(TableNames.OHLCV_HISTORY)
+            self._updated_min_max_per_symbol_per_time_frame_per_exchange = self._parse_min_max_per_symbol_per_time_frame_per_exchange(
+                table
+            )
+            if not self._updated_min_max_per_symbol_per_time_frame_per_exchange:
+                return (0, 0)
 
-    def _sync_fetch_candles_history_range(
-        self,
-        exchange: str,
-        symbol: str,
-        time_frame: commons_enums.TimeFrames
-    ) -> tuple[float, float]:
-        table = self.get_or_create_table(TableNames.OHLCV_HISTORY)
-        filter = pyiceberg.expressions.And(
-            pyiceberg.expressions.EqualTo("time_frame", time_frame.value),
-            pyiceberg.expressions.EqualTo("exchange_internal_name", exchange),
-            pyiceberg.expressions.EqualTo("symbol", symbol),
-        )
-        result = table.scan(
-            row_filter=filter,
-            selected_fields=("timestamp", ),
-            case_sensitive=True,
-            limit=1,
-        )
-        rows_count = result.count()
-        if rows_count == 0:
-            return 0, 0
-        # max timestamp is the first one as ohlcvs are sorted by timestamp in descending order
-        max_ts = result.to_arrow()['timestamp'][0]
-        max_ts_seconds = history_backend_util.get_utc_timestamp_from_datetime(max_ts)
-        # approximate the min timestamp using the total rows count and time frame
-        tf_seconds = commons_enums.TimeFramesMinutes[time_frame] * commons_constants.MINUTE_TO_SECONDS
-        approximated_min_ts_seconds = max_ts_seconds - (rows_count - 1) * tf_seconds
-        return approximated_min_ts_seconds, max_ts_seconds
+        if self._updated_min_max_per_symbol_per_time_frame_per_exchange and (
+            min_max := self._updated_min_max_per_symbol_per_time_frame_per_exchange.get(exchange, {}).get(symbol, {}).get(time_frame.value)
+        ):
+            return min_max
+        return (0, 0)
 
     async def fetch_all_candles_for_exchange(self, exchange: str) -> list[list[float]]:
         return await self._run_in_executor(
@@ -223,9 +217,8 @@ class IcebergHistoricalBackendClient(historical_backend_client.HistoricalBackend
         # if not rows:
         #     return
         schema = self._pyarrow_get_ohlcv_schema()
-        table_by_ns = {ns: self.catalog.list_tables(ns) for ns in self.catalog.list_namespaces()}
-        # for table in ["ohlcv_history", "ohlcv_history2", "ohlcv_history3", "ohlcv_history4", "ohlcv_history5", "ohlcv_history6"]:
-        #     self.drop_table(table)
+        # table_by_ns = {ns: self.catalog.list_tables(ns) for ns in self.catalog.list_namespaces()}
+        # self.drop_table("ohlcv_history")
         # return
         table = self.get_or_create_table(TableNames.OHLCV_HISTORY)
         pa_arrays = [
@@ -236,6 +229,7 @@ class IcebergHistoricalBackendClient(historical_backend_client.HistoricalBackend
             for i, _ in enumerate(column_names)
         ]
         pa_table = pyarrow.Table.from_arrays(pa_arrays, schema=schema)
+        self._register_updated_min_max(table, pa_table)
         # warning: try not to insert duplicate candles, duplicates will be deduplicated later on anyway
         table.append(pa_table)
         # note: alternative upsert syntax could prevent duplicates but is really slow and silentlycrashes the process 
@@ -254,6 +248,8 @@ class IcebergHistoricalBackendClient(historical_backend_client.HistoricalBackend
 
     @staticmethod
     def _format_ohlcvs(ohlcvs_table: pyarrow.Table, extended: bool) -> list[list[typing.Union[float, str]]]:
+        # ohlcv are fetched in "random" order, sort them before switching to python objects
+        batches = ohlcvs_table.sort_by([("timestamp", "descending")]).to_batches()
         ohlcvs = [
             # time frame
             # symbol
@@ -265,7 +261,7 @@ class IcebergHistoricalBackendClient(historical_backend_client.HistoricalBackend
             # IND_PRICE_CLOSE = 4
             # IND_PRICE_VOL = 5
             [tf, s, history_backend_util.get_utc_timestamp_from_datetime(t), o, h, l, c, v]
-            for batch in ohlcvs_table.to_batches()
+            for batch in batches
             if (batch_dict := batch.to_pydict())
             for tf, s, t, o, h, l, c, v in zip(
                 batch_dict['time_frame'], batch_dict['symbol'], batch_dict['timestamp'], batch_dict['open'], batch_dict['high'], batch_dict['low'], batch_dict['close'], batch_dict['volume']
@@ -279,14 +275,12 @@ class IcebergHistoricalBackendClient(historical_backend_client.HistoricalBackend
             # IND_PRICE_CLOSE = 4
             # IND_PRICE_VOL = 5
             [history_backend_util.get_utc_timestamp_from_datetime(t), o, h, l, c, v]
-            for batch in ohlcvs_table.to_batches()
+            for batch in batches
             if (batch_dict := batch.to_pydict())
             for t, o, h, l, c, v in zip(
                 batch_dict['timestamp'], batch_dict['open'], batch_dict['high'], batch_dict['low'], batch_dict['close'], batch_dict['volume']
             )
         ]
-        # ohlcv are ordered in descending timestamp, we want to opposite: reverse order
-        ohlcvs = list(reversed(ohlcvs))
         return ohlcvs
     
     def _load_catalog(self) -> pyiceberg.catalog.Catalog:
@@ -300,6 +294,137 @@ class IcebergHistoricalBackendClient(historical_backend_client.HistoricalBackend
     def drop_table(self, table_name: str) -> None:
         self.catalog.purge_table(f"{self.namespace}.{table_name}")
         self.get_logger().info(f"Table {table_name} deleted successfully")
+
+    async def _update_metadata(self) -> None:
+        await self._run_in_executor(self._sync_update_metadata)
+
+    def _sync_update_metadata(self) -> None:
+        ohlcv_table = self.get_or_create_table(TableNames.OHLCV_HISTORY)
+        # Get current snapshot ID from the table
+        current_snapshot_id = ohlcv_table.current_snapshot().snapshot_id if ohlcv_table.current_snapshot() else 0
+
+        blob_metadata_list = self._create_blob_metadata_list(current_snapshot_id, ohlcv_table)
+        
+        # Calculate total file size (approximate)
+        total_data_size = sum(len(json.dumps(blob.properties or {})) for blob in blob_metadata_list)
+        
+        # Create a unique statistics file path
+        statistics_path = f"{ohlcv_table.location()}/statistics/{current_snapshot_id}.json"
+        
+        # Create the StatisticsFile with the blob_metadata
+        # Using field names (Pydantic will map to aliases automatically)
+        statistics_file = pyiceberg.table.statistics.StatisticsFile(
+            snapshot_id=current_snapshot_id,  # type: ignore
+            statistics_path=statistics_path,  # type: ignore
+            file_size_in_bytes=total_data_size,  # type: ignore
+            file_footer_size_in_bytes=0,  # type: ignore
+            key_metadata=None,  # type: ignore
+            blob_metadata=blob_metadata_list  # type: ignore
+        )
+        t0 = time.time()
+        self.get_logger().info(f"Updating statistics for {ohlcv_table.name()} with {len(blob_metadata_list)} blob metadata")
+        with ohlcv_table.update_statistics() as update:
+            update.set_statistics(statistics_file=statistics_file)
+        self.get_logger().info(
+            f"Completed updating statistics for {ohlcv_table.name()} with {len(blob_metadata_list)} "
+            f"blob metadata in {round(time.time() - t0, 2)} seconds"
+        )
+    
+    def _create_blob_metadata_list(
+        self, current_snapshot_id: int, ohlcv_table: pyiceberg.table.Table
+    ) -> list[pyiceberg.table.statistics.BlobMetadata]:
+        current_min_max_per_symbol_per_time_frame_per_exchange = self._parse_min_max_per_symbol_per_time_frame_per_exchange(
+            ohlcv_table
+        )
+        updated_min_max = {
+            # keep previous min max for exchanges that were not updated, replace others
+            **current_min_max_per_symbol_per_time_frame_per_exchange, 
+            **(self._updated_min_max_per_symbol_per_time_frame_per_exchange or {})
+        }
+        # Create BlobMetadata objects for all exchange/symbol/timeframe combinations
+        updated_properties = {
+            f"{exchange}{_METADATA_SEPARATOR}{symbol}{_METADATA_SEPARATOR}{time_frame}": 
+                f"{min_timestamp}{_METADATA_SEPARATOR}{max_timestamp}"
+            for exchange, symbol_data in updated_min_max.items()
+            for symbol, time_frame_data in symbol_data.items()
+            for time_frame, (min_timestamp, max_timestamp) in time_frame_data.items()
+        }
+        
+        # Get field IDs from the table schema for timestamp field (field ID 1)
+        timestamp_field_id = 1  # Based on the schema definition in _get_ohlcv_schema()
+        blob_metadata_list = [
+            pyiceberg.table.statistics.BlobMetadata(
+                type="apache-datasketches-theta-v1",
+                snapshot_id=current_snapshot_id,  # type: ignore
+                sequence_number=0,  # type: ignore
+                fields=[timestamp_field_id],
+                properties=updated_properties
+            )
+        ]
+        return blob_metadata_list
+
+    def _parse_min_max_per_symbol_per_time_frame_per_exchange(
+        self, ohlcv_table: pyiceberg.table.Table
+    ) -> dict[str, dict[str, dict[str, tuple[float, float]]]]:
+        try:
+            properties = ohlcv_table.metadata.statistics[0].blob_metadata[0].properties
+        except IndexError:
+            return {}
+        min_max_per_symbol_per_time_frame_per_exchange = {}
+        for key, values in properties.items():
+            exchange, symbol, time_frame = key.split(_METADATA_SEPARATOR)
+            if exchange not in min_max_per_symbol_per_time_frame_per_exchange:
+                min_max_per_symbol_per_time_frame_per_exchange[exchange] = {}
+            if symbol not in min_max_per_symbol_per_time_frame_per_exchange[exchange]:
+                min_max_per_symbol_per_time_frame_per_exchange[exchange][symbol] = {}
+            min_max_per_symbol_per_time_frame_per_exchange[exchange][symbol][time_frame] = tuple(map(float, values.split(_METADATA_SEPARATOR)))
+        return min_max_per_symbol_per_time_frame_per_exchange
+
+    def _register_updated_min_max(self, table: pyiceberg.table.Table, update_table: pyarrow.Table) -> None:
+        if self._updated_min_max_per_symbol_per_time_frame_per_exchange is None:
+            self._updated_min_max_per_symbol_per_time_frame_per_exchange = self._parse_min_max_per_symbol_per_time_frame_per_exchange(
+                table
+            )
+        grouped_result = update_table.group_by(
+            ["exchange_internal_name", "symbol", "time_frame"]
+        ).aggregate([
+            ("timestamp", "hash_min"),
+            ("timestamp", "hash_max")
+        ])
+
+        update_min_max_per_symbol_per_time_frame_per_exchange = {}
+        for exchange, symbol, time_frame, ts_min, ts_max in zip(
+            grouped_result['exchange_internal_name'], grouped_result['symbol'], grouped_result['time_frame'], grouped_result['timestamp_min'], grouped_result['timestamp_max']
+        ):
+            py_exchange = exchange.as_py() # type: ignore
+            py_symbol = symbol.as_py() # type: ignore
+            py_time_frame = time_frame.as_py() # type: ignore
+            if py_exchange not in update_min_max_per_symbol_per_time_frame_per_exchange:
+                update_min_max_per_symbol_per_time_frame_per_exchange[py_exchange] = {}
+            if py_symbol not in update_min_max_per_symbol_per_time_frame_per_exchange[py_exchange]:
+                update_min_max_per_symbol_per_time_frame_per_exchange[py_exchange][py_symbol] = {}
+            update_min_max_per_symbol_per_time_frame_per_exchange[py_exchange][py_symbol][py_time_frame] = (
+                history_backend_util.get_utc_timestamp_from_datetime(ts_min.as_py()), 
+                history_backend_util.get_utc_timestamp_from_datetime(ts_max.as_py())
+            )
+        # save updated min max per symbol per time frame per exchange in self._updated_min_max_per_symbol_per_time_frame_per_exchange
+        for exchange, symbol_data in update_min_max_per_symbol_per_time_frame_per_exchange.items():
+            if exchange not in self._updated_min_max_per_symbol_per_time_frame_per_exchange:
+                self._updated_min_max_per_symbol_per_time_frame_per_exchange[exchange] = symbol_data
+            else:
+                current_exchange_data = self._updated_min_max_per_symbol_per_time_frame_per_exchange[exchange]
+                for symbol, time_frame_data in symbol_data.items():
+                    if symbol not in current_exchange_data:
+                        current_exchange_data[symbol] = time_frame_data
+                    else:
+                        current_symbol_data = current_exchange_data[symbol]
+                        for time_frame, (min_timestamp, max_timestamp) in time_frame_data.items():
+                            if time_frame not in current_symbol_data:
+                                current_symbol_data[time_frame] = (min_timestamp, max_timestamp)
+                            else:
+                                min_ts = min(min_timestamp, current_symbol_data[time_frame][0])
+                                max_ts = max(max_timestamp, current_symbol_data[time_frame][1])
+                                current_symbol_data[time_frame] = (min_ts, max_ts)
     
     def get_or_create_table(self, table_name: TableNames) -> pyiceberg.table.Table:
         try:
@@ -316,7 +441,7 @@ class IcebergHistoricalBackendClient(historical_backend_client.HistoricalBackend
                     sort_order=pyiceberg.table.sorting.SortOrder(
                         pyiceberg.table.sorting.SortField(
                             source_id=1,
-                            direction=pyiceberg.table.sorting.SortDirection.DESC,
+                            direction=pyiceberg.table.sorting.SortDirection.DESC, # warning: not applied in selects
                         )
                     )
                 )
@@ -391,3 +516,6 @@ class IcebergHistoricalBackendClient(historical_backend_client.HistoricalBackend
     @classmethod
     def get_logger(cls):
         return commons_logging.get_logger(cls.__name__)
+
+    def _has_metadata_to_update(self) -> bool:
+        return bool(self._updated_min_max_per_symbol_per_time_frame_per_exchange)

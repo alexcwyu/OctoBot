@@ -104,7 +104,7 @@ class ClickhouseHistoricalBackendClient(historical_backend_client.HistoricalBack
     async def fetch_all_candles_for_exchange(self, exchange: str) -> list[list[float]]:
         result = await self._client.query(
             """
-            SELECT timestamp, time_frame, symbol, open, high, low, close, volume 
+            SELECT time_frame, symbol, timestamp, open, high, low, close, volume 
             FROM ohlcv_history
             WHERE 
                 exchange_internal_name = %s
