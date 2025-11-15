@@ -1,0 +1,109 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "octobot"
+version = "2.0.14"
+description = "Cryptocurrencies alert / trading bot"
+readme = "README.md"
+requires-python = "==3.13.*"
+license = {text = "GPL-3.0"}
+authors = [
+    {name = "Drakkar-Software", email = "contact@drakkar.software"},
+]
+keywords = ["cryptocurrency", "trading", "bot", "bitcoin", "ethereum", "alert"]
+classifiers = [
+    "Development Status :: 5 - Production/Stable",
+    "Intended Audience :: Developers",
+    "Intended Audience :: Financial and Insurance Industry",
+    "License :: OSI Approved :: GNU General Public License v3 (GPLv3)",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.13",
+    "Operating System :: OS Independent",
+]
+dependencies = [
+    # Drakkar-Software requirements
+    "OctoBot-Commons==1.9.83",
+    "OctoBot-Trading==2.4.228",
+    "OctoBot-Tentacles-Manager==2.9.17",
+    "OctoBot-Services==1.6.26",
+    "OctoBot-Backtesting==1.9.7",
+    "Async-Channel==2.2.1",
+    "trading-backend==1.2.42",
+
+    # Core dependencies
+    "colorlog>=6.10.1",
+    "requests>=2.32.5",
+    "urllib3>=2.3.0",
+    "packaging>=25.0",
+    "python-dotenv>=1.2.1",
+
+    # Community
+    "websockets==15.0.1",  # Required by supabase
+    "gmqtt>=0.7.0",
+    "pgpy>=0.6.0",
+    "clickhouse-connect>=0.8.18",
+    "pyarrow>=21.0.0",  # Relaxed from ==21.0.0 to allow workspace compatibility
+
+    # Error tracking
+    "sentry-sdk>=2.35.0",
+
+    # Supabase
+    "supabase>=2.18.1",
+    "supabase-auth",
+    "postgrest",
+
+    # Async HTTP
+    "aiohttp>=3.13.2",
+    "aiodns>=3.1.1",
+
+    # Protobuf
+    "protobuf>=5.29.5",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8.3.4",
+]
+evaluators = [
+    "OctoBot-Evaluators==1.9.7",  # Requires octobot-tulipy with Cython 0.29.x
+]
+iceberg = [
+    "pyiceberg>=0.10.0",
+    "pydantic<2.12",  # Required for pyiceberg 0.10.0
+]
+
+[project.urls]
+Homepage = "https://github.com/Drakkar-Software/OctoBot"
+Documentation = "https://www.octobot.cloud/en/guides"
+Repository = "https://github.com/Drakkar-Software/OctoBot"
+"Bug Tracker" = "https://github.com/Drakkar-Software/OctoBot/issues"
+
+[project.scripts]
+octobot = "start:main"
+
+[tool.hatch.build.targets.wheel]
+packages = ["octobot"]
+include = ["start.py"]
+
+[tool.hatch.build.targets.sdist]
+include = [
+    "octobot/**",
+    "start.py",
+    "README.md",
+    "LICENSE",
+    "requirements.txt",
+]
+exclude = [
+    "tests/**",
+    "additional_tests/**",
+    "docker/**",
+]
+
+[tool.hatch.build]
+include = [
+    "octobot/config/*",
+    "octobot/strategy_optimizer/optimizer_data_files/*",
+]
+
