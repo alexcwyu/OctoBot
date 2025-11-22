@@ -7,7 +7,7 @@ name = "octobot"
 version = "2.0.14"
 description = "Cryptocurrencies alert / trading bot"
 readme = "README.md"
-requires-python = "==3.13.*"
+requires-python = ">=3.10,<3.12"
 license = {text = "GPL-3.0"}
 authors = [
     {name = "Drakkar-Software", email = "contact@drakkar.software"},
@@ -19,59 +19,58 @@ classifiers = [
     "Intended Audience :: Financial and Insurance Industry",
     "License :: OSI Approved :: GNU General Public License v3 (GPLv3)",
     "Programming Language :: Python :: 3",
-    "Programming Language :: Python :: 3.13",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
     "Operating System :: OS Independent",
 ]
 dependencies = [
     # Drakkar-Software requirements
-    "OctoBot-Commons==1.9.83",
-    "OctoBot-Trading==2.4.228",
-    "OctoBot-Tentacles-Manager==2.9.17",
+    "OctoBot-Commons==1.9.86",
+    "OctoBot-Trading==2.4.231",
+    "OctoBot-Evaluators==1.9.7",
+    "OctoBot-Tentacles-Manager==2.9.18",
     "OctoBot-Services==1.6.26",
     "OctoBot-Backtesting==1.9.7",
     "Async-Channel==2.2.1",
     "trading-backend==1.2.42",
 
     # Core dependencies
-    "colorlog>=6.10.1",
-    "requests>=2.32.5",
-    "urllib3>=2.3.0",
-    "packaging>=25.0",
-    "python-dotenv>=1.2.1",
+    "colorlog==6.8.0",
+    "requests==2.32.5",
+    "urllib3",  # required by requests, used in imports: make sure it's always available
+    "packaging==25.0",
+    "python-dotenv==1.1.1",
+    "setuptools==79.0.1",  # warning: setuptools>=80 breaks easy_install, need to find an alternative not to break installs
 
     # Community
-    "websockets==15.0.1",  # Required by supabase
-    "gmqtt>=0.7.0",
-    "pgpy>=0.6.0",
-    "clickhouse-connect>=0.8.18",
-    "pyarrow>=21.0.0",  # Relaxed from ==21.0.0 to allow workspace compatibility
+    "websockets==15.0.1",  # used by supabase, a recent version is required
+    "gmqtt==0.7.0",
+    "pgpy==0.6.0",
+    "clickhouse-connect==0.8.18",
+    "pyiceberg==0.10.0",
+    "pydantic<2.12",  # required for pyiceberg 0.10.0
+    "pyarrow==21.0.0",
 
     # Error tracking
-    "sentry-sdk>=2.35.0",
+    "sentry-sdk==2.35.0",  # always make sure sentry_aiohttp_transport.py keep working
 
-    # Supabase
-    "supabase>=2.18.1",
-    "supabase-auth",
-    "postgrest",
+    # Supabase - ensure supabase_backend_tests keep passing when updating any of those
+    "supabase==2.18.1",  # Supabase client
+    "supabase-auth",  # Supabase authenticated API (required by supabase and enforced to allow direct import)
+    "postgrest",  # Supabase posgres calls (required by supabase and enforced to allow direct import)
 
-    # Async HTTP
-    "aiohttp>=3.13.2",
-    "aiodns>=3.1.1",
+    # Async HTTP requests
+    "aiohttp==3.12.15",
+    "aiodns==3.1.1",  # used by aiohttp
 
-    # Protobuf
-    "protobuf>=5.29.5",
+    # used by ccxt for protobuf "websockets" such as mexc
+    # lock protobuf to avoid using .rc versions
+    "protobuf==5.29.5",
 ]
 
 [project.optional-dependencies]
 dev = [
     "pytest>=8.3.4",
-]
-evaluators = [
-    "OctoBot-Evaluators==1.9.7",  # Requires octobot-tulipy with Cython 0.29.x
-]
-iceberg = [
-    "pyiceberg>=0.10.0",
-    "pydantic<2.12",  # Required for pyiceberg 0.10.0
 ]
 
 [project.urls]
