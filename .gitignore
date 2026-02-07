@@ -148,3 +148,6 @@ installer/
 
 # resources watcher
 *.dump
+
+# node
+*.db*
