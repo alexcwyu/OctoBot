@@ -74,6 +74,17 @@ class NodeApiInterface(services_interfaces.AbstractInterface):
         host = self.host
         port = self.port
         self.app = self.create_app()
+        # Set CORS from service config
+        cors_origins_str = self.node_api_service.get_backend_cors_origins()
+        if cors_origins_str:
+            cors_origins = [i.strip() for i in cors_origins_str.split(",") if i.strip()]
+            self.app.add_middleware(
+                CORSMiddleware,
+                allow_origins=cors_origins,
+                allow_credentials=True,
+                allow_methods=["*"],
+                allow_headers=["*"],
+            )
         config = uvicorn.Config(self.app, host=host, port=port, log_level="info")
         self.server = uvicorn.Server(config)
         await self.server.serve()
@@ -110,16 +121,6 @@ class NodeApiInterface(services_interfaces.AbstractInterface):
             generate_unique_id_function=custom_generate_unique_id,
             lifespan=lifespan,
         )
-
-        # Set all CORS enabled origins
-        if settings.all_cors_origins:
-            app.add_middleware(
-                CORSMiddleware,
-                allow_origins=settings.all_cors_origins,
-                allow_credentials=True,
-                allow_methods=["*"],
-                allow_headers=["*"],
-            )
 
         app.include_router(build_api_router(), prefix=settings.API_V1_STR)
 

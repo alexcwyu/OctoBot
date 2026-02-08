@@ -12,8 +12,14 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as LayoutRouteImport } from './routes/_layout'
 import { Route as LayoutIndexRouteImport } from './routes/_layout/index'
-import { Route as LayoutTasksRouteImport } from './routes/_layout/tasks'
-import { Route as LayoutSystemRouteImport } from './routes/_layout/system'
+import { Route as LayoutOctobotsRouteImport } from './routes/_layout/octobots'
+import { Route as LayoutOctobotsNewRouteImport } from './routes/_layout/octobots/new'
+import { Route as LayoutOctobotsImportRouteImport } from './routes/_layout/octobots/import'
+import { Route as LayoutOctobotsStrategiesRouteImport } from './routes/_layout/octobots/new/strategies'
+import { Route as LayoutAccountsRouteImport } from './routes/_layout/accounts'
+import { Route as LayoutSettingsRouteImport } from './routes/_layout/settings'
+import { Route as LayoutTentaclesIndexRouteImport } from './routes/_layout/tentacles/index'
+import { Route as LayoutTentaclesNewRouteImport } from './routes/_layout/tentacles/new'
 
 const LoginRoute = LoginRouteImport.update({
   id: '/login',
@@ -29,48 +35,122 @@ const LayoutIndexRoute = LayoutIndexRouteImport.update({
   path: '/',
   getParentRoute: () => LayoutRoute,
 } as any)
-const LayoutTasksRoute = LayoutTasksRouteImport.update({
-  id: '/tasks',
-  path: '/tasks',
+const LayoutOctobotsRoute = LayoutOctobotsRouteImport.update({
+  id: '/octobots',
+  path: '/octobots',
   getParentRoute: () => LayoutRoute,
 } as any)
-const LayoutSystemRoute = LayoutSystemRouteImport.update({
-  id: '/system',
-  path: '/system',
+const LayoutOctobotsNewRoute = LayoutOctobotsNewRouteImport.update({
+  id: '/octobots/new',
+  path: '/octobots/new',
+  getParentRoute: () => LayoutRoute,
+} as any)
+const LayoutOctobotsImportRoute = LayoutOctobotsImportRouteImport.update({
+  id: '/octobots/import',
+  path: '/octobots/import',
+  getParentRoute: () => LayoutRoute,
+} as any)
+const LayoutOctobotsStrategiesRoute = LayoutOctobotsStrategiesRouteImport.update({
+  id: '/octobots/new/strategies',
+  path: '/octobots/new/strategies',
+  getParentRoute: () => LayoutRoute,
+} as any)
+const LayoutAccountsRoute = LayoutAccountsRouteImport.update({
+  id: '/accounts',
+  path: '/accounts',
+  getParentRoute: () => LayoutRoute,
+} as any)
+const LayoutSettingsRoute = LayoutSettingsRouteImport.update({
+  id: '/settings',
+  path: '/settings',
+  getParentRoute: () => LayoutRoute,
+} as any)
+const LayoutTentaclesIndexRoute = LayoutTentaclesIndexRouteImport.update({
+  id: '/tentacles',
+  path: '/tentacles',
+  getParentRoute: () => LayoutRoute,
+} as any)
+const LayoutTentaclesNewRoute = LayoutTentaclesNewRouteImport.update({
+  id: '/tentacles/new',
+  path: '/tentacles/new',
   getParentRoute: () => LayoutRoute,
 } as any)
 
 export interface FileRoutesByFullPath {
   '/login': typeof LoginRoute
-  '/system': typeof LayoutSystemRoute
-  '/tasks': typeof LayoutTasksRoute
+  '/octobots': typeof LayoutOctobotsRoute
+  '/octobots/new': typeof LayoutOctobotsNewRoute
+  '/octobots/import': typeof LayoutOctobotsImportRoute
+  '/octobots/new/strategies': typeof LayoutOctobotsStrategiesRoute
+  '/accounts': typeof LayoutAccountsRoute
+  '/settings': typeof LayoutSettingsRoute
+  '/tentacles': typeof LayoutTentaclesIndexRoute
+  '/tentacles/new': typeof LayoutTentaclesNewRoute
   '/': typeof LayoutIndexRoute
 }
 export interface FileRoutesByTo {
   '/login': typeof LoginRoute
-  '/system': typeof LayoutSystemRoute
-  '/tasks': typeof LayoutTasksRoute
+  '/octobots': typeof LayoutOctobotsRoute
+  '/octobots/new': typeof LayoutOctobotsNewRoute
+  '/octobots/import': typeof LayoutOctobotsImportRoute
+  '/octobots/new/strategies': typeof LayoutOctobotsStrategiesRoute
+  '/accounts': typeof LayoutAccountsRoute
+  '/settings': typeof LayoutSettingsRoute
+  '/tentacles': typeof LayoutTentaclesIndexRoute
+  '/tentacles/new': typeof LayoutTentaclesNewRoute
   '/': typeof LayoutIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/_layout': typeof LayoutRouteWithChildren
   '/login': typeof LoginRoute
-  '/_layout/system': typeof LayoutSystemRoute
-  '/_layout/tasks': typeof LayoutTasksRoute
+  '/_layout/octobots': typeof LayoutOctobotsRoute
+  '/_layout/octobots/new': typeof LayoutOctobotsNewRoute
+  '/_layout/octobots/import': typeof LayoutOctobotsImportRoute
+  '/_layout/octobots/new/strategies': typeof LayoutOctobotsStrategiesRoute
+  '/_layout/accounts': typeof LayoutAccountsRoute
+  '/_layout/settings': typeof LayoutSettingsRoute
+  '/_layout/tentacles': typeof LayoutTentaclesIndexRoute
+  '/_layout/tentacles/new': typeof LayoutTentaclesNewRoute
   '/_layout/': typeof LayoutIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/login' | '/system' | '/tasks' | '/'
+  fullPaths:
+    | '/login'
+    | '/octobots'
+    | '/octobots/new'
+    | '/octobots/import'
+    | '/octobots/new/strategies'
+    | '/accounts'
+    | '/settings'
+    | '/tentacles'
+    | '/tentacles/new'
+    | '/'
   fileRoutesByTo: FileRoutesByTo
-  to: '/login' | '/system' | '/tasks' | '/'
+  to:
+    | '/login'
+    | '/octobots'
+    | '/octobots/new'
+    | '/octobots/import'
+    | '/octobots/new/strategies'
+    | '/accounts'
+    | '/settings'
+    | '/tentacles'
+    | '/tentacles/new'
+    | '/'
   id:
     | '__root__'
     | '/_layout'
     | '/login'
-    | '/_layout/system'
-    | '/_layout/tasks'
+    | '/_layout/octobots'
+    | '/_layout/octobots/new'
+    | '/_layout/octobots/import'
+    | '/_layout/octobots/new/strategies'
+    | '/_layout/accounts'
+    | '/_layout/settings'
+    | '/_layout/tentacles'
+    | '/_layout/tentacles/new'
     | '/_layout/'
   fileRoutesById: FileRoutesById
 }
@@ -102,32 +182,86 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof LayoutIndexRouteImport
       parentRoute: typeof LayoutRoute
     }
-    '/_layout/tasks': {
-      id: '/_layout/tasks'
-      path: '/tasks'
-      fullPath: '/tasks'
-      preLoaderRoute: typeof LayoutTasksRouteImport
+    '/_layout/octobots': {
+      id: '/_layout/octobots'
+      path: '/octobots'
+      fullPath: '/octobots'
+      preLoaderRoute: typeof LayoutOctobotsRouteImport
       parentRoute: typeof LayoutRoute
     }
-    '/_layout/system': {
-      id: '/_layout/system'
-      path: '/system'
-      fullPath: '/system'
-      preLoaderRoute: typeof LayoutSystemRouteImport
+    '/_layout/octobots/new': {
+      id: '/_layout/octobots/new'
+      path: '/octobots/new'
+      fullPath: '/octobots/new'
+      preLoaderRoute: typeof LayoutOctobotsNewRouteImport
+      parentRoute: typeof LayoutRoute
+    }
+    '/_layout/octobots/import': {
+      id: '/_layout/octobots/import'
+      path: '/octobots/import'
+      fullPath: '/octobots/import'
+      preLoaderRoute: typeof LayoutOctobotsImportRouteImport
+      parentRoute: typeof LayoutRoute
+    }
+    '/_layout/octobots/new/strategies': {
+      id: '/_layout/octobots/new/strategies'
+      path: '/octobots/new/strategies'
+      fullPath: '/octobots/new/strategies'
+      preLoaderRoute: typeof LayoutOctobotsStrategiesRouteImport
+      parentRoute: typeof LayoutRoute
+    }
+    '/_layout/accounts': {
+      id: '/_layout/accounts'
+      path: '/accounts'
+      fullPath: '/accounts'
+      preLoaderRoute: typeof LayoutAccountsRouteImport
+      parentRoute: typeof LayoutRoute
+    }
+    '/_layout/settings': {
+      id: '/_layout/settings'
+      path: '/settings'
+      fullPath: '/settings'
+      preLoaderRoute: typeof LayoutSettingsRouteImport
+      parentRoute: typeof LayoutRoute
+    }
+    '/_layout/tentacles': {
+      id: '/_layout/tentacles'
+      path: '/tentacles'
+      fullPath: '/tentacles'
+      preLoaderRoute: typeof LayoutTentaclesIndexRouteImport
+      parentRoute: typeof LayoutRoute
+    }
+    '/_layout/tentacles/new': {
+      id: '/_layout/tentacles/new'
+      path: '/tentacles/new'
+      fullPath: '/tentacles/new'
+      preLoaderRoute: typeof LayoutTentaclesNewRouteImport
       parentRoute: typeof LayoutRoute
     }
   }
 }
 
 interface LayoutRouteChildren {
-  LayoutSystemRoute: typeof LayoutSystemRoute
-  LayoutTasksRoute: typeof LayoutTasksRoute
+  LayoutOctobotsRoute: typeof LayoutOctobotsRoute
+  LayoutOctobotsNewRoute: typeof LayoutOctobotsNewRoute
+  LayoutOctobotsImportRoute: typeof LayoutOctobotsImportRoute
+  LayoutOctobotsStrategiesRoute: typeof LayoutOctobotsStrategiesRoute
+  LayoutAccountsRoute: typeof LayoutAccountsRoute
+  LayoutSettingsRoute: typeof LayoutSettingsRoute
+  LayoutTentaclesIndexRoute: typeof LayoutTentaclesIndexRoute
+  LayoutTentaclesNewRoute: typeof LayoutTentaclesNewRoute
   LayoutIndexRoute: typeof LayoutIndexRoute
 }
 
 const LayoutRouteChildren: LayoutRouteChildren = {
-  LayoutSystemRoute: LayoutSystemRoute,
-  LayoutTasksRoute: LayoutTasksRoute,
+  LayoutOctobotsRoute: LayoutOctobotsRoute,
+  LayoutOctobotsNewRoute: LayoutOctobotsNewRoute,
+  LayoutOctobotsImportRoute: LayoutOctobotsImportRoute,
+  LayoutOctobotsStrategiesRoute: LayoutOctobotsStrategiesRoute,
+  LayoutAccountsRoute: LayoutAccountsRoute,
+  LayoutSettingsRoute: LayoutSettingsRoute,
+  LayoutTentaclesIndexRoute: LayoutTentaclesIndexRoute,
+  LayoutTentaclesNewRoute: LayoutTentaclesNewRoute,
   LayoutIndexRoute: LayoutIndexRoute,
 }
 
