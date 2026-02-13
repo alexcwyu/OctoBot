@@ -382,7 +382,6 @@ class OctoBotBacktesting:
                         required_service_classes.add(required_class)
             except Exception as e:
                 pass
-                continue
         for service_class in required_service_classes:
             try:
                 await service_api.get_service(service_class, True, self.services_config)

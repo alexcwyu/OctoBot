@@ -26,7 +26,7 @@ import octobot_evaluators.evaluators as evaluators
 import octobot_services.api.services as services_api
 import tentacles.Services.Services_bases
 
-from tentacles.Agent.teams.simple_ai_evaluator_agents_team import SimpleAIEvaluatorAgentsTeam, DeepAgentEvaluatorTeam
+from tentacles.Agent.Teams.simple_ai_evaluator_agents_team import SimpleAIEvaluatorAgentsTeam, DeepAgentEvaluatorTeam
 
 
 class BaseLLMAIStrategyEvaluator(evaluators.StrategyEvaluator):
