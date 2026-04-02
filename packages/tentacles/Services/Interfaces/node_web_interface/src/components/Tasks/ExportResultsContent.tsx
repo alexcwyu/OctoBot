@@ -9,20 +9,12 @@ import {
   getSortedRowModel,
   useReactTable,
 } from "@tanstack/react-table"
-import { ArrowUpDown, Download, Eye, EyeOff, Plus, Search, X } from "lucide-react"
+import { ArrowLeft, ArrowUpDown, Download, Eye, EyeOff, Plus, Search, X } from "lucide-react"
 import { useCallback, useMemo, useState } from "react"
 
 import type { Task_Output as Task } from "@/client"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
 import {
   Select,
@@ -43,7 +35,6 @@ import { generateCSV, downloadCSV } from "@/lib/csv"
 import {
   EXPORT_TEMPLATES,
   type ExportColumnDef,
-  type ExportTemplate,
 } from "@/lib/export-templates"
 import {
   extractValue,
@@ -62,10 +53,9 @@ interface ExportRow {
   meta: Record<string, unknown>
 }
 
-export interface ExportResultsDialogProps {
-  open: boolean
-  onOpenChange: (open: boolean) => void
+export interface ExportResultsContentProps {
   tasks: Task[]
+  onClose?: () => void
 }
 
 // ── Helpers ────────────────────────────────────────────────────────────
@@ -139,11 +129,10 @@ function buildColumnsForFullDetails(
 
 // ── Component ──────────────────────────────────────────────────────────
 
-export default function ExportResultsDialog({
-  open,
-  onOpenChange,
+export default function ExportResultsContent({
   tasks,
-}: ExportResultsDialogProps) {
+  onClose,
+}: ExportResultsContentProps) {
   const [selectedTemplateId, setSelectedTemplateId] = useState("general")
   const [customColumns, setCustomColumns] = useState<ExportColumnDef[]>([])
   const [addColumnPath, setAddColumnPath] = useState("")
@@ -265,196 +254,189 @@ export default function ExportResultsDialog({
   }, [table, allColumns])
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-5xl max-h-[85vh] flex flex-col">
-        <DialogHeader>
-          <DialogTitle>Export Results</DialogTitle>
-          <DialogDescription>
-            Select a template, review the data, and export as CSV.
-          </DialogDescription>
-        </DialogHeader>
+    <div className="flex flex-col gap-3">
+      {/* Controls row */}
+      <div className="flex flex-wrap items-center gap-2">
+        <Select
+          value={selectedTemplateId}
+          onValueChange={setSelectedTemplateId}
+        >
+          <SelectTrigger size="sm" className="w-44">
+            <SelectValue placeholder="Template" />
+          </SelectTrigger>
+          <SelectContent>
+            {EXPORT_TEMPLATES.map((t) => (
+              <SelectItem key={t.id} value={t.id}>
+                {t.label}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
 
-        <div className="flex flex-col gap-3 flex-1 overflow-hidden">
-          {/* Controls row */}
-          <div className="flex flex-wrap items-center gap-2">
-            <Select
-              value={selectedTemplateId}
-              onValueChange={setSelectedTemplateId}
+        <div className="relative flex items-center">
+          <Search className="pointer-events-none absolute left-2.5 size-3.5 text-muted-foreground" />
+          <Input
+            value={globalFilter}
+            onChange={(e) => setGlobalFilter(e.target.value)}
+            placeholder="Search all columns..."
+            className="h-8 w-48 pl-8 text-xs"
+          />
+          {globalFilter && (
+            <button
+              onClick={() => setGlobalFilter("")}
+              className="absolute right-2 text-muted-foreground hover:text-foreground"
             >
-              <SelectTrigger size="sm" className="w-44">
-                <SelectValue placeholder="Template" />
-              </SelectTrigger>
-              <SelectContent>
-                {EXPORT_TEMPLATES.map((t) => (
-                  <SelectItem key={t.id} value={t.id}>
-                    {t.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-
-            <div className="relative flex items-center">
-              <Search className="pointer-events-none absolute left-2.5 size-3.5 text-muted-foreground" />
-              <Input
-                value={globalFilter}
-                onChange={(e) => setGlobalFilter(e.target.value)}
-                placeholder="Search all columns..."
-                className="h-8 w-48 pl-8 text-xs"
-              />
-              {globalFilter && (
-                <button
-                  onClick={() => setGlobalFilter("")}
-                  className="absolute right-2 text-muted-foreground hover:text-foreground"
-                >
-                  <X className="size-3" />
-                </button>
-              )}
-            </div>
-
-            {/* Column visibility toggles */}
-            <div className="flex gap-1 ml-auto">
-              {allColumns.map((col) => {
-                const isVisible =
-                  columnVisibility[col.key] !== false
-                return (
-                  <Button
-                    key={col.key}
-                    variant="ghost"
-                    size="sm"
-                    className="h-6 px-1.5 text-[10px]"
-                    onClick={() =>
-                      setColumnVisibility((prev) => ({
-                        ...prev,
-                        [col.key]: !isVisible,
-                      }))
-                    }
-                  >
-                    {isVisible ? (
-                      <Eye className="size-3 mr-0.5" />
-                    ) : (
-                      <EyeOff className="size-3 mr-0.5" />
-                    )}
-                    {col.label.length > 12
-                      ? `${col.label.slice(0, 12)}...`
-                      : col.label}
-                  </Button>
-                )
-              })}
-            </div>
-          </div>
-
-          {/* Add custom column */}
-          <div className="flex items-center gap-2">
-            <Input
-              value={addColumnLabel}
-              onChange={(e) => setAddColumnLabel(e.target.value)}
-              placeholder="Column label"
-              className="h-7 w-32 text-xs"
-            />
-            <Select
-              value={addColumnPath}
-              onValueChange={setAddColumnPath}
-            >
-              <SelectTrigger size="sm" className="w-48">
-                <SelectValue placeholder="Select JSON path..." />
-              </SelectTrigger>
-              <SelectContent>
-                {discoveredPaths.map((path) => (
-                  <SelectItem key={path} value={path}>
-                    {path}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={handleAddColumn}
-              disabled={!addColumnPath.trim()}
-              className="h-7"
-            >
-              <Plus className="size-3 mr-1" /> Add Column
-            </Button>
-
-            {customColumns.length > 0 && (
-              <div className="flex gap-1 ml-2">
-                {customColumns.map((col) => (
-                  <Badge
-                    key={col.key}
-                    variant="secondary"
-                    className="text-xs cursor-pointer"
-                    onClick={() => handleRemoveCustomColumn(col.key)}
-                  >
-                    {col.label} <X className="size-2.5 ml-1" />
-                  </Badge>
-                ))}
-              </div>
-            )}
-          </div>
-
-          {/* Data table */}
-          <div className="flex-1 overflow-auto">
-            <Table>
-              <TableHeader>
-                {table.getHeaderGroups().map((headerGroup) => (
-                  <TableRow key={headerGroup.id}>
-                    {headerGroup.headers.map((header) => (
-                      <TableHead key={header.id}>
-                        {header.isPlaceholder
-                          ? null
-                          : flexRender(
-                              header.column.columnDef.header,
-                              header.getContext(),
-                            )}
-                      </TableHead>
-                    ))}
-                  </TableRow>
-                ))}
-              </TableHeader>
-              <TableBody>
-                {table.getRowModel().rows.length === 0 ? (
-                  <TableRow>
-                    <TableCell
-                      colSpan={tableColumns.length}
-                      className="text-center text-muted-foreground py-8"
-                    >
-                      No data to display
-                    </TableCell>
-                  </TableRow>
-                ) : (
-                  table.getRowModel().rows.map((row) => (
-                    <TableRow key={row.id}>
-                      {row.getVisibleCells().map((cell) => (
-                        <TableCell key={cell.id}>
-                          {flexRender(
-                            cell.column.columnDef.cell,
-                            cell.getContext(),
-                          )}
-                        </TableCell>
-                      ))}
-                    </TableRow>
-                  ))
-                )}
-              </TableBody>
-            </Table>
-          </div>
-
-          <p className="text-xs text-muted-foreground">
-            Showing {table.getFilteredRowModel().rows.length} of{" "}
-            {exportRows.length} rows
-          </p>
+              <X className="size-3" />
+            </button>
+          )}
         </div>
 
-        <DialogFooter>
-          <Button variant="outline" onClick={() => onOpenChange(false)}>
-            Cancel
+        {/* Column visibility toggles */}
+        <div className="flex gap-1 ml-auto">
+          {allColumns.map((col) => {
+            const isVisible =
+              columnVisibility[col.key] !== false
+            return (
+              <Button
+                key={col.key}
+                variant="ghost"
+                size="sm"
+                className="h-6 px-1.5 text-[10px]"
+                onClick={() =>
+                  setColumnVisibility((prev) => ({
+                    ...prev,
+                    [col.key]: !isVisible,
+                  }))
+                }
+              >
+                {isVisible ? (
+                  <Eye className="size-3 mr-0.5" />
+                ) : (
+                  <EyeOff className="size-3 mr-0.5" />
+                )}
+                {col.label.length > 12
+                  ? `${col.label.slice(0, 12)}...`
+                  : col.label}
+              </Button>
+            )
+          })}
+        </div>
+      </div>
+
+      {/* Add custom column */}
+      <div className="flex items-center gap-2">
+        <Input
+          value={addColumnLabel}
+          onChange={(e) => setAddColumnLabel(e.target.value)}
+          placeholder="Column label"
+          className="h-7 w-32 text-xs"
+        />
+        <Select
+          value={addColumnPath}
+          onValueChange={setAddColumnPath}
+        >
+          <SelectTrigger size="sm" className="w-48">
+            <SelectValue placeholder="Select JSON path..." />
+          </SelectTrigger>
+          <SelectContent>
+            {discoveredPaths.map((path) => (
+              <SelectItem key={path} value={path}>
+                {path}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={handleAddColumn}
+          disabled={!addColumnPath.trim()}
+          className="h-7"
+        >
+          <Plus className="size-3 mr-1" /> Add Column
+        </Button>
+
+        {customColumns.length > 0 && (
+          <div className="flex gap-1 ml-2">
+            {customColumns.map((col) => (
+              <Badge
+                key={col.key}
+                variant="secondary"
+                className="text-xs cursor-pointer"
+                onClick={() => handleRemoveCustomColumn(col.key)}
+              >
+                {col.label} <X className="size-2.5 ml-1" />
+              </Badge>
+            ))}
+          </div>
+        )}
+      </div>
+
+      {/* Data table */}
+      <div className="overflow-auto rounded-md border">
+        <Table>
+          <TableHeader>
+            {table.getHeaderGroups().map((headerGroup) => (
+              <TableRow key={headerGroup.id}>
+                {headerGroup.headers.map((header) => (
+                  <TableHead key={header.id}>
+                    {header.isPlaceholder
+                      ? null
+                      : flexRender(
+                          header.column.columnDef.header,
+                          header.getContext(),
+                        )}
+                  </TableHead>
+                ))}
+              </TableRow>
+            ))}
+          </TableHeader>
+          <TableBody>
+            {table.getRowModel().rows.length === 0 ? (
+              <TableRow>
+                <TableCell
+                  colSpan={tableColumns.length}
+                  className="text-center text-muted-foreground py-8"
+                >
+                  No data to display
+                </TableCell>
+              </TableRow>
+            ) : (
+              table.getRowModel().rows.map((row) => (
+                <TableRow key={row.id}>
+                  {row.getVisibleCells().map((cell) => (
+                    <TableCell key={cell.id}>
+                      {flexRender(
+                        cell.column.columnDef.cell,
+                        cell.getContext(),
+                      )}
+                    </TableCell>
+                  ))}
+                </TableRow>
+              ))
+            )}
+          </TableBody>
+        </Table>
+      </div>
+
+      <p className="text-xs text-muted-foreground">
+        Showing {table.getFilteredRowModel().rows.length} of{" "}
+        {exportRows.length} rows
+      </p>
+
+      {/* Footer */}
+      <div className="flex justify-between items-center pt-4 border-t">
+        {onClose && (
+          <Button variant="outline" onClick={onClose}>
+            <ArrowLeft className="size-3.5 mr-1.5" />
+            Back
           </Button>
-          <Button onClick={handleExport}>
-            <Download className="size-3.5 mr-1.5" />
-            Download CSV ({table.getFilteredRowModel().rows.length} rows)
-          </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
+        )}
+        <Button onClick={handleExport} className={onClose ? "" : "ml-auto"}>
+          <Download className="size-3.5 mr-1.5" />
+          Download CSV ({table.getFilteredRowModel().rows.length} rows)
+        </Button>
+      </div>
+    </div>
   )
 }

@@ -7,7 +7,6 @@ import {
 import { Trash2 } from "lucide-react"
 import { useCallback, useMemo, useState } from "react"
 
-import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import {
@@ -27,6 +26,7 @@ import {
 } from "@/components/ui/table"
 import {
   ACTION_TEMPLATES,
+  type ActionParamDef,
   getTemplateById,
 } from "@/lib/action-templates"
 import {
@@ -113,7 +113,7 @@ export default function ColumnMappingStep({
       const csvRow = rows[rowIndex]
       if (!csvRow) return
 
-      const newParamValues = buildParamValuesForRow(csvRow, newMappings)
+      const newParamValues = buildParamValuesForRow(csvRow, newMappings, template)
       const mappedCols = new Set(newMappings.map((m) => m.columnIndex))
       const unmappedColumns = headers
         .map((_, i) => i)
@@ -163,6 +163,7 @@ export default function ColumnMappingStep({
           </span>
         ),
         size: 40,
+        maxSize: 40,
       }),
       columnHelper.accessor("name", {
         header: "Name",
@@ -176,6 +177,7 @@ export default function ColumnMappingStep({
           />
         ),
         size: 140,
+        maxSize: 140,
       }),
       columnHelper.accessor("templateId", {
         header: "Action Template",
@@ -199,6 +201,7 @@ export default function ColumnMappingStep({
           </Select>
         ),
         size: 160,
+        maxSize: 160,
       }),
     ]
 
@@ -210,17 +213,6 @@ export default function ColumnMappingStep({
     columns,
     getCoreRowModel: getCoreRowModel(),
   })
-
-  const getConfidenceVariant = (confidence: "high" | "medium" | "low") => {
-    switch (confidence) {
-      case "high":
-        return "default" as const
-      case "medium":
-        return "secondary" as const
-      case "low":
-        return "destructive" as const
-    }
-  }
 
   return (
     <div className="flex flex-col gap-4">
@@ -243,7 +235,10 @@ export default function ColumnMappingStep({
             <TableRow>
               {table.getHeaderGroups().map((headerGroup) =>
                 headerGroup.headers.map((header) => (
-                  <TableHead key={header.id}>
+                  <TableHead
+                    key={header.id}
+                    style={{ width: header.column.getSize() }}
+                  >
                     {header.isPlaceholder
                       ? null
                       : flexRender(
@@ -265,7 +260,10 @@ export default function ColumnMappingStep({
               return (
                 <TableRow key={row.id}>
                   {row.getVisibleCells().map((cell) => (
-                    <TableCell key={cell.id}>
+                    <TableCell
+                      key={cell.id}
+                      style={{ width: cell.column.getSize() }}
+                    >
                       {flexRender(
                         cell.column.columnDef.cell,
                         cell.getContext(),
@@ -273,13 +271,18 @@ export default function ColumnMappingStep({
                     </TableCell>
                   ))}
                   <TableCell>
-                    <div className="flex flex-wrap gap-1.5">
-                      {template?.params.map((param) => {
-                        const value = actionRow.paramValues[param.key] ?? ""
-                        const mapping = actionRow.mappings.find(
-                          (m) => m.paramKey === param.key,
-                        )
+                    {(() => {
+                      const requiredParams = template?.params.filter((p) => p.required) ?? []
+                      const optionalParams = template?.params.filter((p) => !p.required) ?? []
+                      const filledOptional = optionalParams.filter(
+                        (p) => (actionRow.paramValues[p.key] ?? "").trim() !== "",
+                      )
+                      const emptyOptional = optionalParams.filter(
+                        (p) => (actionRow.paramValues[p.key] ?? "").trim() === "",
+                      )
 
+                      const renderParam = (param: ActionParamDef) => {
+                        const value = actionRow.paramValues[param.key] ?? ""
                         return (
                           <div
                             key={param.key}
@@ -311,44 +314,53 @@ export default function ColumnMappingStep({
                               placeholder={param.label}
                               className="h-6 text-xs w-28"
                             />
-                            {mapping && (
-                              <Badge
-                                variant={getConfidenceVariant(
-                                  mapping.confidence,
-                                )}
-                                className="text-[10px] px-1 py-0"
-                              >
-                                {mapping.confidence}
-                              </Badge>
-                            )}
                           </div>
                         )
-                      })}
-                    </div>
-                    {actionRow.unmappedColumns.length > 0 && (
-                      <details className="mt-1">
-                        <summary className="text-[10px] text-muted-foreground cursor-pointer">
-                          {actionRow.unmappedColumns.length} unmapped column
-                          {actionRow.unmappedColumns.length !== 1 ? "s" : ""}
-                        </summary>
-                        <div className="flex flex-wrap gap-1 mt-1">
-                          {actionRow.unmappedColumns.map((colIdx) => {
-                            const header = headers[colIdx] ?? ""
-                            const value = rows[actionRow.rowIndex]?.[colIdx] ?? ""
-                            const masked = isSensitiveHeader(header)
-                            return (
-                              <span
-                                key={colIdx}
-                                className="text-[10px] bg-muted px-1.5 py-0.5 rounded"
-                              >
-                                {header}:{" "}
-                                {masked ? "\u2022\u2022\u2022\u2022\u2022\u2022" : value}
-                              </span>
-                            )
-                          })}
+                      }
+
+                      return (
+                        <div className="space-y-1.5">
+                          <div className="grid grid-cols-[repeat(auto-fill,minmax(220px,1fr))] gap-1.5">
+                            {requiredParams.map(renderParam)}
+                            {filledOptional.map(renderParam)}
+                          </div>
+                          {emptyOptional.length > 0 && (
+                            <details>
+                              <summary className="text-[10px] text-muted-foreground cursor-pointer">
+                                {emptyOptional.length} optional parameter{emptyOptional.length !== 1 ? "s" : ""}
+                              </summary>
+                              <div className="grid grid-cols-[repeat(auto-fill,minmax(220px,1fr))] gap-1.5 mt-1.5">
+                                {emptyOptional.map(renderParam)}
+                              </div>
+                            </details>
+                          )}
+                          {actionRow.unmappedColumns.length > 0 && (
+                            <details>
+                              <summary className="text-[10px] text-muted-foreground cursor-pointer">
+                                {actionRow.unmappedColumns.length} unmapped column
+                                {actionRow.unmappedColumns.length !== 1 ? "s" : ""}
+                              </summary>
+                              <div className="flex flex-wrap gap-1 mt-1">
+                                {actionRow.unmappedColumns.map((colIdx) => {
+                                  const header = headers[colIdx] ?? ""
+                                  const value = rows[actionRow.rowIndex]?.[colIdx] ?? ""
+                                  const masked = isSensitiveHeader(header)
+                                  return (
+                                    <span
+                                      key={colIdx}
+                                      className="text-[10px] bg-muted px-1.5 py-0.5 rounded"
+                                    >
+                                      {header}:{" "}
+                                      {masked ? "\u2022\u2022\u2022\u2022\u2022\u2022" : value}
+                                    </span>
+                                  )
+                                })}
+                              </div>
+                            </details>
+                          )}
                         </div>
-                      </details>
-                    )}
+                      )
+                    })()}
                   </TableCell>
                   <TableCell>
                     <Button

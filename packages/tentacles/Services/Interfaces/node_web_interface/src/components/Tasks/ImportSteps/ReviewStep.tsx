@@ -13,9 +13,8 @@ import type { ActionRow } from "./ColumnMappingStep"
 
 export interface ReviewStepProps {
   actions: ActionRow[]
-  onImport: () => void
+  onNext: () => void
   onBack: () => void
-  isImporting: boolean
 }
 
 interface ValidationResult {
@@ -45,9 +44,8 @@ function validateAction(action: ActionRow): ValidationResult {
 
 export default function ReviewStep({
   actions,
-  onImport,
+  onNext,
   onBack,
-  isImporting,
 }: ReviewStepProps) {
   const validations = useMemo(
     () => actions.map((action) => ({
@@ -142,16 +140,14 @@ export default function ReviewStep({
       </div>
 
       <div className="flex gap-2 justify-end">
-        <Button variant="outline" onClick={onBack} disabled={isImporting}>
+        <Button variant="outline" onClick={onBack}>
           Back
         </Button>
         <Button
-          onClick={onImport}
-          disabled={!allValid || isImporting || actions.length === 0}
+          onClick={onNext}
+          disabled={validCount === 0}
         >
-          {isImporting
-            ? "Importing..."
-            : `Import ${validCount} Action${validCount !== 1 ? "s" : ""}`}
+          Review {validCount} Action{validCount !== 1 ? "s" : ""}
         </Button>
       </div>
     </div>

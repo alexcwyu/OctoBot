@@ -1,11 +1,10 @@
 import { useMutation, useQueryClient, useSuspenseQuery } from "@tanstack/react-query"
-import { createFileRoute, Link } from "@tanstack/react-router"
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router"
 import { Bot, Check, Clock, Layers, Plus, Search, Trash2, X } from "lucide-react"
 import { Suspense, useMemo, useState } from "react"
 
 import type { Task_Output as Task, TaskStatus } from "@/client"
 import { TasksService } from "@/client"
-import ExportResultsDialog from "@/components/Tasks/ExportResultsDialog"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import {
@@ -24,16 +23,9 @@ import {
 } from "@/components/ui/dialog"
 import { LoadingButton } from "@/components/ui/loading-button"
 import useCustomToast from "@/hooks/useCustomToast"
+import { getTasksQueryOptions } from "@/lib/task-queries"
 import { cn } from "@/lib/utils"
-import { getActiveExecution } from "@/utils/executions"
-
-function getTasksQueryOptions() {
-  return {
-    queryFn: () => TasksService.getTasks({ page: 1, limit: 100 }),
-    queryKey: ["tasks"],
-    refetchInterval: 2_000,
-  }
-}
+import { getActiveExecution, getStatusGroup } from "@/utils/executions"
 
 const filters = [
   { value: "active", label: "Active" },
@@ -55,14 +47,6 @@ function getStatusVariant(status?: TaskStatus | null) {
   if (status === "failed") return "destructive" as const
   if (status === "completed") return "outline" as const
   return "secondary" as const
-}
-
-function getStatusGroup(status?: TaskStatus | null) {
-  if (!status) return "active"
-  if (status === "running" || status === "scheduled" || status === "periodic" || status === "pending") {
-    return "active"
-  }
-  return "stopped"
 }
 
 function getDisplayDate(task: Task) {
@@ -308,10 +292,10 @@ function SelectionToolbar({
   onDeleted: () => void
 }) {
   const [deleteOpen, setDeleteOpen] = useState(false)
-  const [exportOpen, setExportOpen] = useState(false)
   const [shareLogsOpen, setShareLogsOpen] = useState(false)
   const [shareLogsLoading, setShareLogsLoading] = useState(false)
   const [shareCreds, setShareCreds] = useState<{ errorId: string; errorSecret: string } | null>(null)
+  const navigate = useNavigate()
   const queryClient = useQueryClient()
   const { showSuccessToast, showErrorToast } = useCustomToast()
 
@@ -348,7 +332,8 @@ function SelectionToolbar({
       showErrorToast("No results to export for selected OctoBots")
       return
     }
-    setExportOpen(true)
+    const taskIds = exportableTasks.map((t) => t.id).filter(Boolean).join(",")
+    navigate({ to: "/octobots/export", search: { tasks: taskIds } })
   }
 
   const handleShareLogs = async () => {
@@ -455,11 +440,6 @@ function SelectionToolbar({
         </DialogContent>
       </Dialog>
 
-      <ExportResultsDialog
-        open={exportOpen}
-        onOpenChange={setExportOpen}
-        tasks={exportableTasks}
-      />
     </>
   )
 }

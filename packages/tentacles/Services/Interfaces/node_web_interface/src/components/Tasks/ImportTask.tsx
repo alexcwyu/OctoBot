@@ -9,21 +9,23 @@ import CsvUploadStep from "./ImportSteps/CsvUploadStep"
 import ColumnMappingStep, {
   type ActionRow,
 } from "./ImportSteps/ColumnMappingStep"
+import EncryptStep from "./ImportSteps/EncryptStep"
 import ReviewStep from "./ImportSteps/ReviewStep"
 
 export interface ImportTaskProps {
   onSuccess?: () => void
 }
 
-type ImportStep = "upload" | "mapping" | "review"
+type ImportStep = "upload" | "mapping" | "review" | "encrypt"
 
 const STEP_LABELS: Record<ImportStep, string> = {
   upload: "Upload CSV",
   mapping: "Map Columns",
-  review: "Review & Import",
+  review: "Review",
+  encrypt: "Import",
 }
 
-const STEPS: ImportStep[] = ["upload", "mapping", "review"]
+const STEPS: ImportStep[] = ["upload", "mapping", "review", "encrypt"]
 
 export default function ImportTask({ onSuccess }: ImportTaskProps) {
   const [currentStep, setCurrentStep] = useState<ImportStep>("upload")
@@ -47,20 +49,13 @@ export default function ImportTask({ onSuccess }: ImportTaskProps) {
     setCurrentStep("review")
   }
 
-  const handleImport = async () => {
-    if (actionRows.length === 0) {
+  const handleImport = async (tasks: Task[]) => {
+    if (tasks.length === 0) {
       showErrorToast("No actions to import")
       return
     }
 
     try {
-      const tasks: Task[] = actionRows.map((action) => ({
-        name: action.name,
-        content: JSON.stringify(action.paramValues),
-        type: "execute_actions",
-      }))
-
-      // API returns [successCount, errorCount] tuple
       const result = await createTaskMutation.mutateAsync(tasks)
       const [successCount, errorCount] = result as [number, number]
 
@@ -144,8 +139,16 @@ export default function ImportTask({ onSuccess }: ImportTaskProps) {
       {currentStep === "review" && (
         <ReviewStep
           actions={actionRows}
-          onImport={handleImport}
+          onNext={() => setCurrentStep("encrypt")}
           onBack={() => setCurrentStep("mapping")}
+        />
+      )}
+
+      {currentStep === "encrypt" && (
+        <EncryptStep
+          actions={actionRows}
+          onImport={handleImport}
+          onBack={() => setCurrentStep("review")}
           isImporting={createTaskMutation.isPending}
         />
       )}

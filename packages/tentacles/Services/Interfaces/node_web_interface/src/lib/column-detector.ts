@@ -279,6 +279,11 @@ export function detectColumnsAndTemplates(
       }
       mappedColumnIndices.add(mapping.columnIndex)
     }
+    for (const param of best.template.params) {
+      if (!paramValues[param.key] && param.defaultValue) {
+        paramValues[param.key] = param.defaultValue
+      }
+    }
 
     const unmappedColumns = headers
       .map((_, i) => i)
@@ -310,16 +315,25 @@ export function detectMappingsForTemplate(
 
 /**
  * Build param values for a single row given mappings.
+ * When a template is provided, applies defaultValue for params not filled by mappings.
  */
 export function buildParamValuesForRow(
   row: string[],
   mappings: ColumnMapping[],
+  template?: ActionTemplate,
 ): Record<string, string> {
   const values: Record<string, string> = {}
   for (const mapping of mappings) {
     const value = row[mapping.columnIndex]?.trim() ?? ""
     if (value) {
       values[mapping.paramKey] = value
+    }
+  }
+  if (template) {
+    for (const param of template.params) {
+      if (!values[param.key] && param.defaultValue) {
+        values[param.key] = param.defaultValue
+      }
     }
   }
   return values

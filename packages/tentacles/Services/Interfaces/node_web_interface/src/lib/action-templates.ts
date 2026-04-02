@@ -15,6 +15,8 @@ export interface ActionParamDef {
   type: ParamInputType
   options?: string[]
   sensitive?: boolean
+  /** Pre-filled value when this template is selected */
+  defaultValue?: string
   /** Regex patterns to detect this param type from cell values */
   detectPatterns?: RegExp[]
   /** Fuzzy aliases to match column header names (case-insensitive) */
@@ -316,7 +318,7 @@ export const WAIT_TEMPLATE: ActionTemplate = {
   params: [
     {
       key: "MIN_DELAY",
-      label: "Min Delay (seconds)",
+      label: "Min Delay (s)",
       required: true,
       type: "number",
       detectPatterns: [PATTERNS.numericAmount],
@@ -324,11 +326,83 @@ export const WAIT_TEMPLATE: ActionTemplate = {
     },
     {
       key: "MAX_DELAY",
-      label: "Max Delay (seconds)",
+      label: "Max Delay (s)",
       required: false,
       type: "number",
       detectPatterns: [PATTERNS.numericAmount],
       aliasFuzzy: ["max_delay", "maxdelay", "max_wait"],
+    },
+  ],
+}
+
+export const WAIT_TRADE_BINANCE_TEMPLATE: ActionTemplate = {
+  id: "wait_trade_binance",
+  label: "Wait + Trade (Binance)",
+  description: "Wait for a delay, then place an order on Binance",
+  actionTypes: ["wait", "trade"],
+  params: [
+    ...WAIT_TEMPLATE.params,
+    {
+      key: "ORDER_SYMBOL",
+      label: "Symbol",
+      required: true,
+      type: "text",
+      detectPatterns: [PATTERNS.tradingPair],
+      aliasFuzzy: ["symbol", "pair", "market", "sym", "ticker"],
+    },
+    amountParam("ORDER_AMOUNT", "Amount", true),
+    {
+      key: "ORDER_TYPE",
+      label: "Order Type",
+      required: true,
+      type: "select",
+      options: ["market", "limit", "stop", "stop_limit", "trailing_stop"],
+      detectPatterns: [PATTERNS.orderType],
+      aliasFuzzy: ["type", "order_type", "ordertype"],
+    },
+    {
+      key: "ORDER_SIDE",
+      label: "Side",
+      required: false,
+      type: "select",
+      options: ["buy", "sell"],
+      detectPatterns: [PATTERNS.orderSide],
+      aliasFuzzy: ["side", "direction", "buy", "sell"],
+    },
+    {
+      key: "ORDER_PRICE",
+      label: "Price",
+      required: false,
+      type: "number",
+      detectPatterns: [PATTERNS.numericAmount],
+      aliasFuzzy: ["price", "rate", "limit_price"],
+    },
+    {
+      key: "ORDER_STOP_PRICE",
+      label: "Stop Price",
+      required: false,
+      type: "number",
+      detectPatterns: [PATTERNS.numericAmount],
+      aliasFuzzy: ["stop", "stop_price", "stopprice", "trigger"],
+    },
+    {
+      key: "ORDER_TAG",
+      label: "Tag",
+      required: false,
+      type: "text",
+      aliasFuzzy: ["tag", "label", "note", "comment"],
+    },
+    {
+      key: "ORDER_REDUCE_ONLY",
+      label: "Reduce Only",
+      required: false,
+      type: "select",
+      options: ["true", "false"],
+      aliasFuzzy: ["reduce", "reduce_only", "reduceonly"],
+    },
+    {
+      ...exchangeParam("EXCHANGE_TO", "Exchange", false),
+      defaultValue: "binance",
     },
   ],
 }
@@ -340,6 +414,7 @@ export const ACTION_TEMPLATES: ActionTemplate[] = [
   DEPOSIT_TEMPLATE,
   CANCEL_TEMPLATE,
   WAIT_TEMPLATE,
+  WAIT_TRADE_BINANCE_TEMPLATE,
 ]
 
 export function getTemplateById(id: string): ActionTemplate | undefined {

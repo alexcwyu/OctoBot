@@ -13,8 +13,8 @@ import {
 
 describe("action-templates", () => {
   describe("template registry", () => {
-    it("contains all 6 templates", () => {
-      expect(ACTION_TEMPLATES).toHaveLength(6)
+    it("contains all 7 templates", () => {
+      expect(ACTION_TEMPLATES).toHaveLength(7)
     })
 
     it("each template has a unique id", () => {
