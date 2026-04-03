@@ -20,6 +20,16 @@ vault_platform_pubkey_evm: "0xCHANGE_ME"
 vault_encryption_secret: "CHANGE_ME"           # openssl rand -base64 64
 vault_platform_encryption_secret: "CHANGE_ME"  # openssl rand -base64 64
 
+# NATS
+vault_nats_auth_token: "CHANGE_ME"              # openssl rand -base64 32
+
+# FCM (Firebase Cloud Messaging)
+vault_fcm_service_account_json: |               # Paste full Google Service Account JSON
+  {
+    "type": "service_account",
+    "project_id": "CHANGE_ME"
+  }
+
 # Optional
 # vault_evm_base_rpc: "https://mainnet.base.org"
 # vault_evm_contract_base: "0x..."

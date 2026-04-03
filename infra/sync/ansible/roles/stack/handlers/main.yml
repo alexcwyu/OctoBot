@@ -4,6 +4,16 @@
     cmd: docker compose up -d
     chdir: "{{ stack_deploy_dir }}"
 
+- name: restart nats
+  ansible.builtin.command:
+    cmd: docker compose restart nats
+    chdir: "{{ stack_deploy_dir }}"
+
+- name: restart fcm-bridge
+  ansible.builtin.command:
+    cmd: docker compose up -d --no-deps --force-recreate fcm-bridge
+    chdir: "{{ stack_deploy_dir }}"
+
 - name: restart garage
   ansible.builtin.command:
     cmd: docker compose restart garage

@@ -17,6 +17,29 @@ services:
     networks:
       - backend
 
+  nats:
+    image: {{ nats_image }}
+    command: ["--config", "/etc/nats/nats.conf"]
+    ports:
+      - "127.0.0.1:4222:4222"
+      - "0.0.0.0:6222:6222"
+      - "127.0.0.1:8222:8222"
+    restart: unless-stopped
+    mem_limit: {{ nats_mem_limit }}
+    security_opt:
+      - no-new-privileges:true
+    volumes:
+      - nats_data:/data/jetstream
+      - ./nats.conf:/etc/nats/nats.conf:ro
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://127.0.0.1:8222/healthz"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    networks:
+      - backend
+
   octobot-sync:
     image: {{ octobot_sync_image }}:{{ octobot_image_tag }}
     command: ["sync", "--host", "0.0.0.0", "--port", "{{ octobot_sync_port }}"]
@@ -36,9 +59,36 @@ services:
       retries: 5
       start_period: 30s
     depends_on:
-      - garage
+      garage:
+        condition: service_started
+      nats:
+        condition: service_healthy
     networks:
       - frontend
+      - backend
+
+  fcm-bridge:
+    image: {{ octobot_sync_image }}:{{ octobot_image_tag }}
+    command: ["fcm-bridge"]
+    env_file: .env
+    environment:
+      - FCM_SERVICE_ACCOUNT_PATH=/run/secrets/fcm-sa.json
+    volumes:
+      - ./fcm-service-account.json:/run/secrets/fcm-sa.json:ro
+    restart: unless-stopped
+    mem_limit: 256m
+    security_opt:
+      - no-new-privileges:true
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://127.0.0.1:9090/healthz"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 15s
+    depends_on:
+      nats:
+        condition: service_healthy
+    networks:
       - backend
 
   nginx:
@@ -68,6 +118,7 @@ services:
 volumes:
   garage_meta:
   garage_data:
+  nats_data:
 
 networks:
   frontend:

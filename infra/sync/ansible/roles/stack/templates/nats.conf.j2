@@ -1,0 +1,24 @@
+server_name: {{ inventory_hostname }}
+listen: 0.0.0.0:4222
+
+jetstream {
+  store_dir: /data/jetstream
+  max_mem_store: {{ nats_jetstream_max_mem }}
+  max_file_store: {{ nats_jetstream_max_file }}
+}
+
+cluster {
+  name: octobot-sync
+  listen: 0.0.0.0:6222
+  routes = [
+{% for host in groups['sync_nodes'] if host != inventory_hostname %}
+    nats-route://{{ hostvars[host]['ansible_host'] }}:6222
+{% endfor %}
+  ]
+}
+
+http_port: 8222
+
+authorization {
+  token: "{{ nats_auth_token }}"
+}

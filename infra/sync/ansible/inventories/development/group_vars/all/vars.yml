@@ -3,6 +3,7 @@ octobot_sync_image: "drakkarsoftware/octobot"
 octobot_image_tag: "latest"
 garage_image: "dxflrs/garage:v2.2.0"
 nginx_image: "nginx:1-alpine"
+nats_image: "nats:2-alpine"
 
 # Deployment
 stack_deploy_dir: "/opt/octobot-sync"
@@ -12,6 +13,9 @@ octobot_sync_port: 3000
 nginx_port: 80
 nginx_ssl_port: 443
 garage_replication_factor: 1
+nats_mem_limit: "512m"
+nats_jetstream_max_mem: "128MB"
+nats_jetstream_max_file: "512MB"
 
 # Map vault → app vars
 garage_rpc_secret: "{{ vault_garage_rpc_secret }}"
@@ -24,6 +28,8 @@ encryption_secret: "{{ vault_encryption_secret }}"
 platform_encryption_secret: "{{ vault_platform_encryption_secret }}"
 evm_base_rpc: "{{ vault_evm_base_rpc | default('') }}"
 evm_contract_base: "{{ vault_evm_contract_base | default('') }}"
+nats_auth_token: "{{ vault_nats_auth_token }}"
+fcm_service_account_json: "{{ vault_fcm_service_account_json }}"
 
 # Firewall (geerlingguy.firewall)
 firewall_allowed_tcp_ports:

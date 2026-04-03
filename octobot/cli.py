@@ -523,6 +523,13 @@ def octobot_parser(parser, default_config_file=None):
     _register_sync_arguments(sync_parser)
     sync_parser.set_defaults(func=lambda args: start_sync(args))
 
+    # fcm bridge
+    fcm_bridge_parser = subparsers.add_parser("fcm-bridge",
+                                              help='Start the NATS-to-FCM bridge.\n'
+                                                   'Use "fcm-bridge --help" for options.')
+    _register_fcm_bridge_arguments(fcm_bridge_parser)
+    fcm_bridge_parser.set_defaults(func=lambda args: start_fcm_bridge(args))
+
 
 def _register_node_arguments(parser):
     parser.add_argument(
@@ -581,6 +588,39 @@ def start_sync(args):
     octobot_sync.server.start_sync_server(
         host=args.host,
         port=args.port,
+    )
+
+
+def _register_fcm_bridge_arguments(parser):
+    parser.add_argument(
+        '--nats-url',
+        help='NATS server URL (default: from NATS_URL env var or nats://localhost:4222).',
+        type=str,
+        default=None
+    )
+    parser.add_argument(
+        '--fcm-credentials',
+        help='Path to Google Service Account JSON for FCM (default: from FCM_SERVICE_ACCOUNT_PATH env var).',
+        type=str,
+        default=None
+    )
+    parser.add_argument(
+        '--healthz-port',
+        help='Port for the health check HTTP server (default: 9090).',
+        type=int,
+        default=9090
+    )
+
+
+def start_fcm_bridge(args):
+    import octobot_notifications.fcm_bridge
+
+    asyncio.run(
+        octobot_notifications.fcm_bridge.run_fcm_bridge(
+            nats_url=args.nats_url,
+            fcm_credentials_path=args.fcm_credentials,
+            healthz_port=args.healthz_port,
+        )
     )
 
 

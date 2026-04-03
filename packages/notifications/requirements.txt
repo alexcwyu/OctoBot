@@ -1,0 +1,2 @@
+firebase-admin>=6.0.0
+nats-py>=2.0.0

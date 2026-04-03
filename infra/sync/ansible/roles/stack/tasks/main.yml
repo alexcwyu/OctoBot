@@ -47,6 +47,25 @@
     mode: "0644"
   notify: restart garage
 
+- name: Render nats.conf
+  ansible.builtin.template:
+    src: nats.conf.j2
+    dest: "{{ stack_deploy_dir }}/nats.conf"
+    owner: deploy
+    group: deploy
+    mode: "0644"
+  notify: restart nats
+
+- name: Write FCM service account JSON
+  ansible.builtin.copy:
+    content: "{{ fcm_service_account_json }}"
+    dest: "{{ stack_deploy_dir }}/fcm-service-account.json"
+    owner: deploy
+    group: deploy
+    mode: "0600"
+  notify: restart fcm-bridge
+  no_log: true
+
 - name: Render ssl.conf
   ansible.builtin.template:
     src: ssl.conf.j2

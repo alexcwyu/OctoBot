@@ -1,4 +1,24 @@
 ---
+- name: Wait for NATS health
+  ansible.builtin.uri:
+    url: "http://127.0.0.1:8222/healthz"
+    return_content: true
+    status_code: [200]
+  register: nats_health
+  until: nats_health.status == 200
+  retries: 30
+  delay: 5
+
+- name: Wait for NATS JetStream ready
+  ansible.builtin.uri:
+    url: "http://127.0.0.1:8222/jsz"
+    return_content: true
+    status_code: [200]
+  register: nats_js_health
+  until: nats_js_health.status == 200
+  retries: 10
+  delay: 5
+
 - name: Wait for Garage health
   ansible.builtin.uri:
     url: "http://127.0.0.1:3903/health"
@@ -17,6 +37,16 @@
   register: octobot_health
   until: octobot_health.status == 200 and (octobot_health.json.ok | default(false))
   retries: 30
+  delay: 5
+
+- name: Wait for FCM bridge health
+  ansible.builtin.uri:
+    url: "http://127.0.0.1:9090/healthz"
+    return_content: true
+    status_code: [200]
+  register: fcm_bridge_health
+  until: fcm_bridge_health.status == 200 and (fcm_bridge_health.json.ok | default(false))
+  retries: 10
   delay: 5
 
 - name: Wait for Nginx health (proxied)
