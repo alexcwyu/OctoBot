@@ -58,6 +58,9 @@ const config: Config = {
   },
 
   plugins: [
+    [require.resolve('docusaurus-lunr-search'), {
+      languages: ['en', 'fr'],
+    }],
     [
       '@docusaurus/plugin-client-redirects',
       {
@@ -179,11 +182,6 @@ const config: Config = {
           sidebarId: 'developers',
           position: 'left',
           label: 'Developers',
-        },
-        {
-          to: '/blog',
-          label: 'Blog',
-          position: 'right',
         },
         {
           type: 'localeDropdown',
