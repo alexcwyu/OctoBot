@@ -185,14 +185,19 @@ class OrdersSynchronizer:
         orphan_orders = self._mirrored_orphan_open_orders(active_reference_ids)
         orphan_count = len(orphan_orders)
         threshold = settings.mirrored_orphan_grace_abort_threshold
-        if orphan_count == 0 or orphan_count >= threshold:
+        if orphan_count == 0:
+            return False
+        if orphan_count >= threshold:
+            self._get_logger().info(
+                f"Mirrored orphans grace period aborted: {orphan_count} orphans >= threshold ({threshold})"
+            )
             return False
         if not self._mirrored_orphan_batch_eligible_for_grace(orphan_orders):
             return False
         started_at = settings.mirrored_orphan_grace_started_at
-        now = time.time()
         if started_at is None:
             return True
+        now = time.time()
         return (now - started_at) < grace_seconds
 
     def _reference_symbols_skipped_while_grace_orphans_uncancelled(
@@ -230,15 +235,16 @@ class OrdersSynchronizer:
         created: list = []
         replaced_cancelled_count = 0
         already_synchronized_count = 0
+        skipped_grace_upserts: list[tuple[str, typing.Any]] = []
         for doc in replicable:
             origin = doc[trading_constants.STORAGE_ORIGIN_VALUE]
             order_symbol = origin[trading_enums.ExchangeConstantsOrderColumns.SYMBOL.value]
             if order_symbol in skip_symbols_for_upsert:
-                reference_order_id = origin.get(trading_enums.ExchangeConstantsOrderColumns.ID.value)
-                self._get_logger().info(
-                    f"Skipping reference mirror upsert for symbol={order_symbol} "
-                    f"(reference_order_id={reference_order_id}): mirrored orphan grace still deferring cancel "
-                    f"on this symbol"
+                skipped_grace_upserts.append(
+                    (
+                        order_symbol,
+                        origin.get(trading_enums.ExchangeConstantsOrderColumns.ID.value),
+                    )
                 )
                 continue
             try:
@@ -255,6 +261,16 @@ class OrdersSynchronizer:
                     True,
                     f"Skipping synched reference order mirror: {err} ({err.__class__.__name__})",
                 )
+        if skipped_grace_upserts:
+            skipped_summary = ", ".join(
+                f"{symbol}:{reference_order_id}"
+                for symbol, reference_order_id in skipped_grace_upserts
+            )
+            self._get_logger().info(
+                "Skipped reference mirror upsert for %s order(s) (mirrored orphan grace period active): %s",
+                len(skipped_grace_upserts),
+                skipped_summary,
+            )
         total_cancelled = orphan_cancelled_count + replaced_cancelled_count
         total_created = len(created)
         self._get_logger().info(

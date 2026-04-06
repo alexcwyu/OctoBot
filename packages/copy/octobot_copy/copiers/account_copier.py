@@ -95,8 +95,8 @@ class AccountCopier:
             and (time.time() - grace_started_at) >= grace_seconds
         ):
             self._get_logger().info(
-                "Mirrored open-order grace period had already elapsed before this run; "
-                f"treating as aborted grace and forcing resync (cancel orphans, refresh portfolio) on "
+                "Mirrored open-order grace period elapsed before this run; "
+                f"aborting grace and resyncing (cancel orphans, refresh portfolio) on "
                 f"[{self._copier_exchange_interface.exchange_name}]"
             )
             self._orders_synchronizer.abort_mirrored_orphan_grace()

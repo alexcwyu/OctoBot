@@ -43,6 +43,7 @@ import tests.functionnal_tests.trading_modes_actions.simulator.test_grid_trading
 from tests.functionnal_tests import (
     automation_state_dict,
     copy_exchange_account_action,
+    d_order_price,
     resolved_actions,
     set_init_action_run_mode,
 )
@@ -154,8 +155,36 @@ def reference_replace_highest_buy_with_sell(
             ORDER_AMOUNT,
         )
     )
+    content_after_fill = copy_module.deepcopy(reference_before.content)
+    fill_quantity = decimal.Decimal(str(ORDER_AMOUNT))
+    fill_price = decimal.Decimal(str(highest_buy_price))
+    quote_spent = fill_quantity * fill_price
+    btc_holdings = content_after_fill["BTC"]
+    usdc_holdings = content_after_fill["USDC"]
+    btc_holdings[common_constants.PORTFOLIO_TOTAL] = (
+        btc_holdings[common_constants.PORTFOLIO_TOTAL] + fill_quantity
+    )
+    btc_holdings[common_constants.PORTFOLIO_AVAILABLE] = (
+        btc_holdings[common_constants.PORTFOLIO_AVAILABLE] + fill_quantity
+    )
+    usdc_holdings[common_constants.PORTFOLIO_TOTAL] = (
+        usdc_holdings[common_constants.PORTFOLIO_TOTAL] - quote_spent
+    )
+    mark_price = decimal.Decimal(str(grid_test._FIXED_BTC_USDC_CLOSE))
+    btc_total_after = btc_holdings[common_constants.PORTFOLIO_TOTAL]
+    usdc_total_after = usdc_holdings[common_constants.PORTFOLIO_TOTAL]
+    value_btc = btc_total_after * mark_price
+    value_quote = usdc_total_after
+    value_total = value_btc + value_quote
+    if value_total > decimal.Decimal("0"):
+        btc_holdings[copy_constants.PORTFOLIO_ASSET_ALLOCATION_RATIO] = (
+            value_btc / value_total
+        )
+        usdc_holdings[copy_constants.PORTFOLIO_ASSET_ALLOCATION_RATIO] = (
+            value_quote / value_total
+        )
     return copy_entities.Account(
-        content=copy_module.deepcopy(reference_before.content),
+        content=content_after_fill,
         orders=new_orders,
         positions=[],
     )
@@ -190,8 +219,38 @@ def reference_replace_both_buys_with_sells(
             ORDER_AMOUNT,
         )
     )
+    content_after_fill = copy_module.deepcopy(reference_before.content)
+    fill_quantity = decimal.Decimal(str(ORDER_AMOUNT))
+    lowest_buy_price = decimal.Decimal(str(lowest_buy))
+    inc_decimal = decimal.Decimal(str(inc))
+    quote_spent = fill_quantity * (2 * lowest_buy_price + inc_decimal)
+    btc_holdings = content_after_fill["BTC"]
+    usdc_holdings = content_after_fill["USDC"]
+    btc_received = fill_quantity * decimal.Decimal("2")
+    btc_holdings[common_constants.PORTFOLIO_TOTAL] = (
+        btc_holdings[common_constants.PORTFOLIO_TOTAL] + btc_received
+    )
+    btc_holdings[common_constants.PORTFOLIO_AVAILABLE] = (
+        btc_holdings[common_constants.PORTFOLIO_AVAILABLE] + btc_received
+    )
+    usdc_holdings[common_constants.PORTFOLIO_TOTAL] = (
+        usdc_holdings[common_constants.PORTFOLIO_TOTAL] - quote_spent
+    )
+    mark_price = decimal.Decimal(str(grid_test._FIXED_BTC_USDC_CLOSE))
+    btc_total_after = btc_holdings[common_constants.PORTFOLIO_TOTAL]
+    usdc_total_after = usdc_holdings[common_constants.PORTFOLIO_TOTAL]
+    value_btc = btc_total_after * mark_price
+    value_quote = usdc_total_after
+    pair_value_total = value_btc + value_quote
+    if pair_value_total > decimal.Decimal("0"):
+        btc_holdings[copy_constants.PORTFOLIO_ASSET_ALLOCATION_RATIO] = (
+            value_btc / pair_value_total
+        )
+        usdc_holdings[copy_constants.PORTFOLIO_ASSET_ALLOCATION_RATIO] = (
+            value_quote / pair_value_total
+        )
     return copy_entities.Account(
-        content=copy_module.deepcopy(reference_before.content),
+        content=content_after_fill,
         orders=new_orders,
         positions=[],
     )
@@ -251,33 +310,6 @@ def _orders_by_side_with_id(origins: list[dict], side: str) -> list[tuple[str, f
         ],
         key=lambda row: row[1],
     )
-
-
-def _simulate_client_buy_filled_in_dump(
-    dump: dict[str, typing.Any],
-    reference_buy_order_id: str,
-    *,
-    fill_price: float,
-    amount: float,
-) -> None:
-    client = dump["automation"]["client_exchange_account_elements"]
-    order_list = client["orders"]["open_orders"]
-    filtered: list = []
-    for order_wrapped in order_list:
-        origin = order_wrapped[trading_constants.STORAGE_ORIGIN_VALUE]
-        if str(origin[trading_enums.ExchangeConstantsOrderColumns.ID.value]) == str(reference_buy_order_id):
-            continue
-        filtered.append(order_wrapped)
-    client["orders"]["open_orders"] = filtered
-
-    portfolio = client["portfolio"]["content"]
-    btc = portfolio["BTC"]
-    usdc = portfolio["USDC"]
-    fill_quote = amount * fill_price
-    btc["total"] = float(decimal.Decimal(str(btc["total"])) + decimal.Decimal(str(amount)))
-    btc["available"] = float(decimal.Decimal(str(btc["available"])) + decimal.Decimal(str(amount)))
-    usdc["total"] = float(decimal.Decimal(str(usdc["total"])) - decimal.Decimal(str(fill_quote)))
-    usdc["available"] = float(decimal.Decimal(str(usdc["available"])) - decimal.Decimal(str(fill_quote)))
 
 
 @pytest.mark.asyncio
@@ -472,13 +504,13 @@ async def test_grid_copy_grace_aborted_when_second_orphan_exceeds_threshold(init
         for origin in final_origins
         if origin[trading_enums.ExchangeConstantsOrderColumns.SIDE.value] == trading_enums.TradeOrderSide.BUY.value
     }
-    assert "grid_ref_b0" not in buy_ids_final
-    assert "grid_ref_b1" not in buy_ids_final
+    assert len(buy_ids_final) == 0
     sell_ids = {
         origin[trading_enums.ExchangeConstantsOrderColumns.ID.value]
         for origin in final_origins
         if origin[trading_enums.ExchangeConstantsOrderColumns.SIDE.value] == trading_enums.TradeOrderSide.SELL.value
     }
+    assert len(sell_ids) == 4
     assert "grid_ref_s_fill_b0" in sell_ids
     assert "grid_ref_s_fill_b1" in sell_ids
 
@@ -486,17 +518,19 @@ async def test_grid_copy_grace_aborted_when_second_orphan_exceeds_threshold(init
 @pytest.mark.asyncio
 async def test_grid_copy_orphan_resolved_by_client_fill_without_rebalance_orders(init_action: dict):
     """
-    The highest mirrored buy (fills first vs the market) is removed from client open orders and
-    balances are adjusted as if the limit had filled (same end state the simulator would reach when
-    price trades through that bid).
+    After copying the reference grid, switch the embedded reference to R2 at the original close:
+    first automation run starts an open-order grace period (``open_orders_grace_period_started_at``
+    is set). Then lower BTC/USDC below the highest mirrored buy (midway between the two bid
+    rungs) so the client buy can fill; the second run clears grace (``started_at`` is None) and
+    mirrors the new reference sell without rebalance limit creations.
     """
     reference_market = "USDC"
-    highest_buy_price = float(grid_test.GRID_REFERENCE_LOWEST_BUY) + float(grid_test.increment)
+    simulated_close = {"value": float(grid_test._FIXED_BTC_USDC_CLOSE)}
     patched_fetch_tickers = grid_test.tickers_repository_fetch_tickers_btc_usdc_close_override(
-        lambda: grid_test._FIXED_BTC_USDC_CLOSE
+        lambda: simulated_close["value"]
     )
     patched_fetch_ohlcv = grid_test.fetch_ohlcv_side_effect_for_close_price(
-        lambda: grid_test._FIXED_BTC_USDC_CLOSE
+        lambda: simulated_close["value"]
     )
     reference_r1 = grid_reference_four_order_account()
     reference_r2 = reference_replace_highest_buy_with_sell(reference_r1)
@@ -525,15 +559,7 @@ async def test_grid_copy_orphan_resolved_by_client_fill_without_rebalance_orders
             await job.run()
         after_copy_r1 = job.dump()
 
-    _simulate_client_buy_filled_in_dump(
-        after_copy_r1,
-        "grid_ref_b1",
-        fill_price=highest_buy_price,
-        amount=ORDER_AMOUNT,
-    )
-
     update_state_reference_account_details(after_copy_r1, reference_market, reference_r2, settings)
-    after_copy_r1["automation"]["execution"]["copy_details"]["open_orders_grace_period_started_at"] = None
 
     trading_exchange_data.TickerUpdater.reset_cache()
     trading_exchange_data.OHLCVUpdater.reset_cache()
@@ -552,7 +578,48 @@ async def test_grid_copy_orphan_resolved_by_client_fill_without_rebalance_orders
     ):
         async with octobot_flow.AutomationJob(after_copy_r1, [], {}) as job:
             await job.run()
+        after_grace_started = job.dump()
+
+    grace_started_at = after_grace_started["automation"]["execution"]["copy_details"][
+        "open_orders_grace_period_started_at"
+    ]
+    assert grace_started_at is not None
+
+    highest_buy_price = d_order_price(
+        grid_test.GRID_REFERENCE_LOWEST_BUY + grid_test.increment
+    )
+    simulated_close["value"] = float(
+        highest_buy_price - grid_test.D_INCREMENT / decimal.Decimal("2")
+    )
+    update_state_reference_account_details(
+        after_grace_started, reference_market, reference_r2, settings
+    )
+
+    trading_exchange_data.TickerUpdater.reset_cache()
+    trading_exchange_data.OHLCVUpdater.reset_cache()
+
+    with (
+        mock.patch.object(
+            octobot_flow.repositories.exchange.TickersRepository,
+            "fetch_tickers",
+            new=patched_fetch_tickers,
+        ),
+        mock.patch.object(
+            octobot_flow.repositories.exchange.OhlcvRepository,
+            "fetch_ohlcv",
+            side_effect=patched_fetch_ohlcv,
+        ),
+    ):
+        async with octobot_flow.AutomationJob(after_grace_started, [], {}) as job:
+            await job.run()
         after_fill_sync = job.dump()
+
+    assert (
+        after_fill_sync["automation"]["execution"]["copy_details"][
+            "open_orders_grace_period_started_at"
+        ]
+        is None
+    )
 
     copy_result = None
     recall_name = re_callable_operator_mixin.ReCallingOperatorResult.__name__
@@ -585,9 +652,21 @@ async def test_grid_copy_orphan_resolved_by_client_fill_without_rebalance_orders
     assert len(limit_rebalance_like) == 0
 
     final_origins = _open_orders_origins(after_fill_sync)
+    side_col = trading_enums.ExchangeConstantsOrderColumns.SIDE.value
+    buy_origins = [
+        origin
+        for origin in final_origins
+        if origin[side_col] == trading_enums.TradeOrderSide.BUY.value
+    ]
+    sell_origins = [
+        origin
+        for origin in final_origins
+        if origin[side_col] == trading_enums.TradeOrderSide.SELL.value
+    ]
+    assert len(buy_origins) == 1
+    assert len(sell_origins) == 3
     sell_ids = {
         origin[trading_enums.ExchangeConstantsOrderColumns.ID.value]
-        for origin in final_origins
-        if origin[trading_enums.ExchangeConstantsOrderColumns.SIDE.value] == trading_enums.TradeOrderSide.SELL.value
+        for origin in sell_origins
     }
     assert "grid_ref_s_from_b1" in sell_ids

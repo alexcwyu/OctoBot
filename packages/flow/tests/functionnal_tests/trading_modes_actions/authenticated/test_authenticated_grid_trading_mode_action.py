@@ -22,6 +22,7 @@ from tests.functionnal_tests import (
     automation_state_dict,
     set_init_action_run_mode,
     AUTHENTICATED_TEST_GROUP,
+    d_order_price,
 )
 
 import tentacles.Trading.Mode.grid_trading_mode.grid_trading as grid_trading
@@ -32,13 +33,6 @@ D_INCREMENT = decimal.Decimal(str(increment))
 D_SPREAD = decimal.Decimal(str(spread))
 # Exchange price rounding (e.g. Binance tick) — ladder spacing is still flat increment/spread.
 _GRID_PRICE_TOLERANCE = decimal.Decimal("0.5")
-
-
-def d_order_price(value: typing.Union[int, float, decimal.Decimal]) -> decimal.Decimal:
-    """Exact decimal view of a stored order price (avoids float + int mix in assertions)."""
-    if isinstance(value, decimal.Decimal):
-        return value
-    return decimal.Decimal(str(value))
 
 
 grid_pair_settings = [
