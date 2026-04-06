@@ -1,4 +1,5 @@
 import decimal
+import time
 import typing
 
 import octobot_commons.constants as commons_constants
@@ -21,9 +22,12 @@ class OrdersSynchronizer:
         self,
         reference_account: copy_entities.Account,
         exchange_interface: copy_exchange.ExchangeInterface,
+        copy_settings: copy_entities.AccountCopySettings,
     ) -> None:
         self._reference_account = reference_account
         self._exchange_interface = exchange_interface
+        self._copy_settings = copy_settings
+        self._force_immediate_orphan_cancel_next: bool = False
 
     def _get_replicable_reference_orders(self) -> list[dict[str, typing.Any]]:
         replicable: list[dict[str, typing.Any]] = []
@@ -55,7 +59,7 @@ class OrdersSynchronizer:
 
     async def cancel_orders_pending_synchronization(
         self,
-        replicable_orders: typing.Optional[list[dict[str, typing.Any]]]
+        replicable_orders: typing.Optional[list[dict[str, typing.Any]]],
     ) -> int:
         """
         Cancel mirrored copier open orders that no longer match a replicable reference open order
@@ -63,6 +67,39 @@ class OrdersSynchronizer:
         replicable = replicable_orders or self._get_replicable_reference_orders()
         to_keep_ids = self._active_reference_order_ids(replicable)
         return await self._cancel_mirrored_orphan_orders(to_keep_ids)
+
+    def abort_mirrored_orphan_grace(self) -> None:
+        self._copy_settings.mirrored_orphan_grace_started_at = None
+        self._force_immediate_orphan_cancel_next = True
+
+    def is_mirrored_orphan_grace_blocking_rebalance(self) -> bool:
+        replicable = self._get_replicable_reference_orders()
+        active_reference_ids = self._active_reference_order_ids(replicable)
+        return self._is_grace_blocking_rebalance(active_reference_ids)
+
+    def _mirrored_orphan_open_orders(self, active_reference_ids: set) -> list[trading_personal_data.Order]:
+        return [
+            order
+            for order in self._exchange_interface.orders.get_open_orders()
+            if order.tag == copy_constants.MIRRORED_ORDER_TAG
+            and str(order.order_id) not in active_reference_ids
+        ]
+
+    def _is_grace_blocking_rebalance(self, active_reference_ids: set) -> bool:
+        settings = self._copy_settings
+        grace_seconds = settings.mirrored_orphan_cancel_grace_seconds
+        if grace_seconds <= 0:
+            return False
+        orphan_orders = self._mirrored_orphan_open_orders(active_reference_ids)
+        orphan_count = len(orphan_orders)
+        threshold = settings.mirrored_orphan_grace_abort_threshold
+        if orphan_count == 0 or orphan_count >= threshold:
+            return False
+        started_at = settings.mirrored_orphan_grace_started_at
+        now = time.time()
+        if started_at is None:
+            return True
+        return (now - started_at) < grace_seconds
 
     async def synchronize(self) -> list:
         """Align copier open orders with reference_account.orders (synched mirror rows)."""
@@ -96,13 +133,86 @@ class OrdersSynchronizer:
         )
         return created
 
-    async def _cancel_mirrored_orphan_orders(self, active_reference_ids: set) -> int:
+    async def _cancel_mirrored_orphan_orders(
+        self,
+        active_reference_ids: set,
+    ) -> int:
+        orphan_orders = self._mirrored_orphan_open_orders(active_reference_ids)
+        return await self._apply_grace_policy_and_cancel_mirrored_orphans(orphan_orders)
+
+    async def _apply_grace_policy_and_cancel_mirrored_orphans(
+        self,
+        orphan_orders: list[trading_personal_data.Order],
+    ) -> int:
+        """
+        When mirrored orphans exist (or none, to clear grace state): defer cancel during an active
+        grace window unless ``abort_mirrored_orphan_grace`` requested immediate cancel, grace is
+        disabled, orphan count reaches abort threshold, or wall-clock grace has elapsed.
+        """
+        settings = self._copy_settings
+        orphan_count = len(orphan_orders)
+
+        # No mirrored orphans: nothing to cancel; drop any in-memory grace start (episode over or idle).
+        if orphan_count == 0:
+            self._force_immediate_orphan_cancel_next = False
+            if settings.mirrored_orphan_grace_started_at is not None:
+                self._get_logger().info(
+                    "Mirrored open-order grace period ended early: no mirrored orphan orders remain "
+                    "(reference and copier mirrors aligned as expected). "
+                    "Downstream copy flow proceeds without grace deferral."
+                )
+            settings.mirrored_orphan_grace_started_at = None
+            return 0
+
+        grace_seconds = settings.mirrored_orphan_cancel_grace_seconds
+        threshold = settings.mirrored_orphan_grace_abort_threshold
+        # Explicit abort or grace disabled: cancel orphans immediately, do not start or extend grace.
+        if self._force_immediate_orphan_cancel_next or grace_seconds <= 0:
+            self._force_immediate_orphan_cancel_next = False
+            settings.mirrored_orphan_grace_started_at = None
+            return await self._cancel_mirrored_orphan_order_list(orphan_orders)
+
+        # Too many orphans at once: treat as runaway desync, cancel immediately (same as threshold abort).
+        if orphan_count >= threshold:
+            if settings.mirrored_orphan_grace_started_at:
+                self._get_logger().info(
+                    f"Mirrored orphan grace aborted: {orphan_count} orphan(s) >= threshold {threshold}"
+                )
+            settings.mirrored_orphan_grace_started_at = None
+            return await self._cancel_mirrored_orphan_order_list(orphan_orders)
+
+        now = time.time()
+        started_at = settings.mirrored_orphan_grace_started_at
+        # First observation of orphans this episode: begin wall-clock grace window, do not cancel yet.
+        if started_at is None:
+            settings.mirrored_orphan_grace_started_at = now
+            self._get_logger().info(
+                f"Mirrored orphan grace period started: deferring cancel of {orphan_count} "
+                f"orphan order(s) for up to {grace_seconds}s"
+            )
+            return 0
+        # Still inside grace window: wait for copier fills / alignment.
+        if (now - started_at) < grace_seconds:
+            remaining_seconds = grace_seconds - (now - started_at)
+            self._get_logger().info(
+                f"Mirrored orphan cancel deferred: {orphan_count} orphan(s), "
+                f"{remaining_seconds:.1f}s grace remaining"
+            )
+            return 0
+
+        # Grace window finished: cancel orphans that are still open.
+        settings.mirrored_orphan_grace_started_at = None
+        self._get_logger().info(
+            f"Mirrored orphan grace elapsed after {grace_seconds}s: cancelling {orphan_count} orphan(s)"
+        )
+        return await self._cancel_mirrored_orphan_order_list(orphan_orders)
+
+    async def _cancel_mirrored_orphan_order_list(
+        self,
+        orphan_orders: list[trading_personal_data.Order],
+    ) -> int:
         cancelled_count = 0
-        for order in self._exchange_interface.orders.get_open_orders():
-            if order.tag != copy_constants.MIRRORED_ORDER_TAG:
-                continue
-            if str(order.order_id) in active_reference_ids:
-                continue
+        for order in orphan_orders:
             try:
                 await self._exchange_interface.orders.cancel_order(order)
                 cancelled_count += 1
