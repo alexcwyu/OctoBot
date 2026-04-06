@@ -1,5 +1,8 @@
 # OctoBot Documentation
 
+> **Last Updated**: 2026-04-06T16:25:30Z  \
+> **Git Hash**: `d3dff7b7`
+
 ## Project Overview
 
 OctoBot is a modular, open-source cryptocurrency trading bot developed by [Drakkar-Software](https://github.com/Drakkar-Software). Built in Python, it uses a plugin architecture called **Tentacles** to provide extensible trading strategies, evaluators, and exchange integrations. OctoBot supports both live trading and backtesting with a focus on automation, community-driven strategies, and multi-exchange support.
