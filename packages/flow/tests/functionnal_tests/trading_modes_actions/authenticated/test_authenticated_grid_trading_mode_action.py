@@ -131,7 +131,7 @@ async def _cancel_all_btc_usdc_orders_for_test(automation_dump: dict) -> None:
         ]
     )
     async with octobot_flow.AutomationJob(automation_dump, [], {}) as automations_job:
-        automations_job.automation_state.update_automation_actions(cancel_grid_orders_actions)
+        automations_job.automation_state.upsert_automation_actions(cancel_grid_orders_actions)
         await automations_job.run()
     cancel_action = automations_job.automation_state.automation.actions_dag.actions[-1]
     assert isinstance(cancel_action, octobot_flow.entities.AbstractActionDetails)

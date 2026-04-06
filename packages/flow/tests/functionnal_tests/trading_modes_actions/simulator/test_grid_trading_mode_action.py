@@ -405,8 +405,8 @@ async def test_simulator_grid_init_from_empty_state(init_action: dict, run_mode:
     
 @pytest.mark.asyncio
 @pytest.mark.parametrize("run_mode", [
-        octobot_flow.enums.AutomationRunMode.UPDATE_CLIENT_EXCHANGE_ACCOUNT_ONLY,
-        octobot_flow.enums.AutomationRunMode.UPDATE_REFERENCE_EXCHANGE_ACCOUNT_AND_COPY,
+    octobot_flow.enums.AutomationRunMode.UPDATE_CLIENT_EXCHANGE_ACCOUNT_ONLY,
+    octobot_flow.enums.AutomationRunMode.UPDATE_REFERENCE_EXCHANGE_ACCOUNT_AND_COPY,
 ])
 async def test_simulator_grid_init_and_fill_sell_order(init_action: dict, run_mode: octobot_flow.enums.AutomationRunMode):
     """
