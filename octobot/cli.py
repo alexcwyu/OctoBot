@@ -18,38 +18,48 @@ import os
 import sys
 import multiprocessing
 import asyncio
+import traceback
 
 import packaging.version as packaging_version
 
-import octobot_commons.os_util as os_util
-import octobot_commons.logging as logging
-import octobot_commons.configuration as configuration
-import octobot_commons.profiles as profiles
-import octobot_commons.authentication as authentication
-import octobot_commons.constants as common_constants
-import octobot_commons.errors as errors
+try:
+    import octobot_commons.os_util as os_util
+    import octobot_commons.logging as logging
+    import octobot_commons.configuration as configuration
+    import octobot_commons.profiles as profiles
+    import octobot_commons.authentication as authentication
+    import octobot_commons.constants as common_constants
+    import octobot_commons.errors as errors
 
-import octobot_services.api as service_api
+    import octobot_services.api as service_api
 
-import octobot_tentacles_manager.api as tentacles_manager_api
-import octobot_tentacles_manager.cli as tentacles_manager_cli
-import octobot_tentacles_manager.constants as tentacles_manager_constants
+    import octobot_tentacles_manager.api as tentacles_manager_api
+    import octobot_tentacles_manager.cli as tentacles_manager_cli
+    import octobot_tentacles_manager.constants as tentacles_manager_constants
 
-# make tentacles importable
-sys.path.append(os.path.dirname(sys.executable))
+    # make tentacles importable
+    sys.path.append(os.path.dirname(sys.executable))
 
-import octobot.octobot as octobot_class
-import octobot.commands as commands
-import octobot.configuration_manager as configuration_manager
-import octobot.octobot_backtesting_factory as octobot_backtesting
-import octobot.constants as constants
-import octobot.enums as enums
-import octobot.disclaimer as disclaimer
-import octobot.logger as octobot_logger
-import octobot.community as octobot_community
-import octobot.community.errors
-import octobot.limits as limits
-
+    import octobot.octobot as octobot_class
+    import octobot.octobot_node as octobot_node_class
+    import octobot.commands as commands
+    import octobot.configuration_manager as configuration_manager
+    import octobot.octobot_backtesting_factory as octobot_backtesting
+    import octobot.constants as constants
+    import octobot.enums as enums
+    import octobot.disclaimer as disclaimer
+    import octobot.logger as octobot_logger
+    import octobot.community as octobot_community
+    import octobot.community.errors
+    import octobot.limits as limits
+except ImportError as err:
+    traceback.print_exc()
+    print(
+        "Error importing OctoBot dependencies, please install OctoBot with the [full] option. "
+        "Example: \"pip install -U octobot[full]\" "
+        "(Error: {0}: {1})".format(err.__class__.__name__, str(err)), file=sys.stderr
+    )
+    sys.exit(-1)
 
 def update_config_with_args(starting_args, config: configuration.Configuration, logger):
     try:
@@ -234,16 +244,18 @@ async def _get_authenticated_community_if_possible(config, logger):
 
 
 async def _async_load_community_data(community_auth, config, logger, is_first_startup):
-    if constants.IS_CLOUD_ENV and is_first_startup:
-        if not community_auth.is_logged_in():
-            raise authentication.FailedAuthentication(
-                "Impossible to load community data without an authenticated user account"
-            )
-        # auto config
-        if constants.USE_FETCHED_BOT_CONFIG:
-            await _apply_db_bot_config(logger, config, community_auth)
-        else:
-            await _apply_community_startup_info_to_config(logger, config, community_auth)
+    if constants.IS_CLOUD_ENV:
+        if is_first_startup:
+            if not community_auth.is_logged_in():
+                raise authentication.FailedAuthentication(
+                    "Impossible to load community data without an authenticated user account"
+                )
+            # auto config
+            if constants.USE_FETCHED_BOT_CONFIG:
+                await _apply_db_bot_config(logger, config, community_auth)
+            else:
+                await _apply_community_startup_info_to_config(logger, config, community_auth)
+        await community_auth.community_bot.on_started_bot()
 
 
 def _apply_forced_configs(community_auth, logger, config, is_first_startup):
@@ -306,7 +318,9 @@ def start_octobot(args, default_config_file=None):
             print(constants.LONG_VERSION)
             return
 
-        logger = octobot_logger.init_logger()
+        # log folder can be overridden by the LOGS_FOLDER environment variable, 
+        # useful to run multiple bots from the same folder
+        logger = octobot_logger.init_logger(logs_folder=constants.LOGS_FOLDER)
         startup_messages = []
 
         # Version
@@ -355,11 +369,16 @@ def start_octobot(args, default_config_file=None):
         startup_messages += limits.apply_config_limits(config)
 
         # create OctoBot instance
+        distribution = configuration_manager.get_distribution(config.config)
         if args.backtesting:
             bot = octobot_backtesting.OctoBotBacktestingFactory(config,
                                                                 run_on_common_part_only=not args.whole_data_range,
                                                                 enable_join_timeout=args.enable_backtesting_timeout,
                                                                 enable_logs=not args.no_logs)
+        elif distribution is enums.OctoBotDistribution.NODE:
+            bot = octobot_node_class.OctoBotNode(config, community_authenticator=community_auth,
+                                        reset_trading_history=args.reset_trading_history,
+                                        startup_messages=startup_messages)
         else:
             bot = octobot_class.OctoBot(config, community_authenticator=community_auth,
                                         reset_trading_history=args.reset_trading_history,
@@ -489,6 +508,80 @@ def octobot_parser(parser, default_config_file=None):
                                                                'tentacles manager help.')
     tentacles_manager_cli.register_tentacles_manager_arguments(tentacles_parser)
     tentacles_parser.set_defaults(func=commands.call_tentacles_manager)
+
+    # node manager
+    node_parser = subparsers.add_parser("node", help='Start OctoBot in node mode.\n'
+                                                     'Use "node --help" to get the '
+                                                     'node manager help.')
+    _register_node_arguments(node_parser)
+    node_parser.set_defaults(func=lambda args: start_node(args, default_config_file))
+
+    # sync server
+    sync_parser = subparsers.add_parser("sync", help='Start OctoBot Sync server.\n'
+                                                     'Use "sync --help" to get the '
+                                                     'sync server help.')
+    _register_sync_arguments(sync_parser)
+    sync_parser.set_defaults(func=lambda args: start_sync(args))
+
+
+def _register_node_arguments(parser):
+    parser.add_argument(
+        '--host',
+        help='Host to bind the server to.',
+        type=str,
+        default=None
+    )
+    parser.add_argument(
+        '--port',
+        help='Port to bind the server to (default: 8000).',
+        type=int,
+        default=None
+    )
+    parser.add_argument(
+        '--master',
+        help='Enable master node mode (schedules and executes tasks, UI enabled by default).',
+        action='store_true'
+    )
+    parser.add_argument(
+        '--consumer_only',
+        help='Start OctoBot Node in consumer only mode, in case the master node is not enough (requires a postgres database).',
+        type=bool,
+        default=False
+    )
+
+
+def start_node(args, default_config_file=None):
+    import octobot_node.config
+
+    constants.FORCED_DISTRIBUTION = enums.OctoBotDistribution.NODE.value
+    if args.master:
+        octobot_node.config.settings.IS_MASTER_MODE = True
+    octobot_node.config.settings.CONSUMER_ONLY = args.consumer_only
+    start_octobot(args, default_config_file)
+
+
+def _register_sync_arguments(parser):
+    parser.add_argument(
+        '--host',
+        help='Host to bind the sync server to (default: 0.0.0.0).',
+        type=str,
+        default="0.0.0.0"
+    )
+    parser.add_argument(
+        '--port',
+        help='Port to bind the sync server to (default: 3000).',
+        type=int,
+        default=None
+    )
+
+
+def start_sync(args):
+    import octobot_sync.server
+
+    octobot_sync.server.start_sync_server(
+        host=args.host,
+        port=args.port,
+    )
 
 
 def start_background_octobot_with_args(

@@ -85,6 +85,8 @@ class BotDeploymentStatus(enum.Enum):
 class ProductSubscriptionDesiredStatus(enum.Enum):
     ACTIVE = 'active'
     CANCELED = "canceled"
+    RESTARTING = "restarting"
+    STOPPING = "stopping"
 
 
 class BotDeploymentErrorsStatuses(enum.Enum):
@@ -99,7 +101,7 @@ class BotDeploymentErrorsStatuses(enum.Enum):
     TOO_MANY_ORDERS_TO_EXECUTE_STRATEGY = "too_many_orders_to_execute_strategy"
     MISSING_CONFIG = "missing_config"
     EXPIRED_BOT = "expired_bot"
-    MAX_SIMULATORS_REACHED = "max_simulators_reached"
+    STOP_CONDITION_TRIGGERED = "stop_condition_triggered"
 
 
 class ExchangeAccountStatuses(enum.Enum):
@@ -128,8 +130,9 @@ class BotLogType(enum.Enum):
     CLOSED_POSITION = "closed_position"
     UNSUPPORTED_HEDGE_POSITION = "unsupported_hedge_position"
     NOTHING_TO_DO = "nothing_to_do"
-    BOT_RESTARTED = "bot_restarted"
+    BOT_STARTED = "bot_started"
     BOT_STOPPED = "bot_stopped"
+    BOT_RESTARTED = "bot_restarted"
     MISSING_MINIMAL_FUNDS = "missing_minimal_funds"
     CHANGED_PRODUCT = "changed_product"
     IMPOSSIBLE_TO_CREATE_ALL_REQUIRED_ORDERS = "impossible_to_create_all_required_orders"

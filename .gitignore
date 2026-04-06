@@ -106,6 +106,7 @@ ENV/
 
 # Tentacles manager temporary files
 octobot/creator_temp/
+packages/metadata.yaml
 creator_temp/
 
 # Data
@@ -113,17 +114,20 @@ backtesting/collector/data/
 backtesting/data/
 
 # Tentacles
+output
 tentacles
 downloaded_temp_tentacles
+!packages/tentacles
 
 # User config
-user/
+user
 temp_config.json
 
 *.csv
 *.ods
 *.c
 *.h
+.DS_Store
 
 # OctoBot logs
 logs
@@ -136,3 +140,27 @@ letsencrypt/
 
 # dev env
 .env
+
+# Ansible decrypted temp files, SSH keys, and production collections config
+infra/**/*.dec.yml
+infra/**/.ssh/
+
+# Ansible Galaxy installed roles (installed via requirements.yml)
+infra/**/roles/geerlingguy.*/
+
+# Pants build system
+/.pants.d/
+/dist/
+
+# bin
+nltk_data/
+installer/
+
+# resources watcher
+*.dump
+
+# node
+*.db*
+
+# ai
+analysis/

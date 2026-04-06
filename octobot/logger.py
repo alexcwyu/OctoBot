@@ -14,7 +14,7 @@
 #  You should have received a copy of the GNU General Public
 #  License along with OctoBot. If not, see <https://www.gnu.org/licenses/>.
 import logging
-import logging.config as config
+import logging.config
 import os
 import shutil
 import traceback
@@ -34,6 +34,7 @@ import octobot_evaluators.evaluators.channel as evaluator_channels
 import octobot_trading.exchange_channel as exchanges_channel
 import octobot_trading.enums as trading_enums
 import octobot_trading.api as trading_api
+import octobot_trading.personal_data as personal_data
 
 import octobot.constants as constants
 import octobot.configuration_manager as configuration_manager
@@ -47,11 +48,11 @@ def _log_uncaught_exceptions(ex_cls, ex, tb):
     logging.exception("{0}: {1}".format(ex_cls, ex))
 
 
-def init_logger():
+def init_logger(logs_folder: str = constants.DEFAULT_LOGS_FOLDER):
     try:
-        if not os.path.exists(constants.LOGS_FOLDER):
-            os.mkdir(constants.LOGS_FOLDER)
-        _load_logger_config()
+        if not os.path.exists(logs_folder):
+            os.mkdir(logs_folder)
+        _load_logger_config(logs_folder)
         init_bot_channel_logger()
     except KeyError:
         print(
@@ -83,23 +84,34 @@ def init_bot_channel_logger():
     BOT_CHANNEL_LOGGER = common_logging.get_logger("OctoBot Channel")
 
 
-def _load_logger_config():
+def _load_logger_config(logs_folder: str):
     try:
         # use local logging file to allow users to customize the log level
         if not os.path.isfile(configuration_manager.get_user_local_config_file()):
             if not os.path.exists(commons_constants.USER_FOLDER):
                 os.mkdir(commons_constants.USER_FOLDER)
             shutil.copyfile(constants.LOGGING_CONFIG_FILE, configuration_manager.get_user_local_config_file())
-        config.fileConfig(configuration_manager.get_user_local_config_file())
+        logging.config.fileConfig(configuration_manager.get_user_local_config_file())
+        logger = logging.getLogger("Logging Configuration")
+        logger.info(f"Saving logs in '{os.path.join(os.getcwd(), logs_folder)}' folder")
+        if logs_folder != constants.DEFAULT_LOGS_FOLDER:
+            _set_log_folder(os.path.join(os.getcwd(), logs_folder))
         if constants.FORCED_LOG_LEVEL:
-            logging.getLogger("Logging Configuration").info(
+            logger.info(
                 f"Applying forced logging level {constants.FORCED_LOG_LEVEL}"
             )
             common_logging.set_global_logger_level(constants.FORCED_LOG_LEVEL)
     except Exception as ex:
-        config.fileConfig(constants.LOGGING_CONFIG_FILE)
-        logging.getLogger("Logging Configuration").warning(f"Impossible to initialize local logging configuration file,"
-                                                           f" using default one. {ex}")
+        logging.config.fileConfig(constants.LOGGING_CONFIG_FILE)
+        logging.getLogger("Logging Configuration").warning(
+            f"Impossible to initialize local logging configuration file, using default one. {ex}"
+        )
+
+
+def _set_log_folder(logs_folder: str):
+    for handler in logging.getLogger().handlers:
+        if isinstance(handler, logging.FileHandler):
+            handler.baseFilename = os.path.join(logs_folder, os.path.basename(handler.baseFilename))
 
 
 async def init_exchange_chan_logger(exchange_id):
@@ -281,6 +293,14 @@ async def mark_price_callback(
     )
 
 
+async def markets_callback(
+        exchange: str, exchange_id: str, markets
+):
+    BOT_CHANNEL_LOGGER.debug(
+        f"MARKETS : EXCHANGE = {exchange} || MARKET RELOADED"
+    )
+
+
 def _filter_balance(balance: dict):
     if not balance:
         return balance, 0
@@ -293,6 +313,14 @@ def _filter_balance(balance: dict):
         }
         removed_count = len(balance) - len(filtered_balance)
         return trading_api.parse_decimal_portfolio(filtered_balance, False), removed_count
+    elif isinstance(first_value, personal_data.Asset):
+        filtered_balance = {
+            key: values
+            for key, values in balance.items()
+            if values.total
+        }
+        removed_count = len(balance) - len(filtered_balance)
+        return filtered_balance, removed_count
     return balance, 0
 
 
@@ -382,6 +410,8 @@ async def matrix_callback(
         evaluator_type,
         eval_note,
         eval_note_type,
+        eval_note_description,
+        eval_note_metadata,
         exchange_name,
         cryptocurrency,
         symbol,
@@ -392,6 +422,7 @@ async def matrix_callback(
         f"EVALUATOR = {evaluator_name} || EVALUATOR_TYPE = {evaluator_type} || "
         f"CRYPTOCURRENCY = {cryptocurrency} || SYMBOL = {symbol} || TF = {time_frame} "
         f"|| NOTE = {eval_note} [MATRIX id = {matrix_id}] "
+        f"|| DESCRIPTION = {eval_note_description if eval_note_description else ''}"
     )
 
 

@@ -21,9 +21,12 @@ from octobot.community.errors import (
     BotError,
     BotNotFoundError,
     NoBotDeviceError,
+    MissingDeploymentError,
+    MissingProductsSubscriptionError,
 )
 from octobot.community import models
 from octobot.community.models import (
+    BotLogData,
     CommunityUserAccount,
     CommunityFields,
     CommunityTentaclesPackage,
@@ -40,6 +43,7 @@ from octobot.community.models import (
     get_master_and_nested_product_slug_from_profile_name,
     get_tentacles_data_exchange_config,
     USD_LIKE,
+    from_community_order_to_trading_order,
 )
 from octobot.community.supabase_backend import (
     SyncConfigurationStorage,
@@ -89,6 +93,8 @@ from octobot.community.feeds import (
 from octobot.community.errors_upload import (
     init_sentry_tracker,
     flush_tracker,
+    upload_error,
+    share_logs,
 )
 from octobot.community.identifiers_provider import (
     IdentifiersProvider,
@@ -98,6 +104,9 @@ from octobot.community.history_backend import (
     HistoricalBackendClient,
     ClickhouseHistoricalBackendClient,
     IcebergHistoricalBackendClient,
+)
+from octobot.community.community_bot import (
+    CommunityBot,
 )
 
 __all__ = [
@@ -130,6 +139,7 @@ __all__ = [
     "get_master_and_nested_product_slug_from_profile_name",
     "get_tentacles_data_exchange_config",
     "USD_LIKE",
+    "from_community_order_to_trading_order",
     "SyncConfigurationStorage",
     "ASyncConfigurationStorage",
     "AuthenticatedAsyncSupabaseClient",
@@ -154,4 +164,9 @@ __all__ = [
     "HistoricalBackendClient",
     "ClickhouseHistoricalBackendClient",
     "IcebergHistoricalBackendClient",
+    "CommunityBot",
+    "MissingDeploymentError",
+    "MissingProductsSubscriptionError",
+    "upload_error",
+    "share_logs",
 ]

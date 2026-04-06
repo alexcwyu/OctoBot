@@ -18,6 +18,10 @@ from octobot.community.models import community_user_account
 from octobot.community.models.community_user_account import (
     CommunityUserAccount,
 )
+from octobot.community.models import bot_log
+from octobot.community.models.bot_log import (
+    BotLogData,
+)
 from octobot.community.models import community_fields
 from octobot.community.models.community_fields import (
     CommunityFields,
@@ -57,6 +61,8 @@ from octobot.community.models.formatters import (
     to_community_exchange_internal_name,
     get_tentacles_data_exchange_config,
     USD_LIKE,
+    get_deployment_error_status_from_stop_reason,
+    from_community_order_to_trading_order,
 )
 from octobot.community.models.community_public_data import (
     CommunityPublicData
@@ -74,6 +80,7 @@ from octobot.community.models.executed_product_details import (
 __all__ = [
     "CommunityUserAccount",
     "CommunityFields",
+    "BotLogData",
     "CommunityTentaclesPackage",
     "CommunitySupports",
     "CommunityDonation",
@@ -93,10 +100,12 @@ __all__ = [
     "to_community_exchange_internal_name",
     "get_tentacles_data_exchange_config",
     "USD_LIKE",
+    "get_deployment_error_status_from_stop_reason",
     "CommunityPublicData",
     "StrategyData",
     "is_custom_category",
     "get_custom_strategy_name",
     "is_custom_strategy_profile",
     "ExecutedProductDetails",
+    "from_community_order_to_trading_order",
 ]
