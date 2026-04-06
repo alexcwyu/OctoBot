@@ -29,6 +29,9 @@ class AccountCopySettings(commons_dataclasses.MinimizableDataclass):
     # Defer cancelling mirrored copier orders when reference open orders disappeared (wall time.time)
     mirrored_orphan_cancel_grace_seconds: float = float(copy_constants.FILL_ORDER_TIMEOUT)
     mirrored_orphan_grace_abort_threshold: int = 2
+    mirrored_orphan_grace_pair_ratio_max_delta: decimal.Decimal = (
+        copy_constants.DEFAULT_MIRRORED_ORPHAN_GRACE_PAIR_RATIO_MAX_DELTA
+    )
     mirrored_orphan_grace_started_at: typing.Optional[float] = None
 
     def __post_init__(self):
@@ -42,3 +45,7 @@ class AccountCopySettings(commons_dataclasses.MinimizableDataclass):
             self.reference_market_ratio = decimal.Decimal(str(self.reference_market_ratio))
         if self.min_order_size_margin:
             self.min_order_size_margin = decimal.Decimal(str(self.min_order_size_margin))
+        if self.mirrored_orphan_grace_pair_ratio_max_delta:
+            self.mirrored_orphan_grace_pair_ratio_max_delta = decimal.Decimal(
+                str(self.mirrored_orphan_grace_pair_ratio_max_delta)
+            )

@@ -57,5 +57,8 @@ def create_account_copy_settings(
     return copy_entities.AccountCopySettings(
         mirrored_orphan_cancel_grace_seconds=grace_seconds,
         mirrored_orphan_grace_abort_threshold=threshold,
+        mirrored_orphan_grace_pair_ratio_max_delta=(
+            flow_constants.DEFAULT_COPY_TRADING_ORPHAN_GRACE_PAIR_RATIO_MAX_DELTA
+        ),
         mirrored_orphan_grace_started_at=copy_details.open_orders_grace_period_started_at,
     )
