@@ -7,7 +7,7 @@ name = "octobot"
 version = "2.0.14"
 description = "Cryptocurrencies alert / trading bot"
 readme = "README.md"
-requires-python = ">=3.10,<3.12"
+requires-python = ">=3.13"
 license = {text = "GPL-3.0"}
 authors = [
     {name = "Drakkar-Software", email = "contact@drakkar.software"},
@@ -19,8 +19,7 @@ classifiers = [
     "Intended Audience :: Financial and Insurance Industry",
     "License :: OSI Approved :: GNU General Public License v3 (GPLv3)",
     "Programming Language :: Python :: 3",
-    "Programming Language :: Python :: 3.10",
-    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.13",
     "Operating System :: OS Independent",
 ]
 dependencies = [
@@ -68,10 +67,13 @@ dependencies = [
     "protobuf==5.29.5",
 ]
 
-[project.optional-dependencies]
+[dependency-groups]
 dev = [
-    "pytest>=8.3.4",
+    "pytest>=9.0",
 ]
+
+[tool.uv]
+default-groups = ["dev"]
 
 [project.urls]
 Homepage = "https://github.com/Drakkar-Software/OctoBot"
@@ -80,19 +82,18 @@ Repository = "https://github.com/Drakkar-Software/OctoBot"
 "Bug Tracker" = "https://github.com/Drakkar-Software/OctoBot/issues"
 
 [project.scripts]
-octobot = "start:main"
+octobot = "octobot.cli:main"
 
 [tool.hatch.build.targets.wheel]
-packages = ["octobot"]
-include = ["start.py"]
+packages = ["src/octobot"]
+include = ["src/start.py"]
 
 [tool.hatch.build.targets.sdist]
 include = [
-    "octobot/**",
-    "start.py",
+    "src/octobot/**",
+    "src/start.py",
     "README.md",
     "LICENSE",
-    "requirements.txt",
 ]
 exclude = [
     "tests/**",
@@ -102,7 +103,34 @@ exclude = [
 
 [tool.hatch.build]
 include = [
-    "octobot/config/*",
-    "octobot/strategy_optimizer/optimizer_data_files/*",
+    "src/octobot/config/*",
+    "src/octobot/strategy_optimizer/optimizer_data_files/*",
 ]
+
+[tool.ruff]
+line-length = 88
+target-version = "py313"
+
+[tool.ruff.lint]
+select = ["E", "W", "F", "I", "UP", "B", "SIM", "C4", "RUF", "PERF", "TC", "PTH"]
+ignore = ["E501"]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/*" = ["S101"]
+"__init__.py" = ["F401"]
+
+[tool.ruff.lint.isort]
+known-first-party = ["octobot"]
+
+[tool.pyright]
+pythonVersion = "3.13"
+typeCheckingMode = "basic"
+
+[tool.pytest.ini_options]
+minversion = "9.0"
+addopts = ["-ra", "-q", "--strict-markers", "--import-mode=importlib"]
+testpaths = ["tests"]
+pythonpath = ["src"]
+xfail_strict = true
+filterwarnings = ["error"]
 
