@@ -25,8 +25,13 @@ class CommunityFeedType(enum.Enum):
 
 class CommunityHistoricalBackendType(enum.Enum):
     Clickhouse = "Clickhouse"
-    Iceberg = "Iceberg"
-    DEFAULT = Iceberg
+    DEFAULT = Clickhouse
+
+
+class WalletStorageBackend(str, enum.Enum):
+    CONFIG = "config"
+    FILE = "file"
+    ENV = "env"
 
 
 class CommunityEnvironments(enum.Enum):

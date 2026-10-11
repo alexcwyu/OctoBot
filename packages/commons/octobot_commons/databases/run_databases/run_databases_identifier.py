@@ -19,6 +19,7 @@ import shutil
 
 import octobot_commons.databases.document_database_adaptors as adaptors
 import octobot_commons.constants as constants
+import octobot_commons.user_root_folder_provider as user_root_folder_provider
 import octobot_commons.enums as enums
 import octobot_commons.symbols.symbol_util as symbol_util
 
@@ -47,7 +48,9 @@ class RunDatabasesIdentifier:
         )
         self.enable_storage = enable_storage
         self.context = context
-        self.data_path = self._merge_parts(constants.USER_FOLDER, constants.DATA_FOLDER)
+        self.data_path = self._merge_parts(
+            user_root_folder_provider.get_user_root_folder(), constants.DATA_FOLDER
+        )
         self.base_path = self._merge_parts(self.data_path, self.tentacle_class)
         self.suffix = (
             self.database_adaptor.get_db_file_ext()
@@ -190,15 +193,10 @@ class RunDatabasesIdentifier:
         :return: the name of the only exchange the backtesting happened on if it only ran on a single exchange,
         None otherwise
         """
-        ignored_folders = [enums.RunDatabases.LIVE.value]
-        try:
-            import octobot_tentacles_manager.constants as tentacles_manager_constants
-
-            ignored_folders.append(
-                tentacles_manager_constants.TENTACLES_SPECIFIC_CONFIG_FOLDER
-            )
-        except ImportError:
-            pass
+        ignored_folders = [
+            enums.RunDatabases.LIVE.value,
+            constants.TENTACLES_SPECIFIC_CONFIG_FOLDER,
+        ]
         return await self.database_adaptor.get_single_sub_identifier(
             self._base_folder(), ignored_folders
         )

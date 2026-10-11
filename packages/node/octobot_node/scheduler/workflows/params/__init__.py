@@ -17,12 +17,36 @@ from .base_params import (
     ProgressStatus,
 )
 from .automation_workflow_params import (
+    AutomationWorkflowActionUpdate,
+    AutomationWorkflowExecutionResultCallback,
     AutomationWorkflowInputs,
     AutomationWorkflowIterationResult,
+    AutomationWorkflowOutput,
+    AutomationWorkflowSignalExecutionResult,
+    PriorityActionExecutionResult,
+)
+from .user_action_workflow_params import (
+    UserActionWorkflowInputs,
+    UserActionWorkflowOutput,
+    UserActionExecutionResult,
+    SignalExecutionAwaitContext,
+)
+from .portfolio_history_workflow_params import (
+    PortfolioHistoryCollectionParams,
 )
 
 __all__ = [
+    "AutomationWorkflowActionUpdate",
+    "AutomationWorkflowExecutionResultCallback",
     "AutomationWorkflowInputs",
     "AutomationWorkflowIterationResult",
+    "AutomationWorkflowOutput",
+    "AutomationWorkflowSignalExecutionResult",
+    "PriorityActionExecutionResult",
+    "PortfolioHistoryCollectionParams",
     "ProgressStatus",
+    "UserActionWorkflowInputs",
+    "UserActionExecutionResult",
+    "SignalExecutionAwaitContext",
+    "UserActionWorkflowOutput",
 ]

@@ -19,6 +19,7 @@ import collections
 import dataclasses
 import decimal
 import typing
+import contextlib
 
 import octobot_commons.enums as commons_enums
 import octobot_commons.constants as common_constants
@@ -477,9 +478,17 @@ class MarketMakingTradingModeProducer(trading_modes.AbstractTradingModeProducer)
     REFERENCE_PRICE_INIT_DELAY = 60 # allow 60s before logging missing reference prices as error
     ORDERS_DESC = "market making"
 
+    @staticmethod
+    def _is_usable_reference_price(reference_price: decimal.Decimal) -> bool:
+        return (
+            bool(reference_price)
+            and not reference_price.is_nan()
+            and reference_price > trading_constants.ZERO
+        )
 
     def __init__(self, channel, config, trading_mode, exchange_manager):
         super().__init__(channel, config, trading_mode, exchange_manager)
+        self.trading_mode: MarketMakingTradingMode = typing.cast(MarketMakingTradingMode, trading_mode)
         # no state for this evaluator: always neutral
         self.state = trading_enums.EvaluatorStates.NEUTRAL
 
@@ -498,6 +507,7 @@ class MarketMakingTradingModeProducer(trading_modes.AbstractTradingModeProducer)
         self.last_target_buy_orders_count: int = 0
         self.last_target_sell_orders_count: int = 0
         self.subscribed_requirements_exchange_ids: set[str] = set()
+        self.waiting_for_dependencies_init: bool = False
 
         try:
             self._load_symbol_trading_config()
@@ -560,7 +570,9 @@ class MarketMakingTradingModeProducer(trading_modes.AbstractTradingModeProducer)
             self.logger.debug(f"Initializing orders creation")
             await self._ensure_market_making_orders_and_reschedule()
 
-    async def set_final_eval(self, matrix_id: str, cryptocurrency: str, symbol: str, time_frame, trigger_source: str):
+    async def set_final_eval(
+        self, matrix_id: str, cryptocurrency: str, symbol: str, time_frame, trigger_source: str,
+    ):
         # nothing to do: this is not a strategy related trading mode
         pass
 
@@ -633,7 +645,7 @@ class MarketMakingTradingModeProducer(trading_modes.AbstractTradingModeProducer)
                     ):
                         self.is_first_execution = False
                         self._started_at = self.exchange_manager.exchange.get_exchange_current_time()
-                        return True
+                        return trading_personal_data.TradesUpdater
                 except trading_errors.TraderDisabledError as err:
                     current_time = self.exchange_manager.exchange.get_exchange_current_time()
                     current_minute_ts = current_time - current_time % (5 * common_constants.MINUTE_TO_SECONDS)
@@ -671,7 +683,7 @@ class MarketMakingTradingModeProducer(trading_modes.AbstractTradingModeProducer)
     ):
         # 1. get price from external source
         reference_price = await self._get_reference_price()
-        if not reference_price:
+        if not self._is_usable_reference_price(reference_price):
             method = self.logger.info if self.is_first_execution else self.logger.error
             method(
                 f"Skipped trigger: can't compute {self.symbol} reference price for"
@@ -771,7 +783,7 @@ class MarketMakingTradingModeProducer(trading_modes.AbstractTradingModeProducer)
         if require_data_refresh:
             # update reference price in case it changed
             reference_price = await self._get_reference_price()
-            if not reference_price:
+            if not self._is_usable_reference_price(reference_price):
                 self.logger.error(
                     f"Can't compute reference price for {self.exchange_manager.exchange_name}: after waiting "
                     f"for previous plan processing: {reference_price=}"
@@ -1262,6 +1274,9 @@ class MarketMakingTradingModeProducer(trading_modes.AbstractTradingModeProducer)
         return False
 
     async def on_new_reference_price(self, reference_price: decimal.Decimal) -> bool:
+        """
+        Returns True if market making orders should be updated.
+        """
         trigger = False
         open_orders = self.get_market_making_orders()
         buy_orders = [
@@ -1290,7 +1305,8 @@ class MarketMakingTradingModeProducer(trading_modes.AbstractTradingModeProducer)
 
     async def _on_reference_price_update(self):
         trigger = False
-        if reference_price := await self._get_reference_price():
+        reference_price = await self._get_reference_price()
+        if self._is_usable_reference_price(reference_price):
             trigger = await self.on_new_reference_price(reference_price)
         if trigger:
             await self._ensure_market_making_orders(f"reference price update: {float(reference_price)}")
@@ -1316,7 +1332,21 @@ class MarketMakingTradingModeProducer(trading_modes.AbstractTradingModeProducer)
         :param mark_price: updated mark price
         :return: None
         """
+        if self.waiting_for_dependencies_init:
+            self.logger.info(
+                f"Skipping reference price update for {self.symbol} [{self.exchange_manager.exchange_name}]: "
+                f"waiting for dependencies initialization"
+            )
+            return
         await self._on_reference_price_update()
+
+    @contextlib.contextmanager
+    def _dependencies_init(self):
+        self.waiting_for_dependencies_init = True
+        try:
+            yield
+        finally:
+            self.waiting_for_dependencies_init = False
 
     async def _register_pair_requirement_on_reference_exchanges(self):
         local_exchange_name = self.exchange_manager.exchange_name
@@ -1336,22 +1366,22 @@ class MarketMakingTradingModeProducer(trading_modes.AbstractTradingModeProducer)
             if other_exchange_key != self.reference_price.exchange:
                 continue
             if exchange_id not in self.subscribed_requirements_exchange_ids:
-                await self._subscribe_to_exchange_mark_price(exchange_id, exchange_manager)
+                await self._subscribe_to_exchange_mark_price(exchange_id, exchange_manager, self.symbol)
                 self.subscribed_requirements_exchange_ids.add(exchange_id)
     
     def _is_registered_on_all_reference_exchanges(self) -> bool:
         return len(self.subscribed_requirements_exchange_ids) == 1
 
-    async def _subscribe_to_exchange_mark_price(self, exchange_id: str, exchange_manager):
+    async def _subscribe_to_exchange_mark_price(self, exchange_id: str, exchange_manager, symbol: str):
         if not self.already_subscribed_to_channel(
-            exchange_id, trading_constants.MARK_PRICE_CHANNEL, self._mark_price_callback, symbol=self.trading_mode.symbol
+            exchange_id, trading_constants.MARK_PRICE_CHANNEL, self._mark_price_callback, symbol=symbol
         ):
             await exchanges_channel.get_chan(trading_constants.MARK_PRICE_CHANNEL, exchange_id).new_consumer(
                 callback=self._mark_price_callback,
-                symbol=self.trading_mode.symbol
+                symbol=symbol
             )
             self.logger.info(
-                f"{self.trading_mode.get_name()} for {self.trading_mode.symbol} on {self.exchange_name}  "
+                f"{self.trading_mode.get_name()} for {symbol} on {self.exchange_name} "
                 f"subscribed to {exchange_manager.exchange_name} price data feed."
             )
 
@@ -1404,4 +1434,11 @@ class MarketMakingTradingModeProducer(trading_modes.AbstractTradingModeProducer)
                     f"No {exchange_manager.exchange_name} exchange symbol data for {self.symbol}, "
                     f"it's probably initializing"
                 )
+        if not self._is_usable_reference_price(price):
+            method = self.logger.info if self.is_first_execution else self.logger.error
+            method(
+                f"Skipped trigger: can't compute {self.symbol} reference price for"
+                f" {self.exchange_manager.exchange_name}: {price=}"
+            )
+            return trading_constants.ZERO
         return price

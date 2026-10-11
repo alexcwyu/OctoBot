@@ -24,10 +24,10 @@ import octobot_commons.symbols
 import octobot_evaluators.constants as evaluators_constants
 
 import octobot_trading.constants as trading_constants
+import octobot_trading.api.exchange as exchange_api
 
 import tentacles.Trading.Mode.index_trading_mode.index_trading as index_trading
-import tentacles.Trading.Mode.index_trading_mode.index_distribution as index_distribution
-import tentacles.Meta.Keywords.scripting_library.configuration.exchanges_configuration as exchanges_configuration
+import octobot_copy.enums as rebalancer_enums
 
 
 def create_index_config_from_tentacles_config(
@@ -36,13 +36,13 @@ def create_index_config_from_tentacles_config(
 ) -> commons_profiles.ProfileData:
     trading_mode_config = tentacles_config[0].config
     distribution = trading_mode_config[index_trading.IndexTradingModeProducer.INDEX_CONTENT]
-    reference_market = exchanges_configuration.get_default_exchange_reference_market(exchange)
+    reference_market = exchange_api.get_default_exchange_reference_market(exchange)
     # replace USD by reference market
     for element in distribution:
-        if element[index_distribution.DISTRIBUTION_NAME] == "USD":
-            element[index_distribution.DISTRIBUTION_NAME] = reference_market
+        if element[rebalancer_enums.DistributionKeys.NAME] == "USD":
+            element[rebalancer_enums.DistributionKeys.NAME] = reference_market
     coins_by_symbol = {
-        element[index_distribution.DISTRIBUTION_NAME]: element[index_distribution.DISTRIBUTION_NAME]
+        element[rebalancer_enums.DistributionKeys.NAME]: element[rebalancer_enums.DistributionKeys.NAME]
         for element in distribution
     }
     rebalance_cap = trading_mode_config[index_trading.IndexTradingModeProducer.REBALANCE_TRIGGER_MIN_PERCENT]
@@ -72,14 +72,14 @@ def generate_index_config(
     )]
     currencies = [
         commons_profile_data.CryptoCurrencyData(
-            [octobot_commons.symbols.merge_currencies(element[index_distribution.DISTRIBUTION_NAME], reference_market)],
+            [octobot_commons.symbols.merge_currencies(element[rebalancer_enums.DistributionKeys.NAME], reference_market)],
             coins_by_symbol.get(
-                element[index_distribution.DISTRIBUTION_NAME],
-                element[index_distribution.DISTRIBUTION_NAME]
+                element[rebalancer_enums.DistributionKeys.NAME],
+                element[rebalancer_enums.DistributionKeys.NAME]
             )
         )
         for element in distribution
-        if element[index_distribution.DISTRIBUTION_NAME] != reference_market
+        if element[rebalancer_enums.DistributionKeys.NAME] != reference_market
     ]
     trader = commons_profile_data.TraderData(enabled=True)
     trader_simulator = commons_profile_data.TraderSimulatorData()
@@ -124,7 +124,7 @@ def _get_index_trading_config(
         index_trading.IndexTradingModeProducer.REBALANCE_TRIGGER_MIN_PERCENT: rebalance_cap,
         index_trading.IndexTradingModeProducer.SELECTED_REBALANCE_TRIGGER_PROFILE: selected_rebalance_trigger_profile,
         index_trading.IndexTradingModeProducer.REBALANCE_TRIGGER_PROFILES: rebalance_trigger_profiles,
-        index_trading.IndexTradingModeProducer.SYNCHRONIZATION_POLICY: index_trading.SynchronizationPolicy.SELL_REMOVED_INDEX_COINS_ON_RATIO_REBALANCE.value,
+        index_trading.IndexTradingModeProducer.SYNCHRONIZATION_POLICY: rebalancer_enums.SynchronizationPolicy.SELL_REMOVED_INDEX_COINS_ON_RATIO_REBALANCE.value,
         index_trading.IndexTradingModeProducer.SELL_UNINDEXED_TRADED_COINS: True,
         index_trading.IndexTradingModeProducer.INDEX_CONTENT: distribution,
         evaluators_constants.STRATEGIES_REQUIRED_TIME_FRAME: [common_enums.TimeFrames.ONE_DAY.value],

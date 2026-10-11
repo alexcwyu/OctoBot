@@ -29,6 +29,8 @@ import octobot_commons.symbols.symbol_util as symbol_util
 import octobot_commons.data_util as data_util
 import octobot_commons.signals as commons_signals
 import octobot_trading.api as trading_api
+import octobot_trading.util as trading_util
+import octobot_trading.dsl as trading_dsl
 import octobot_trading.modes as trading_modes
 import octobot_trading.exchange_channel as exchanges_channel
 import octobot_trading.constants as trading_constants
@@ -281,6 +283,27 @@ class StaggeredOrdersTradingMode(trading_modes.AbstractTradingMode):
     def get_is_symbol_wildcard(cls) -> bool:
         return False
 
+    @classmethod
+    def get_tentacle_config_traded_symbols(cls, trading_config: dict, reference_market: str) -> list[str]:
+        pair_settings = trading_config.get(cls.CONFIG_PAIR_SETTINGS) or []
+        symbols = []
+        seen: set[str] = set()
+        for pair_config in pair_settings:
+            symbol = pair_config.get(cls.CONFIG_PAIR)
+            if symbol and symbol not in seen:
+                seen.add(symbol)
+                symbols.append(symbol)
+        return symbols
+
+    @classmethod
+    def get_dsl_dependencies(cls, trading_config: dict, config: dict, previous_state: typing.Optional[dict]) -> list:
+        symbols = cls.get_tentacle_config_traded_symbols(
+            trading_config, trading_util.get_reference_market(config)
+        )
+        if not symbols:
+            return []
+        return [trading_dsl.SymbolDependency(symbol=symbol) for symbol in symbols]
+
     def set_default_config(self):
         raise RuntimeError(f"Impossible to start {self.get_name()} without a valid configuration file.")
 
@@ -370,16 +393,11 @@ class StaggeredOrdersTradingMode(trading_modes.AbstractTradingMode):
         self.logger.info(f"Optimizing portfolio: selling {to_sell_assets} to buy {common_quote}")
         # need portfolio available to be up-to-date with cancelled orders
         orders = await trading_modes.convert_assets_to_target_asset(
-            self, list(to_sell_assets), common_quote, tickers, dependencies=dependencies
+            list(to_sell_assets), common_quote, tickers, dependencies=dependencies, trading_mode=self,
         )
-        if orders:
-            await asyncio.gather(
-                *[
-                    trading_personal_data.wait_for_order_fill(
-                        order, producer.MISSING_MIRROR_ORDERS_MARKET_REBALANCE_TIMEOUT, True
-                    ) for order in orders
-                ]
-            )
+        await trading_personal_data.wait_for_orders_to_fill_considering_order_auto_synchronization(
+            self.exchange_manager, orders, producer.MISSING_MIRROR_ORDERS_MARKET_REBALANCE_TIMEOUT, True
+        )
         return orders
 
     async def _buy_assets(
@@ -394,20 +412,16 @@ class StaggeredOrdersTradingMode(trading_modes.AbstractTradingMode):
             )
             try:
                 created_orders += await trading_modes.convert_asset_to_target_asset(
-                    self, common_quote, base, tickers,
+                    common_quote, base, tickers,
                     asset_amount=converted_quote_amount_per_symbol,
-                    dependencies=dependencies
+                    dependencies=dependencies,
+                    trading_mode=self,
                 )
             except Exception as err:
                 self.logger.exception(err, True, f"Error when creating order to buy {base}: {err}")
-        if created_orders:
-            await asyncio.gather(
-                *[
-                    trading_personal_data.wait_for_order_fill(
-                        order, producer.MISSING_MIRROR_ORDERS_MARKET_REBALANCE_TIMEOUT, True
-                    ) for order in created_orders
-                ]
-            )
+        await trading_personal_data.wait_for_orders_to_fill_considering_order_auto_synchronization(
+            self.exchange_manager, created_orders, producer.MISSING_MIRROR_ORDERS_MARKET_REBALANCE_TIMEOUT, True
+        )
         return created_orders
 
     def _get_converted_quote_amount_per_symbol(self, portfolio, pair_bases, common_quote) -> decimal.Decimal:
@@ -577,16 +591,20 @@ class StaggeredOrdersTradingModeProducer(trading_modes.AbstractTradingModeProduc
         self.symbol = trading_mode.symbol
         self.symbol_market = None
         self.min_max_order_details = {}
-        fees = trading_api.get_fees(exchange_manager, self.symbol)
-        try:
-            self.max_fees = decimal.Decimal(str(max(fees[trading_enums.ExchangeConstantsMarketPropertyColumns.TAKER.value],
-                                                    fees[trading_enums.ExchangeConstantsMarketPropertyColumns.MAKER.value]
-                                                    )))
-        except TypeError as err:
-            # don't crash if fees are not available
-            market_status = self.exchange_manager.exchange.get_market_status(self.symbol, with_fixer=False)
-            self.logger.error(f"Error reading fees for {self.symbol}: {err}. Market status: {market_status}")
-            self.max_fees = decimal.Decimal(str(trading_constants.CONFIG_DEFAULT_FEES))
+        if self.symbol:
+            fees = trading_api.get_fees(exchange_manager, self.symbol)
+            try:
+                self.max_fees = decimal.Decimal(str(max(fees[trading_enums.ExchangeConstantsMarketPropertyColumns.TAKER.value],
+                                                        fees[trading_enums.ExchangeConstantsMarketPropertyColumns.MAKER.value]
+                                                        )))
+            except TypeError as err:
+                # don't crash if fees are not available
+                market_status = self.exchange_manager.exchange.get_market_status(self.symbol, with_fixer=False)
+                self.logger.warning(
+                    f"Impossible to read fees for {self.symbol}: {err}. Market status: {market_status}. "
+                    f"Using default {trading_constants.CONFIG_DEFAULT_FEES} fees."
+                )
+                self.max_fees = decimal.Decimal(str(trading_constants.CONFIG_DEFAULT_FEES))
         self.flat_increment = None
         self.flat_spread = None
         self.current_price = None
@@ -727,7 +745,9 @@ class StaggeredOrdersTradingModeProducer(trading_modes.AbstractTradingModeProduc
                 StaggeredOrdersTradingModeProducer.AVAILABLE_FUNDS.pop(self.exchange_manager.id, None)
         await super().stop()
 
-    async def set_final_eval(self, matrix_id: str, cryptocurrency: str, symbol: str, time_frame, trigger_source: str):
+    async def set_final_eval(
+        self, matrix_id: str, cryptocurrency: str, symbol: str, time_frame, trigger_source: str,
+    ):
         # nothing to do: this is not a strategy related trading mode
         pass
 
@@ -742,6 +762,12 @@ class StaggeredOrdersTradingModeProducer(trading_modes.AbstractTradingModeProduc
         # price is above max order price
         if max_order_price < price and self.enable_upwards_price_follow:
             return True
+
+    async def manual_trigger(
+        self, matrix_id: str, cryptocurrency: str,
+        symbol: str, time_frame, trigger_source: str,
+    ) -> None:
+        await self.trigger_staggered_orders_creation(reload_config=False)
 
     def _schedule_order_refresh(self):
         # schedule order creation / health check
@@ -895,10 +921,14 @@ class StaggeredOrdersTradingModeProducer(trading_modes.AbstractTradingModeProduc
         parsed_symbol = symbol_util.parse_symbol(self.symbol)
         try:
             if selling:
-                available_funds = trading_api.get_portfolio_currency(self.exchange_manager, parsed_symbol.base).available
+                available_funds = trading_api.get_portfolio_currency(
+                    self.exchange_manager, parsed_symbol.base
+                ).available
                 return min(available_funds, volume)
             else:
-                available_funds = trading_api.get_portfolio_currency(self.exchange_manager, parsed_symbol.quote).available
+                available_funds = trading_api.get_portfolio_currency(
+                    self.exchange_manager, parsed_symbol.quote
+                ).available
                 required_cost = price * volume
                 return min(available_funds, required_cost) / price
         except decimal.DecimalException as err:
@@ -1335,8 +1365,10 @@ class StaggeredOrdersTradingModeProducer(trading_modes.AbstractTradingModeProduc
 
     def _check_params(self):
         if self.increment >= self.spread:
-            self.logger.error(f"Your spread_percent parameter should always be higher than your increment_percent"
-                              f" parameter: average profit is spread-increment. ({self.symbol})")
+            self.logger.error(
+                f"Your spread_percent ({self.spread}) parameter should always be higher than your increment_percent ({self.increment})"
+                f" parameter: average profit is spread-increment. ({self.symbol})"
+            )
         if self.lowest_buy >= self.highest_sell:
             self.logger.error(f"Your lower_bound should always be lower than your upper_bound ({self.symbol})")
 
@@ -1438,8 +1470,8 @@ class StaggeredOrdersTradingModeProducer(trading_modes.AbstractTradingModeProduc
             )
             created_order = await self.trading_mode.create_order(balancing_order)
             # wait for order to be filled
-            await trading_personal_data.wait_for_order_fill(
-                created_order, self.MISSING_MIRROR_ORDERS_MARKET_REBALANCE_TIMEOUT, True
+            await trading_personal_data.wait_for_orders_to_fill_considering_order_auto_synchronization(
+                self.exchange_manager, [created_order], self.MISSING_MIRROR_ORDERS_MARKET_REBALANCE_TIMEOUT, True
             )
 
     def _get_just_filled_unmirrored_missing_order_trade(self, sorted_trades, missing_order_price, missing_order_side):
@@ -1653,20 +1685,18 @@ class StaggeredOrdersTradingModeProducer(trading_modes.AbstractTradingModeProduc
         self.logger.info(f"{log_header}selling {amount_to_convert} {base} worth of {to_sell} to buy {to_buy}")
         # need portfolio available to be up-to-date with cancelled orders
         orders = await trading_modes.convert_asset_to_target_asset(
-            self.trading_mode, to_sell, to_buy, {
+            to_sell, to_buy, {
                 self.symbol: {
                     trading_enums.ExchangeConstantsTickersColumns.CLOSE.value: current_price,
                 }
             }, asset_amount=amount_to_convert,
-            dependencies=convert_dependencies
+            dependencies=convert_dependencies,
+            trading_mode=self.trading_mode,
         )
         orders = [order for order in orders if order is not None]
-        if orders:
-            await asyncio.gather(*[
-                trading_personal_data.wait_for_order_fill(
-                    order, self.MISSING_MIRROR_ORDERS_MARKET_REBALANCE_TIMEOUT, True
-                ) for order in orders
-            ])
+        await trading_personal_data.wait_for_orders_to_fill_considering_order_auto_synchronization(
+            self.exchange_manager, orders, self.MISSING_MIRROR_ORDERS_MARKET_REBALANCE_TIMEOUT, True
+        )
         return orders
 
     def _get_updated_trailing_orders(
@@ -1692,15 +1722,24 @@ class StaggeredOrdersTradingModeProducer(trading_modes.AbstractTradingModeProduc
                 trailed_order_side = trading_enums.TradeOrderSide.SELL if is_trailing_up else trading_enums.TradeOrderSide.BUY
                 ideal_base_quantity = to_convert_order.total_cost / trailed_price 
                 parsed_symbol = symbol_util.parse_symbol(to_convert_order.symbol)
-                other_side_currency = parsed_symbol.quote if trailed_order_side is trading_enums.TradeOrderSide.BUY else parsed_symbol.base
+                other_side_currency = (
+                    parsed_symbol.quote
+                    if trailed_order_side is trading_enums.TradeOrderSide.BUY
+                    else parsed_symbol.base
+                )
                 available_amount = trading_api.get_portfolio_currency(self.exchange_manager, other_side_currency).available
-                available_amount_in_base = available_amount if other_side_currency == parsed_symbol.base else available_amount / trailed_price
+                base_portfolio_asset = parsed_symbol.base
+                available_amount_in_base = (
+                    available_amount if other_side_currency == base_portfolio_asset else available_amount / trailed_price
+                )
                 if available_amount_in_base < ideal_base_quantity:
                     trailing_order_quantity = available_amount_in_base
                     self.logger.warning(
-                        f"Not enough available funds to create a full {ideal_base_quantity} {parsed_symbol.base} {to_convert_order.symbol} {trailed_order_side.name} trailing "
+                        f"Not enough available funds to create a full {ideal_base_quantity} "
+                        f"{parsed_symbol.base} {to_convert_order.symbol} {trailed_order_side.name} trailing "
                         f"order: available: {available_amount} {other_side_currency} < {ideal_base_quantity} "
-                        f"(={available_amount_in_base} {parsed_symbol.base}). Using {trailing_order_quantity} instead."
+                        f"(={available_amount_in_base} {parsed_symbol.base}). "
+                        f"Using {trailing_order_quantity} instead."
                     )
                 else:
                     trailing_order_quantity = ideal_base_quantity
@@ -1823,8 +1862,12 @@ class StaggeredOrdersTradingModeProducer(trading_modes.AbstractTradingModeProduc
         orders = []
         try:
             parsed_symbol = symbol_util.parse_symbol(self.symbol)
-            available_base_amount = trading_api.get_portfolio_currency(self.exchange_manager, parsed_symbol.base).available
-            available_quote_amount = trading_api.get_portfolio_currency(self.exchange_manager, parsed_symbol.quote).available
+            available_base_amount = trading_api.get_portfolio_currency(
+                self.exchange_manager, parsed_symbol.base
+            ).available
+            available_quote_amount = trading_api.get_portfolio_currency(
+                self.exchange_manager, parsed_symbol.quote
+            ).available
             usable_amount_in_quote = available_quote_amount + (available_base_amount * current_price)
             config_max_amount = self.buy_funds + (self.sell_funds * current_price)
             if config_max_amount > trading_constants.ZERO:
@@ -1856,19 +1899,17 @@ class StaggeredOrdersTradingModeProducer(trading_modes.AbstractTradingModeProduc
                 self.logger.info(f"{log_header}selling {amount} {to_sell} to buy {to_buy}")
                 # need portfolio available to be up-to-date with cancelled orders
                 orders = await trading_modes.convert_asset_to_target_asset(
-                    self.trading_mode, to_sell, to_buy, {
+                    to_sell, to_buy, {
                         self.symbol: {
                             trading_enums.ExchangeConstantsTickersColumns.CLOSE.value: current_price,
                         }
                     }, asset_amount=amount,
-                    dependencies=convert_dependencies
+                    dependencies=convert_dependencies,
+                    trading_mode=self.trading_mode,
                 )
-                if orders:
-                    await asyncio.gather(*[
-                        trading_personal_data.wait_for_order_fill(
-                            order, self.MISSING_MIRROR_ORDERS_MARKET_REBALANCE_TIMEOUT, True
-                        ) for order in orders
-                    ])
+                await trading_personal_data.wait_for_orders_to_fill_considering_order_auto_synchronization(
+                    self.exchange_manager, orders, self.MISSING_MIRROR_ORDERS_MARKET_REBALANCE_TIMEOUT, True
+                )
             else:
                 self.logger.info(f"{log_header}nothing to buy or sell. Current funds are enough")
         except Exception as err:

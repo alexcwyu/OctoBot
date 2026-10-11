@@ -15,10 +15,11 @@
 #  License along with this library.
 
 
-import sys
+import ctypes
 import os
 import platform
-import ctypes
+import socket
+import sys
 
 import octobot_commons.constants as constants
 import octobot_commons.enums as enums
@@ -92,6 +93,22 @@ def get_octobot_type():
         return enums.OctoBotTypes.BINARY.value
     except IndexError:
         return enums.OctoBotTypes.BINARY.value
+
+
+# PyInstaller 6.9+: environment entries for spawning an independent frozen child process.
+# Required when re-execing or subprocess-spawning the same frozen executable so each child
+# unpacks and runs as its own instance (see PyInstaller common issues and pitfalls).
+PYINSTALLER_RESET_ENVIRONMENT_VARS = {"PYINSTALLER_RESET_ENVIRONMENT": "1"}
+
+
+def is_frozen_binary_octobot() -> bool:
+    """
+    Return whether OctoBot is running as a PyInstaller frozen binary.
+
+    Uses PyInstaller's ``sys.frozen`` flag (not ``get_octobot_type()``), so ``python -m pytest``
+    and other interpreter invocations are not misclassified as frozen binaries.
+    """
+    return bool(getattr(sys, "frozen", False))
 
 
 def get_os():
@@ -178,6 +195,63 @@ def parse_boolean_environment_var(env_key: str, default_value: str) -> bool:
     :return: the boolean value
     """
     return constants.parse_boolean_environment_var(env_key, default_value)
+
+
+def tcp_port_is_free(bind_host: str, port: int) -> bool:
+    """
+    :return: True if nothing is currently bound to (host, port) for TCP
+    """
+    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as sock:
+        sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+        try:
+            sock.bind((bind_host, port))
+        except OSError:
+            return False
+    return True
+
+
+_HOST_WIDE_LISTENER_PROBE_HOSTS = ("0.0.0.0", "127.0.0.1")  # bind probes when psutil is unavailable
+
+
+def tcp_port_has_listener_on_host(port: int) -> bool:
+    """
+    :return: True if any TCP listener on this machine uses ``port``
+    """
+    try:
+        for connection in psutil.net_connections(kind="tcp"):
+            if connection.status != psutil.CONN_LISTEN:
+                continue
+            local_address = connection.laddr
+            if local_address is not None and local_address.port == port:
+                return True
+    except (psutil.AccessDenied, psutil.Error):
+        for probe_host in _HOST_WIDE_LISTENER_PROBE_HOSTS:
+            if not tcp_port_is_free(probe_host, port):
+                return True
+    return False
+
+
+def find_first_free_listen_port_after_base(
+    bind_host_for_probe: str,
+    listen_port_base: int,
+    max_offset: int = 256,
+    blocklist: list[int] | None = None,
+) -> int:
+    """
+    First offset where ``listen_port_base + offset`` is TCP-free on ``bind_host_for_probe``
+    and not in use by any listener on this host.
+    Returns ``listen_port``.
+    """
+    for offset_from_base in range(max_offset):
+        listen_port = listen_port_base + offset_from_base
+        if blocklist and listen_port in blocklist:
+            continue
+        if tcp_port_has_listener_on_host(listen_port):
+            continue
+        if not tcp_port_is_free(bind_host_for_probe, listen_port):
+            continue
+        return listen_port
+    raise ValueError("No free listen port found in the scanned range.")
 
 
 def get_cpu_and_ram_usage(

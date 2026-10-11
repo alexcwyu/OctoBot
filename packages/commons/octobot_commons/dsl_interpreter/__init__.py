@@ -26,7 +26,10 @@ from octobot_commons.dsl_interpreter.dictionnaries import (
 )
 from octobot_commons.dsl_interpreter.operator_parameter import (
     OperatorParameter,
+    OperatorParameterOption,
+    TIME_FRAME_OPERATOR_PARAMETER_OPTIONS,
     UNINITIALIZED_VALUE,
+    dsl_value_type_for_user_input,
 )
 from octobot_commons.dsl_interpreter.operator_docs import OperatorDocs
 from octobot_commons.dsl_interpreter.operators import (
@@ -39,14 +42,23 @@ from octobot_commons.dsl_interpreter.operators import (
     ExpressionOperator,
     PreComputingCallOperator,
     ReCallableOperatorMixin,
+    SignalableOperatorMixin,
+    OperatorSignal,
+    OperatorSignals,
     ReCallingOperatorResult,
     ReCallingOperatorResultKeys,
+    ProcessBoundOperatorMixin,
+    is_process_bound,
+    NestedInterpretationMixin,
+    DynamicDependency,
+    DynamicDependenciesOperatorMixin,
 )
 from octobot_commons.dsl_interpreter.interpreter_dependency import (
     InterpreterDependency,
 )
 from octobot_commons.dsl_interpreter.parameters_util import (
     format_parameter_value,
+    get_dsl_statement_operator_name,
     resove_operator_params,
     apply_resolved_parameter_value,
     add_resolved_parameter_value,
@@ -62,7 +74,10 @@ __all__ = [
     "Interpreter",
     "Operator",
     "OperatorParameter",
+    "OperatorParameterOption",
+    "TIME_FRAME_OPERATOR_PARAMETER_OPTIONS",
     "UNINITIALIZED_VALUE",
+    "dsl_value_type_for_user_input",
     "OperatorDocs",
     "BinaryOperator",
     "UnaryOperator",
@@ -73,8 +88,15 @@ __all__ = [
     "ExpressionOperator",
     "PreComputingCallOperator",
     "ReCallableOperatorMixin",
+    "SignalableOperatorMixin",
+    "OperatorSignal",
+    "OperatorSignals",
+    "ProcessBoundOperatorMixin",
+    "is_process_bound",
+    "NestedInterpretationMixin",
     "InterpreterDependency",
     "format_parameter_value",
+    "get_dsl_statement_operator_name",
     "resove_operator_params",
     "apply_resolved_parameter_value",
     "add_resolved_parameter_value",
@@ -82,4 +104,6 @@ __all__ = [
     "has_unresolved_parameters",
     "ReCallingOperatorResult",
     "ReCallingOperatorResultKeys",
+    "DynamicDependency",
+    "DynamicDependenciesOperatorMixin",
 ]

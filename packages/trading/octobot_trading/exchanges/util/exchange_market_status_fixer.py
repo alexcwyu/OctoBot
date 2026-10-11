@@ -27,7 +27,7 @@ def is_ms_valid(value, zero_valid=False):
             value = float(value)
         except ValueError:
             return False
-    return value is not None and value is not math.nan and (value >= 0 if zero_valid else value > 0)
+    return value is not None and not math.isnan(value) and (value >= 0 if zero_valid else value > 0)
 
 
 def check_market_status_limits(market_limit):
@@ -112,6 +112,7 @@ def fix_market_status_limits_from_current_data(market_limit):
 
 
 class ExchangeMarketStatusFixer:
+    # TODO later: remove once confirmed that fixer is not needed anymore
     # todo move to connector/ccxt
     LIMIT_PRICE_MULTIPLIER = 1000
     LIMIT_COST_MULTIPLIER = 1

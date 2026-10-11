@@ -18,8 +18,7 @@ from tentacles.Services.Interfaces.web_interface.util import flask_util
 from tentacles.Services.Interfaces.web_interface.util.flask_util import (
     get_rest_reply,
 )
-from tentacles.Services.Interfaces.web_interface.util import browser_util
-from tentacles.Services.Interfaces.web_interface.util.browser_util import (
+from octobot_services.interfaces.util.web import (
     open_in_background_browser,
 )
 

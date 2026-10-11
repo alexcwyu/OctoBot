@@ -4,8 +4,11 @@ import time
 
 import octobot_commons.dsl_interpreter
 import octobot_commons.dataclasses
+import octobot_commons.constants
+import octobot_commons.logging
 import octobot_flow.enums
 import octobot_flow.errors
+
 
 @dataclasses.dataclass
 class ActionDependency(octobot_commons.dataclasses.FlexibleDataclass):
@@ -13,6 +16,8 @@ class ActionDependency(octobot_commons.dataclasses.FlexibleDataclass):
     action_id: str = dataclasses.field(repr=True)
     # value of the dependency result. Used by an action to resolve its own DSL script when it has dependencies
     parameter: typing.Optional[str] = dataclasses.field(default=None, repr=False)
+    # keys into the dependency action's dict result, e.g. ["exchange_specific_order_values", "address_from"]
+    result_path: typing.Optional[list[str]] = dataclasses.field(default=None, repr=False)
 
 
 @dataclasses.dataclass
@@ -22,9 +27,11 @@ class AbstractActionDetails(octobot_commons.dataclasses.FlexibleDataclass):
     # result of the action. Set after the action is executed
     result: typing.Optional[
         octobot_commons.dsl_interpreter.ComputedOperatorParameterType
-    ] = dataclasses.field(default=None, repr=True)
+    ] = dataclasses.field(default=None, repr=octobot_commons.constants.ALLOW_PRIVATE_DATA_LOGS)
     # error status of the action. Set after the action is executed, in case an error occured
     error_status: typing.Optional[str] = dataclasses.field(default=None, repr=True)       # ActionErrorStatus
+    # error message of the action. Set after the action is executed, in case an error occured.
+    error_message: typing.Optional[str] = dataclasses.field(default=None, repr=True)
     # time at which the action was executed
     executed_at: typing.Optional[float] = dataclasses.field(default=None, repr=True)
     # dependencies of this action. If an action has dependencies, it will not be executed until all its dependencies are completed
@@ -46,12 +53,15 @@ class AbstractActionDetails(octobot_commons.dataclasses.FlexibleDataclass):
         self,
         result: typing.Optional[dict] = None,
         error_status: typing.Optional[str] = None,
+        error_message: typing.Optional[str] = None,
     ):
         self.executed_at = time.time()
         if result:
             self.result = result
         if error_status:
             self.error_status = error_status
+        if error_message:
+            self.error_message = error_message
 
     def is_completed(self) -> bool:
         return self.executed_at is not None
@@ -60,14 +70,24 @@ class AbstractActionDetails(octobot_commons.dataclasses.FlexibleDataclass):
         self.result = action.result
         self.executed_at = action.executed_at
         self.error_status = action.error_status
+        self.error_message = action.error_message
 
     def should_be_historised_in_database(self) -> bool:
         return False
 
-    def add_dependency(self, action_id: str, parameter: typing.Optional[str] = None):
-        self.dependencies.append(ActionDependency(action_id, parameter))
+    def add_dependency(
+        self,
+        action_id: str,
+        parameter: typing.Optional[str] = None,
+        result_path: typing.Optional[list[str]] = None,
+    ):
+        if action_id == self.id:
+            raise octobot_flow.errors.ActionDependencyError(
+                f"Action {self.id} cannot depend on itself. Dependency parameter: {parameter}, result path: {result_path}"
+            )
+        self.dependencies.append(ActionDependency(action_id, parameter, result_path))
 
-    def get_summary(self, minimal: bool = False) -> str:
+    def get_summary(self, minimal: bool = not octobot_commons.constants.ALLOW_PRIVATE_DATA_LOGS) -> str:
         raise NotImplementedError("get_summary is not implemented for this bot action type")
 
     def get_rescheduled_parameters(self) -> dict:
@@ -82,20 +102,27 @@ class AbstractActionDetails(octobot_commons.dataclasses.FlexibleDataclass):
         return rescheduled_parameters
 
     def reset(self):
-        self.previous_execution_result = self.result
+        self.previous_execution_result = self.result # type: ignore
         self.result = None
         self.error_status = None
+        self.error_message = None
         self.executed_at = None
+
+    def can_be_reset(self) -> bool:
+        return True
+
+    def update_configuration(self, action: "AbstractActionDetails"):
+        raise NotImplementedError("update_configuration is not implemented")
 
 
 @dataclasses.dataclass
 class DSLScriptActionDetails(AbstractActionDetails):
     # DSL script to execute
-    dsl_script: typing.Optional[str] = dataclasses.field(default=None, repr=True) # should be set to the DSL script
+    dsl_script: typing.Optional[str] = dataclasses.field(default=None, repr=octobot_commons.constants.ALLOW_PRIVATE_DATA_LOGS) # should be set to the DSL script
     # resolved DSL script. self.dsl_script where all the dependencies have been replaced by their actual values
     resolved_dsl_script: typing.Optional[str] = dataclasses.field(default=None, repr=False) # should be set to the resolved DSL script
 
-    def get_summary(self, minimal: bool = False) -> str:
+    def get_summary(self, minimal: bool = not octobot_commons.constants.ALLOW_PRIVATE_DATA_LOGS) -> str:
         if minimal:
             # only return the first operator name
             return str(self.dsl_script).split("(")[0]
@@ -103,13 +130,23 @@ class DSLScriptActionDetails(AbstractActionDetails):
 
     def get_resolved_dsl_script(self) -> str:
         if not self.resolved_dsl_script:
-            raise octobot_flow.errors.UnresolvedDSLScriptError(f"Resolved DSL script is not set: {self.resolved_dsl_script}")
+            raise octobot_flow.errors.UnresolvedDSLScriptError(
+                f"Resolved DSL script is not set: {self.resolved_dsl_script}")
         if octobot_commons.dsl_interpreter.has_unresolved_parameters(self.resolved_dsl_script):
-            raise octobot_flow.errors.UnresolvedDSLScriptError(f"Resolved DSL script has unresolved parameters: {self.resolved_dsl_script}")
+            raise octobot_flow.errors.UnresolvedDSLScriptError(
+                f"Resolved DSL script has unresolved parameters: {octobot_commons.logging.get_private_minimized_message_if_necessary(self.resolved_dsl_script)}"
+            )
         return self.resolved_dsl_script
 
     def clear_resolved_dsl_script(self):
         self.resolved_dsl_script = None
+
+    def update_configuration(self, action: "AbstractActionDetails"):
+        if not isinstance(action, DSLScriptActionDetails):
+            raise TypeError(
+                f"Expected DSLScriptActionDetails, got {type(action).__name__}"
+            )
+        self.dsl_script = action.dsl_script
 
 
 @dataclasses.dataclass
@@ -118,9 +155,24 @@ class ConfiguredActionDetails(AbstractActionDetails):
     action: str = dataclasses.field(default=octobot_flow.enums.ActionType.UNKNOWN.value, repr=True)
     # configuration of the action. A dict specific to the action type
     config: typing.Optional[dict] = dataclasses.field(default=None, repr=False)
+    # returned result of the condig action. Set after the action is executed
+    result: typing.Optional[dict] = dataclasses.field(default=None, repr=False)
 
-    def get_summary(self, minimal: bool = False) -> str:
+    def get_summary(self, minimal: bool = not octobot_commons.constants.ALLOW_PRIVATE_DATA_LOGS) -> str:
         return self.action
+
+    def update_configuration(self, action: "AbstractActionDetails"):
+        if not isinstance(action, ConfiguredActionDetails):
+            raise TypeError(
+                f"Expected ConfiguredActionDetails, got {type(action).__name__}"
+            )
+        self.action = action.action
+        self.config = dict(action.config) if action.config is not None else None
+        self.result = action.result
+
+    def can_be_reset(self) -> bool:
+        # apply_configuration action cannot be reset
+        return self.action != octobot_flow.enums.ActionType.APPLY_CONFIGURATION.value
 
 
 def parse_action_details(action_details: dict) -> AbstractActionDetails:

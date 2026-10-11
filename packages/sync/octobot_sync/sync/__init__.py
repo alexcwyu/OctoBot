@@ -18,21 +18,31 @@ from octobot_sync.sync import collections
 from octobot_sync.sync.collections import (
     load_sync_config,
     is_replicable_collection,
-    make_replica_config,
 )
 
-from octobot_sync.sync import role_resolver
-from octobot_sync.sync.role_resolver import (
-    create_role_resolver,
-    create_role_enricher,
-    create_signature_verifier,
-)
+import octobot_sync.sync.collection_backend as collection_backend
+import octobot_sync.sync.collection_providers as collection_providers
+
+AccountProvider = collection_providers.AccountProvider
+StrategyProvider = collection_providers.StrategyProvider
+BaseLocalCollectionStorage = collection_backend.BaseLocalCollectionStorage
+BaseLocalCollectionProvider = collection_backend.BaseLocalCollectionProvider
+CollectionStorageError = collection_backend.CollectionStorageError
+CollectionDecryptionError = collection_backend.CollectionDecryptionError
+CollectionFileFormatError = collection_backend.CollectionFileFormatError
+ItemNotFoundError = collection_backend.ItemNotFoundError
+DuplicateItemError = collection_backend.DuplicateItemError
 
 __all__ = [
     "load_sync_config",
     "is_replicable_collection",
-    "make_replica_config",
-    "create_role_resolver",
-    "create_role_enricher",
-    "create_signature_verifier",
+    "BaseLocalCollectionStorage",
+    "BaseLocalCollectionProvider",
+    "CollectionStorageError",
+    "CollectionDecryptionError",
+    "CollectionFileFormatError",
+    "ItemNotFoundError",
+    "DuplicateItemError",
+    "AccountProvider",
+    "StrategyProvider",
 ]

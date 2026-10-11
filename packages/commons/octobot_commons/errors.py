@@ -27,6 +27,12 @@ class RemoteConfigError(ConfigError):
     """
 
 
+class CopyError(Exception):
+    """
+    Copy related Exception
+    """
+
+
 class NoProfileError(Exception):
     """
     Profile related Exception: raised when the current profile can't be found and default profile can't be loaded
@@ -48,6 +54,12 @@ class ProfileRemovalError(Exception):
 class ProfileImportError(Exception):
     """
     Profile related Exception: raised when the imported profile is invalid
+    """
+
+
+class ProfileDataError(Exception):
+    """
+    Profile related Exception: raised when the profile data is invalid
     """
 
 
@@ -90,6 +102,12 @@ class UncachableValue(Exception):
 class DatabaseNotFoundError(Exception):
     """
     Raised when a database can't be found
+    """
+
+
+class DatabaseReadOnlyError(Exception):
+    """
+    Raised when a write operation is attempted on a read-only database connection
     """
 
 
@@ -174,4 +192,22 @@ class ResolvedParameterNotFoundError(DSLInterpreterError):
 class ErrorStatementEncountered(DSLInterpreterError):
     """
     Raised when a error statement is encountered when executing a script
+    """
+
+
+class MaxAttemptsExceededError(ErrorStatementEncountered):
+    """
+    Raised when a max attempts is exceeded when executing a script
+    """
+
+
+class AmbiguousTradedSymbolsTradingTypeError(ValueError):
+    """
+    Raised when traded symbols map to more than one exchange trading type.
+    """
+
+
+class ProcessError(Exception):
+    """
+    Raised when a process error occurs
     """

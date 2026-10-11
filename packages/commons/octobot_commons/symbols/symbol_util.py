@@ -20,6 +20,7 @@ import collections
 
 import octobot_commons
 import octobot_commons.constants as constants
+import octobot_commons.errors as commons_errors
 import octobot_commons.symbols.symbol
 
 
@@ -42,7 +43,8 @@ def merge_symbol(symbol: str) -> str:
     :param symbol: the specified symbol
     :return: merged currency and market without /
     """
-    return symbol.replace(octobot_commons.MARKET_SEPARATOR, "").replace(
+    trading_symbol, _, _ = octobot_commons.symbols.symbol.extract_network_and_dex(symbol)
+    return trading_symbol.replace(octobot_commons.MARKET_SEPARATOR, "").replace(
         octobot_commons.SETTLEMENT_ASSET_SEPARATOR, "_"
     )
 
@@ -116,6 +118,7 @@ def convert_symbol(
     :return:
     """
     if base_and_quote_only:
+        symbol, _, _ = octobot_commons.symbols.symbol.extract_network_and_dex(symbol)
         symbol = symbol.split(octobot_commons.SETTLEMENT_ASSET_SEPARATOR)[0]
     if should_uppercase:
         return symbol.replace(symbol_separator, new_symbol_separator).upper()
@@ -124,11 +127,46 @@ def convert_symbol(
     return symbol.replace(symbol_separator, new_symbol_separator)
 
 
+def get_bare_ticker_from_coin_with_maybe_network(coin: str) -> str:
+    """
+    Bare currency ticker from a portfolio asset key (``USDT`` or ``USDT@ETH``).
+    Not for trading pair strings; use ``base_asset_ticker()`` / ``quote_asset_ticker()`` on symbols.
+    """
+    if not coin:
+        return ""
+    if octobot_commons.NETWORK_SEPARATOR in coin:
+        return coin.rsplit(octobot_commons.NETWORK_SEPARATOR, 1)[0]
+    return coin
+
+
 def is_usd_like_coin(coin: str) -> bool:
     """
-    :return: True if the given coin is a USD-like coin
+    :return: True if the given coin's bare ticker is a USD-like coin
     """
-    return coin in constants.USD_LIKE_COINS
+    asset_ticker = get_bare_ticker_from_coin_with_maybe_network(coin)
+    return bool(asset_ticker) and asset_ticker in constants.USD_LIKE_COINS
+
+
+def is_same_coin(coin_a: str, coin_b: str) -> bool:
+    """
+    :return: True when both coins share the same bare ticker (e.g. ``USDT`` and ``USDT@ETH``)
+    """
+    return get_bare_ticker_from_coin_with_maybe_network(coin_a) == get_bare_ticker_from_coin_with_maybe_network(coin_b)
+
+
+def is_usd_like_to_usd_like_pair(symbol: str) -> bool:
+    """
+    :return: True if both base and quote of the symbol are USD-like coins
+    """
+    if not is_symbol(symbol):
+        return False
+    parsed_symbol = parse_symbol(symbol)
+    return (
+        bool(parsed_symbol.base)
+        and bool(parsed_symbol.quote)
+        and is_usd_like_coin(parsed_symbol.base)
+        and is_usd_like_coin(parsed_symbol.quote)
+    )
 
 
 def get_most_common_usd_like_symbol(pairs: list[str]) -> str:
@@ -147,3 +185,38 @@ def get_most_common_usd_like_symbol(pairs: list[str]) -> str:
         if is_usd_like_coin(symbol):
             return symbol
     raise ValueError("Pairs cannot be empty")
+
+
+def trading_type_from_symbol(symbol_str: str) -> str:
+    """
+    Infer exchange trading type from a symbol string.
+    :param symbol_str: the symbol to parse
+    :return: CONFIG_EXCHANGE_* constant (spot, future, or option)
+    """
+    parsed_symbol = parse_symbol(symbol_str)
+    if parsed_symbol.is_option():
+        return constants.CONFIG_EXCHANGE_OPTION
+    if parsed_symbol.is_spot():
+        return constants.CONFIG_EXCHANGE_SPOT
+    if parsed_symbol.is_future() or parsed_symbol.is_perpetual_future():
+        return constants.CONFIG_EXCHANGE_FUTURE
+    raise ValueError(f"Unable to infer trading type from symbol {symbol_str!r}.")
+
+
+def trading_type_from_traded_symbols(symbols: list[str]) -> str:
+    """
+    Infer a single exchange trading type from a list of traded symbols.
+    :param symbols: traded symbol strings
+    :return: CONFIG_EXCHANGE_* constant shared by all symbols
+    """
+    if not symbols:
+        raise ValueError("Traded symbols cannot be empty.")
+    inferred_trading_types: set[str] = set()
+    for symbol_str in symbols:
+        inferred_trading_types.add(trading_type_from_symbol(symbol_str))
+    if len(inferred_trading_types) > 1:
+        trading_type_names = sorted(inferred_trading_types)
+        raise commons_errors.AmbiguousTradedSymbolsTradingTypeError(
+            f"Traded symbols map to multiple trading types: {', '.join(trading_type_names)}."
+        )
+    return next(iter(inferred_trading_types))

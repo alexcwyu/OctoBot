@@ -13,6 +13,7 @@
 #
 #  You should have received a copy of the GNU Lesser General Public
 #  License along with this library.
+import decimal
 import math
 import pytest
 import mock
@@ -20,6 +21,53 @@ import time
 
 import octobot_commons.dsl_interpreter as dsl_interpreter
 import octobot_commons.errors
+import octobot_commons.constants as commons_constants
+import octobot_commons.enums as commons_enums
+
+import tentacles.Meta.DSL_operators.python_std_operators.base_call_operators as base_call_operators
+
+import octobot_commons.tests.dsl_test_keyword_support as dsl_test_keyword_support
+
+
+class RaisesInPreComputeTestOperator(dsl_test_keyword_support.TestKeywordMixin, dsl_interpreter.CallOperator):
+    """Fails in pre_compute only; used to assert if_error runs the on_error DSL."""
+
+    NAME = "raises_in_precompute_test_op"
+    CATEGORY = commons_enums.DslKeywordCategory.LOGIC.value
+
+    @staticmethod
+    def get_name() -> str:
+        return "raises_in_precompute_test_op"
+
+    @classmethod
+    def get_return_values(cls) -> list[dsl_interpreter.OperatorParameter]:
+        return cls.result_return_value(
+            commons_enums.DslValueType.TEXT.value,
+            description="Test result",
+        )
+
+    async def pre_compute(self) -> None:
+        raise ValueError("pre_compute failed for test")
+
+    def compute(self) -> dsl_interpreter.ComputedOperatorParameterType:
+        return "should_not_reach_compute"
+
+
+class ContextualNestedTestOperator(dsl_test_keyword_support.TestKeywordMixin, dsl_interpreter.CallOperator):
+    """Contextual operator excluded from get_all_operators(); used for nested DSL tests."""
+
+    NAME = "contextual_nested_test_op"
+
+    @staticmethod
+    def get_name() -> str:
+        return "contextual_nested_test_op"
+
+    @staticmethod
+    def get_library() -> str:
+        return commons_constants.CONTEXTUAL_OPERATORS_LIBRARY
+
+    def compute(self) -> dsl_interpreter.ComputedOperatorParameterType:
+        return 99
 
 
 @pytest.fixture
@@ -149,6 +197,12 @@ async def test_interpreter_call_operations(interpreter):
     assert 190 <= await interpreter.interprete("oscillate(200, 5, 120)") <= 210  # 200 ± 5%
     assert 185 <= await interpreter.interprete("oscillate(150 + oscillate(50, 10, 60), 5, 120)") <= 215  # 200 ± 5%
 
+    assert await interpreter.interprete("get({'color': 'red'}, 'color', 'blue')") == "red"
+    assert await interpreter.interprete("get({'color': 'red'}, 'missing', 'blue')") == "blue"
+    assert await interpreter.interprete("get(None, 'k', 'd')") == "d"
+    assert await interpreter.interprete("get(1, 'k', 'd')") == "d"
+    assert await interpreter.interprete("get({'a': 1}, [], 'd')") == "d"
+
 
 @pytest.mark.asyncio
 async def test_interpreter_oscillate_operations(interpreter):
@@ -214,6 +268,12 @@ async def test_interpreter_insupported_operations(interpreter):
         await interpreter.interprete("oscillate(100, 10, -1)")
     with pytest.raises(octobot_commons.errors.InvalidParametersError):
         await interpreter.interprete("oscillate(100, 10, 0)")
+    with pytest.raises(octobot_commons.errors.InvalidParametersError):
+        await interpreter.interprete("get({})")
+    with pytest.raises(octobot_commons.errors.InvalidParametersError):
+        await interpreter.interprete("get(1, 2)")
+    with pytest.raises(octobot_commons.errors.InvalidParametersError):
+        await interpreter.interprete("get(1, 2, 3, 4)")
 
 
 @pytest.mark.asyncio
@@ -230,3 +290,141 @@ async def test_error_operator(interpreter):
         await interpreter.interprete("error('123-error') if True else 'ok'")
 
     assert await interpreter.interprete("error('123-error') if False else 'ok'") == "ok"
+
+
+class TestErrorOperatorComputeExpressionWithResult:
+    @pytest.mark.asyncio
+    async def test_single_argument_error(self, interpreter):
+        interpreter.prepare("error('123-error')")
+        call_result = await interpreter.compute_expression_with_result()
+        assert not call_result.succeeded()
+        assert call_result.error == "123-error"
+        assert call_result.error_message == "123-error"
+
+    @pytest.mark.asyncio
+    async def test_status_and_detail_error(self, interpreter):
+        interpreter.prepare("error('not_enough_funds', 'Balance below threshold')")
+        call_result = await interpreter.compute_expression_with_result()
+        assert not call_result.succeeded()
+        assert call_result.error == "not_enough_funds"
+        assert call_result.error_message == "Balance below threshold"
+
+    @pytest.mark.asyncio
+    async def test_conditional_error_not_taken(self, interpreter):
+        interpreter.prepare("error('123-error') if False else 'ok'")
+        call_result = await interpreter.compute_expression_with_result()
+        assert call_result.succeeded()
+        assert call_result.error_message is None
+        assert call_result.result == "ok"
+
+
+@pytest.mark.asyncio
+async def test_if_error_operator(interpreter):
+    assert "if_error" in interpreter.operators_by_name
+
+    assert await interpreter.interprete("if_error(42, \"error('must-not-run')\")") == 42
+
+    assert await interpreter.interprete("if_error(error('x'), \"'ok'\")") == "ok"
+    assert await interpreter.interprete("if_error(error('x'), \"1 + 2\")") == 3
+
+    assert await interpreter.interprete("if_error(7, \"'nope'\")") == 7
+
+    assert await interpreter.interprete("if_error(sqrt(-1), \"'fallback'\")") == "fallback"
+
+    with pytest.raises(octobot_commons.errors.InvalidParametersError):
+        await interpreter.interprete("if_error(1, 2)")
+
+    with pytest.raises(octobot_commons.errors.ErrorStatementEncountered, match="b"):
+        await interpreter.interprete("if_error(error('a'), \"error('b')\")")
+
+    assert await interpreter.interprete("if_error(value=7, on_error=\"'nope'\")") == 7
+
+
+@pytest.mark.asyncio
+async def test_if_error_operator_fallback_when_base_pre_compute_raises(interpreter):
+    interpreter.extend([RaisesInPreComputeTestOperator])
+    assert await interpreter.interprete(
+        "if_error(raises_in_precompute_test_op(), \"'recovered'\")",
+    ) == "recovered"
+
+
+@pytest.mark.asyncio
+async def test_if_error_operator_uses_parent_interpreter_operators(interpreter):
+    assert ContextualNestedTestOperator not in dsl_interpreter.get_all_operators()
+    interpreter.extend([ContextualNestedTestOperator])
+    assert await interpreter.interprete(
+        "if_error(error('x'), \"contextual_nested_test_op()\")",
+    ) == 99
+
+
+@pytest.mark.asyncio
+async def test_value_if_operator_uses_parent_interpreter_operators(interpreter):
+    assert ContextualNestedTestOperator not in dsl_interpreter.get_all_operators()
+    nested_condition = ' " == 99 - contextual_nested_test_op() + 1"'
+    with pytest.raises(octobot_commons.errors.UnsupportedOperatorError):
+        await interpreter.interprete(f"value_if(1,{nested_condition})")
+    interpreter.extend([ContextualNestedTestOperator])
+    assert await interpreter.interprete(f"value_if(1,{nested_condition})") == 1
+
+
+@pytest.mark.asyncio
+async def test_value_if_operator(interpreter):
+    assert "value_if" in interpreter.operators_by_name
+
+    # truthy inner result returns value
+    assert await interpreter.interprete("value_if(15, ' > 12')") == 15
+
+    # falsy inner result returns False
+    assert await interpreter.interprete("value_if(15, ' < 10')") is False
+
+    # string value via repr (inner: 'ab' in 'abc')
+    assert await interpreter.interprete('value_if(\'ab\', " in \'abc\'")') == "ab"
+
+    # truthy non-boolean inner result (inner expression evaluates to 5)
+    assert await interpreter.interprete("value_if(0, ' + 5')") == 0
+
+    # invalid condition type
+    with pytest.raises(octobot_commons.errors.InvalidParametersError):
+        await interpreter.interprete("value_if(1, 2)")
+
+    # computed value (not a literal)
+    assert await interpreter.interprete("value_if(10 + 5, ' > 12')") == 15
+    assert await interpreter.interprete("value_if(min(3, 1, 4), ' > 0')") == 1
+    assert await interpreter.interprete("value_if((2 + 3) * 2, ' == 10')") == 10
+
+    # computed condition via string concatenation
+    assert await interpreter.interprete("value_if(15, ' >' + ' 12')") == 15
+    assert await interpreter.interprete("value_if(15, ' <' + ' 10')") is False
+
+    # both value and condition are computed sub-expressions
+    assert await interpreter.interprete("value_if(min(5, 9, 3), ' >' + ' 2')") == 3
+    assert await interpreter.interprete("value_if((2 + 3) * 2, ' ==' + ' 10 - 1 + 1')") == 10
+    assert await interpreter.interprete("value_if((2 + 3) * 2, ' ==' + ' 10 - 1 + 2')") is False
+
+    # LOCAL_VALUE_PLACEHOLDER in condition: substitute repr(sanitize(value)), full expression as inner script
+    assert await interpreter.interprete(
+        f"value_if({{'status': 'open', 'qty': 1.5}}, \"get({commons_constants.LOCAL_VALUE_PLACEHOLDER}, 'status', 'closed') == 'open'\")"
+    ) == {"status": "open", "qty": 1.5}
+    assert await interpreter.interprete(
+        f"value_if({{'status': 'closed', 'qty': 1.5}}, \"get({commons_constants.LOCAL_VALUE_PLACEHOLDER}, 'status', 'closed') == 'open'\")"
+    ) is False
+
+    # same placeholder pattern with dict keys built from inner operations (e.g. 'sta'+'tus' -> 'status')
+    assert await interpreter.interprete(
+        "value_if({'sta'+'tus': 'open'}, \"get(LOCAL_VALUE_PLACEHOLDER, 'status', 'closed') == 'open'\")"
+    ) == {"status": "open"}
+    assert await interpreter.interprete(
+        "value_if({'sta'+'tus': 'closed'}, \"get(LOCAL_VALUE_PLACEHOLDER, 'status', 'closed') == 'open'\")"
+    ) is False
+
+    # LOCAL_VALUE_PLACEHOLDER + decimal in value dict (sanitize before repr for inner DSL)
+    payload = {"status": "open", "qty": decimal.Decimal("0.25")}
+    condition = (
+        f"get({commons_constants.LOCAL_VALUE_PLACEHOLDER}, 'status', 'closed') == 'open'"
+    )
+    operator = base_call_operators.ValueIfOperator(
+        payload, condition
+    )
+    operator.interpreter = interpreter
+    await operator.pre_compute()
+    assert operator.compute() == {"status": "open", "qty": 0.25}

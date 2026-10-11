@@ -49,6 +49,7 @@ def mock_trader():
     """Create a mock trader with exchange_manager for order creation."""
     mock_exchange_manager = mock.Mock(
         is_future=False,
+        is_option=False,  # must be set; else Mock() auto-attrs are truthy and break resolve_immediately
         get_exchange_quote_and_base=mock.Mock(return_value=("BTC", "USDT"))
     )
     
@@ -115,10 +116,11 @@ def test_filled_order_update_event_initialization_values(buy_order, sell_order):
     assert sell_event.symbol == "BTC/USDT"
 
 
-def test_futures_not_supported(mock_trader):
-    """Test that FilledOrderUpdateEvent raises NotImplementedError for futures."""
+def test_futures_resolve_immediately(mock_trader, portfolio):
+    """Futures/option exchanges skip per-asset amount checks; resolution is immediate."""
     mock_trader.exchange_manager.is_future = True
-    
+    mock_trader.exchange_manager.is_option = False
+
     order = octobot_trading.personal_data.BuyLimitOrder(mock_trader)
     order.update(
         order_type=enums.TraderOrderType.BUY_LIMIT,
@@ -127,9 +129,10 @@ def test_futures_not_supported(mock_trader):
         quantity=decimal.Decimal("1"),
         price=decimal.Decimal("50000")
     )
-    
-    with pytest.raises(NotImplementedError, match="Futures are not supported yet"):
-        octobot_trading.personal_data.FilledOrderUpdateEvent(order)
+
+    event = octobot_trading.personal_data.FilledOrderUpdateEvent(order)
+    assert event.resolve_immediately is True
+    assert event.is_resolved(portfolio) is True
 
 
 def test_get_checked_asset_available_amount_buy(portfolio, buy_order):
@@ -264,3 +267,27 @@ def test_different_symbols(mock_trader):
         
         event = octobot_trading.personal_data.FilledOrderUpdateEvent(order)
         assert event.symbol == symbol
+
+
+TICKER_WISE_SYMBOL = "BTC@BTC/USDT@ETH"
+
+
+class TestFilledOrderUpdateEventNetworkQualified:
+    def test_checked_asset_uses_qualified_base_on_buy(self):
+        portfolio = mock.Mock()
+        portfolio.get_currency_portfolio = mock.Mock(
+            return_value=mock.Mock(available=decimal.Decimal("10"))
+        )
+        order = mock.Mock(
+            origin_quantity=decimal.Decimal("1"),
+            origin_price=decimal.Decimal("1"),
+            side=enums.TradeOrderSide.BUY,
+            symbol=TICKER_WISE_SYMBOL,
+            trader=mock.Mock(
+                exchange_manager=mock.Mock(is_future=False, is_option=False),
+            ),
+        )
+        event = octobot_trading.personal_data.FilledOrderUpdateEvent(order)
+        available = event._get_checked_asset_available_amount(portfolio)
+        assert available == decimal.Decimal("10")
+        portfolio.get_currency_portfolio.assert_called_once_with("BTC@BTC")

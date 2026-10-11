@@ -19,6 +19,7 @@ import enum
 class ExchangeConstantsCCXTColumns(enum.Enum):
     TIMESTAMP = "timestamp"
     DATETIME = "datetime"
+    DEBT = "debt"
 
 
 class ExchangeConstantsMarketStatusCCXTColumns(enum.Enum):
@@ -134,6 +135,11 @@ class ExchangeOrderCCXTUnifiedParams(enum.Enum):
     TRAILING_AMOUNT = "trailingAmount"  # float
     TRAILING_TRIGGER_PRICE = "trailingTriggerPrice"    # float
 
+    # for swaps
+    ADDRESS_TO = "address_to" # address to send final funds to
+    ADDRESS_FROM = "address_from" # address to send initial funds to
+    REFUND_ADDRESS = "refund_address" # address to refund initial funds to
+
 
 class ExchangeWrapperLibs(enum.Enum):
     ASYNC_CCXT = "async_ccxt"
@@ -148,6 +154,8 @@ class ExchangeColumns(enum.Enum):
     REST = "rest"
     WEBSOCKET = "ws"
     LOGO_URL = "logo"
+    ICON_URL = "icon"
+    REFERRAL = "referral"
 
 
 class ExchangeMarginTypes(enum.Enum):
@@ -156,3 +164,5 @@ class ExchangeMarginTypes(enum.Enum):
 
 class OrderFetchParams(enum.Enum):
     STOP = "stop" # bool: when true, is about a stop order
+
+

@@ -52,9 +52,8 @@ from octobot.community.supabase_backend import (
     retried_failed_supabase_request,
     CommunitySupabaseClient,
 )
-
+from octobot.community import local_authenticator
 from octobot.community import community_analysis
-from octobot.community import community_manager
 from octobot.community import authentication
 from octobot.community import graphql_requests
 from octobot.community import feeds
@@ -64,9 +63,6 @@ from octobot.community.community_analysis import (
     get_community_metrics,
     get_current_octobots_stats,
     can_read_metrics,
-)
-from octobot.community.community_manager import (
-    CommunityManager,
 )
 from octobot.community.authentication import (
     CommunityAuthentication,
@@ -93,8 +89,6 @@ from octobot.community.feeds import (
 from octobot.community.errors_upload import (
     init_sentry_tracker,
     flush_tracker,
-    upload_error,
-    share_logs,
 )
 from octobot.community.identifiers_provider import (
     IdentifiersProvider,
@@ -103,12 +97,16 @@ from octobot.community.history_backend import (
     history_backend_client,
     HistoricalBackendClient,
     ClickhouseHistoricalBackendClient,
-    IcebergHistoricalBackendClient,
 )
 from octobot.community.community_bot import (
     CommunityBot,
 )
-
+from octobot.community.local_authenticator import (
+    get_stateless_configuration,
+    get_user_configuration,
+    local_user_authenticator,
+    local_anon_user_authenticator,  
+)
 __all__ = [
     "RequestError",
     "StatusCodeRequestError",
@@ -121,7 +119,6 @@ __all__ = [
     "get_community_metrics",
     "get_current_octobots_stats",
     "can_read_metrics",
-    "CommunityManager",
     "CommunityAuthentication",
     "CommunityTentaclesPackage",
     "CommunitySupports",
@@ -163,10 +160,11 @@ __all__ = [
     "history_backend_client",
     "HistoricalBackendClient",
     "ClickhouseHistoricalBackendClient",
-    "IcebergHistoricalBackendClient",
     "CommunityBot",
     "MissingDeploymentError",
     "MissingProductsSubscriptionError",
-    "upload_error",
-    "share_logs",
+    "get_stateless_configuration",
+    "get_user_configuration",
+    "local_user_authenticator",
+    "local_anon_user_authenticator",
 ]

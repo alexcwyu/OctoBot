@@ -18,7 +18,10 @@ import os.path as path
 
 import octobot_commons.logging as logging
 import octobot_commons.constants as commons_constants
-import octobot_commons.profiles as commons_profiles
+import octobot_commons.errors as commons_errors
+import octobot_commons.user_root_folder_provider as user_root_folder_provider
+import octobot_commons.profiles.backends as profile_backends_module
+import octobot_commons.profiles.profile_edit_gate as profile_edit_gate_module
 
 import octobot_tentacles_manager.constants as constants
 import octobot_tentacles_manager.configuration as configuration
@@ -39,11 +42,13 @@ class TentaclesSetupConfiguration:
         constants.TENTACLES_TRADING_SUPERVISOR_PATH,
     }
 
-    def __init__(self, bot_installation_path=constants.DEFAULT_BOT_PATH,
-                 config_path=constants.USER_REFERENCE_TENTACLE_CONFIG_FILE_PATH):
+    def __init__(self, bot_installation_path=constants.DEFAULT_BOT_PATH, config_path=None):
         self.logger = logging.get_logger(self.__class__.__name__)
         self.bot_installation_path = bot_installation_path
+        if config_path is None:
+            config_path = user_root_folder_provider.get_user_reference_tentacle_config_file_path()
         self.config_path = path.join(bot_installation_path, config_path)
+        self.profile = None
         self.tentacles_activation = {}
         self.registered_tentacles = {}
         self.installation_context = {}
@@ -92,16 +97,20 @@ class TentaclesSetupConfiguration:
     @staticmethod
     def is_imported_profile(profile_folder):
         try:
-            return commons_profiles.Profile(profile_folder).read_config().imported
-        except OSError:
+            filesystem_backend = profile_backends_module.FilesystemProfileBackend()
+            profile = filesystem_backend.read_profile_from_path(profile_folder)
+            return profile.imported
+        except (OSError, commons_errors.ProfileDataError):
             return False
 
     def refresh_profiles_tentacles_config(self,
                                           tentacles,
-                                          profiles_path=commons_constants.USER_PROFILES_FOLDER,
+                                          profiles_path=None,
                                           newly_installed_tentacles=None,
                                           uninstalled_tentacles=None
                                           ):
+        if profiles_path is None:
+            profiles_path = user_root_folder_provider.get_user_profiles_folder()
         bot_profiles_path = os.path.join(self.bot_installation_path, profiles_path)
         if not path.isdir(bot_profiles_path):
             return
@@ -116,6 +125,14 @@ class TentaclesSetupConfiguration:
 
     def update_activation_configuration(self, new_config, deactivate_other_evaluators,
                                         add_missing_elements, tentacles_path=constants.TENTACLES_PATH):
+        profile = self.profile
+        if profile is not None:
+            profile_storage = profile.get_profile_storage()
+            if profile_storage is not None:
+                profile_storage.edit_gate.assert_edit_allowed(
+                    profile,
+                    profile_edit_gate_module.ProfileEditType.TENTACLE_ACTIVATION,
+                )
         something_changed = False
         loaders.ensure_tentacles_metadata(tentacles_path)
         for element_name, activated in new_config.items():
@@ -204,9 +221,10 @@ class TentaclesSetupConfiguration:
         return False
 
     def _apply_default_profile_activation(self):
-        default_profile = commons_profiles.Profile.load_profile(
-            commons_constants.USER_PROFILES_FOLDER,
-            commons_constants.DEFAULT_PROFILE
+        filesystem_backend = profile_backends_module.FilesystemProfileBackend()
+        default_profile = filesystem_backend.load_profile(
+            user_root_folder_provider.get_user_profiles_folder(),
+            commons_constants.DEFAULT_PROFILE,
         )
         profile_setup_config = configuration.TentaclesSetupConfiguration(
             config_path=default_profile.get_tentacles_config_path()
@@ -220,7 +238,9 @@ class TentaclesSetupConfiguration:
                 self._apply_default_profile_activation()
             else:
                 self._from_dict(
-                    configuration.read_config(constants.USER_REFERENCE_TENTACLE_CONFIG_FILE_PATH),
+                    configuration.read_config(
+                        user_root_folder_provider.get_user_reference_tentacle_config_file_path()
+                    ),
                     read_activation_config
                 )
         except Exception as err:
@@ -240,6 +260,18 @@ class TentaclesSetupConfiguration:
             self.save_config()
 
     def save_config(self, is_config_update: bool = False) -> bool:
+        profile = self.profile
+        if profile is not None:
+            profile_storage = profile.get_profile_storage()
+            if profile_storage is not None:
+                edit_gate = profile_storage.edit_gate
+                if not is_config_update:
+                    edit_gate.assert_edit_allowed(
+                        profile,
+                        profile_edit_gate_module.ProfileEditType.TENTACLE_ACTIVATION,
+                    )
+                if edit_gate.should_skip_tentacles_setup_config_write(profile):
+                    return False
         changed = False
         parent_dir, _ = path.split(self.config_path)
         if not path.exists(parent_dir):

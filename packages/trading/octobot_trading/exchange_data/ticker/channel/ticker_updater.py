@@ -16,14 +16,30 @@
 #  License along with this library.
 import asyncio
 import contextlib
+import typing
 
 import octobot_commons.html_util as html_util
 
 import octobot_trading.errors as errors
 import octobot_trading.constants as constants
+import octobot_trading.exchange_data.ticker.ticker_cache as ticker_cache
 import octobot_trading.exchange_data.ticker.channel.ticker as ticker_channel
 import octobot_trading.enums as enums
 import octobot_trading.exchanges.exchange_websocket_factory as exchange_websocket_factory
+import octobot_trading.exchanges.util.exchange_util as exchange_util
+
+
+_TICKER_CACHE = ticker_cache.TickerCache(
+    ttl=constants.TICKER_CACHE_TTL,
+    maxsize=50
+)
+_TICKER_FETCH_LOCKS: dict[str, asyncio.Lock] = {}
+
+
+def _get_ticker_fetch_lock(exchange_key: str) -> asyncio.Lock:
+    if exchange_key not in _TICKER_FETCH_LOCKS:
+        _TICKER_FETCH_LOCKS[exchange_key] = asyncio.Lock()
+    return _TICKER_FETCH_LOCKS[exchange_key]
 
 
 class TickerUpdater(ticker_channel.TickerProducer):
@@ -32,24 +48,30 @@ class TickerUpdater(ticker_channel.TickerProducer):
     CHANNEL_NAME = constants.TICKER_CHANNEL
     TICKER_REFRESH_TIME = 64
     TICKER_FUTURE_REFRESH_TIME = 14
+    TICKERS_AS_SINGLE_PRICE_SOURCE_REFRESH_TIME = (
+        constants.TICKERS_AS_SINGLE_PRICE_SOURCE_REFRESH_TIME
+    )
     TICKER_REFRESH_DELAY_THRESHOLD = 10
 
     def __init__(self, channel):
         super().__init__(channel)
         self._added_pairs = []
-        self.is_fetching_future_data = False
+        self.enable_short_refresh_time = False
         self.refresh_time = self.TICKER_REFRESH_TIME
         self.updating_pairs = set()
 
     async def start(self):
-        use_futures = self._should_use_future()
-        if use_futures:
-            self.is_fetching_future_data = True
+        if self._should_use_future():
+            self.enable_short_refresh_time = True
             self.refresh_time = self.TICKER_FUTURE_REFRESH_TIME
+        if self._creates_ohlcv_from_tickers():
+            # tickers are the only source of price data, need to refresh them often
+            self.enable_short_refresh_time = True
+            self.refresh_time = self.TICKERS_AS_SINGLE_PRICE_SOURCE_REFRESH_TIME
         if self.channel.is_paused:
             await self.pause()
         else:
-            if use_futures or self._should_loop():
+            if self.enable_short_refresh_time or self._should_loop():
                 # initialize ticker
                 await asyncio.gather(*[self._fetch_ticker(pair)
                                        for pair in self._get_pairs_to_update()])
@@ -64,7 +86,10 @@ class TickerUpdater(ticker_channel.TickerProducer):
     async def start_update_loop(self):
         while not self.should_stop and not self.channel.is_paused:
             try:
-                for pair in self._get_pairs_to_update():
+                pairs = self._get_pairs_to_update()
+                if self.enable_short_refresh_time:
+                    self.logger.debug(f"Triggering ticker update for {len(pairs)} pairs: {pairs}")
+                for pair in pairs:
                     await self._fetch_ticker(pair)
 
                 await asyncio.sleep(self.refresh_time)
@@ -101,6 +126,87 @@ class TickerUpdater(ticker_channel.TickerProducer):
         self.logger.debug(f"Triggered ticker update for {symbol}")
         await self.fetch_and_push_pair(symbol)
 
+    async def fetch_all_tickers(self, symbols: typing.Optional[list[str]]) -> dict[str, dict]:
+        if symbols == []:
+            return {}
+        exchange_name = self.channel.exchange_manager.exchange_name
+        exchange_type = exchange_util.get_exchange_type(self.channel.exchange_manager).value
+        sandboxed = self.channel.exchange_manager.is_sandboxed
+        exchange_key = ticker_cache.TickerCache.get_exchange_key(exchange_name, exchange_type, sandboxed)
+        cached_tickers = _TICKER_CACHE.get_all_tickers(exchange_name, exchange_type, sandboxed) or {}
+        if isinstance(symbols, list) and len(symbols) == 1:
+            symbol = symbols[0]
+            if symbol in cached_tickers:
+                return {symbol: cached_tickers[symbol]}
+            return {
+                symbol: await self.channel.exchange_manager.exchange.get_price_ticker(symbol)
+            }
+        if symbols is None:
+            if cached_tickers:
+                return cached_tickers
+            async with _get_ticker_fetch_lock(exchange_key):
+                cached_tickers = _TICKER_CACHE.get_all_tickers(exchange_name, exchange_type, sandboxed) or {}
+                if cached_tickers:
+                    return cached_tickers
+                symbols_filter = None
+                if self.channel.exchange_manager.exchange.get_option_value(
+                    enums.ExchangeClientOptions.REQUIRES_SYMBOLS_PARAM_TO_FETCH_TICKERS
+                ):
+                    symbols_filter = symbols
+                tickers = await self.channel.exchange_manager.exchange.get_all_currencies_price_ticker(
+                    symbols=symbols_filter
+                )
+                self.set_cache(exchange_name, exchange_type, sandboxed, tickers)
+                return tickers
+        tickers_from_cache = {
+            symbol: cached_tickers[symbol]
+            for symbol in symbols
+            if symbol in cached_tickers
+        }
+        missing_symbols = [symbol for symbol in symbols if symbol not in cached_tickers]
+        if not missing_symbols:
+            return tickers_from_cache
+        async with _get_ticker_fetch_lock(exchange_key):
+            cached_tickers = _TICKER_CACHE.get_all_tickers(exchange_name, exchange_type, sandboxed) or {}
+            tickers_from_cache = {
+                symbol: cached_tickers[symbol]
+                for symbol in symbols
+                if symbol in cached_tickers
+            }
+            missing_symbols = [symbol for symbol in symbols if symbol not in cached_tickers]
+            if not missing_symbols:
+                return tickers_from_cache
+            fetched_tickers = await self._fetch_missing_tickers(missing_symbols)
+            self.set_cache(exchange_name, exchange_type, sandboxed, fetched_tickers)
+            return {
+                **tickers_from_cache,
+                **{
+                    symbol: fetched_tickers[symbol]
+                    for symbol in symbols
+                    if symbol in fetched_tickers
+                },
+            }
+
+    async def _fetch_missing_tickers(self, missing_symbols: list[str]) -> dict[str, dict]:
+        exchange = self.channel.exchange_manager.exchange
+        if exchange.get_option_value(
+            enums.ExchangeClientOptions.REQUIRES_SYMBOLS_PARAM_TO_FETCH_TICKERS
+        ):
+            return await exchange.get_all_currencies_price_ticker(symbols=missing_symbols)
+        return await exchange.get_all_currencies_price_ticker()
+
+    @staticmethod
+    def set_cache(exchange_name: str, exchange_type: str, sandboxed: bool, tickers: dict):
+        _TICKER_CACHE.set_all_tickers(exchange_name, exchange_type, sandboxed, tickers, replace_all=False)
+
+    @staticmethod
+    def reset_cache():
+        _TICKER_CACHE.reset_all_tickers_cache()
+
+    @staticmethod
+    def get_ticker_cache():
+        return _TICKER_CACHE
+
     @contextlib.contextmanager
     def _single_pair_update(self, pair: str):
         can_update = False
@@ -116,19 +222,16 @@ class TickerUpdater(ticker_channel.TickerProducer):
     @staticmethod
     def _is_valid(ticker):
         try:
-            # at least require close, volume and timestamp
-            if not (
-                ticker.get(enums.ExchangeConstantsTickersColumns.CLOSE.value)
-                and ticker.get(enums.ExchangeConstantsTickersColumns.TIMESTAMP.value)
-            ):
-                return False
-            if not (
-                ticker.get(enums.ExchangeConstantsTickersColumns.BASE_VOLUME.value)
-                or ticker.get(enums.ExchangeConstantsTickersColumns.QUOTE_VOLUME.value)
-            ):
-                # require either base or quote volume
-                return False
-            return True
+            # at least require close and timestamp
+            if ticker.get(enums.ExchangeConstantsTickersColumns.TIMESTAMP.value):
+                # only accept empty tickers if ALLOW_EMPTY_TICKERS is True
+                # warning: price manager will still be uninitilized if ticker price is empty
+                # TODO later: completely support this case if required
+                return (
+                    ticker.get(enums.ExchangeConstantsTickersColumns.CLOSE.value)
+                    or constants.ALLOW_EMPTY_TICKERS
+                )
+            return False # no timestamp
         except KeyError:
             return False
 
@@ -151,9 +254,18 @@ class TickerUpdater(ticker_channel.TickerProducer):
     def _should_use_future(self):
         return (
             self.channel.exchange_manager.is_future and (
-                self.channel.exchange_manager.exchange.FUNDING_IN_TICKER
-                or self.channel.exchange_manager.exchange.MARK_PRICE_IN_TICKER
+                self.channel.exchange_manager.exchange.get_option_value(
+                    enums.ExchangeClientOptions.FUNDING_IN_TICKER
+                )
+                or self.channel.exchange_manager.exchange.get_option_value(
+                    enums.ExchangeClientOptions.MARK_PRICE_IN_TICKER
+                )
             )
+        )
+
+    def _creates_ohlcv_from_tickers(self):
+        return self.channel.exchange_manager.exchange.get_option_value(
+            enums.ExchangeClientOptions.CREATE_OHLCV_FROM_TICKERS
         )
 
     async def modify(self, added_pairs=None, removed_pairs=None):
@@ -175,7 +287,7 @@ class TickerUpdater(ticker_channel.TickerProducer):
             self._update_refresh_time()
 
     def _update_refresh_time(self):
-        if self.is_fetching_future_data:
+        if self.enable_short_refresh_time:
             # do not change ticker update rate on futures
             return
         pairs_to_update_count = len(self._get_pairs_to_update())

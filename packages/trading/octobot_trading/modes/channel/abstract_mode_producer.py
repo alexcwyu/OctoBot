@@ -88,7 +88,7 @@ class AbstractTradingModeProducer(modes_channel.ModeChannelProducer):
         self.evaluator_consumers: list[async_channel.consumer.Consumer] = []
         self.trading_consumers: list[exchanges_channel.ExchangeChannelConsumer] = []
 
-        self.time_frame_filter: typing.Optional[list[common_enums.TimeFrames]] = None
+        self.time_frame_filter: typing.Optional[list[str]] = None
 
         # Define trading modes default consumer priority level
         self.priority_level: int = channel_enums.ChannelConsumerPriorityLevels.MEDIUM.value
@@ -145,7 +145,7 @@ class AbstractTradingModeProducer(modes_channel.ModeChannelProducer):
         finally:
             self.logger.debug(
                 f"Ready to trade on {self.exchange_manager.exchange_name if self.exchange_manager else ''}, "
-                f"symbol: {self.trading_mode.symbol if (self.trading_mode and self.trading_mode.symbol) else ''}"
+                f"symbol: {self.trading_mode.symbol if (self.trading_mode and self.trading_mode.symbol) else common_constants.CONFIG_WILDCARD}"
             )
             self._is_ready_to_trade.set()
 
@@ -173,12 +173,7 @@ class AbstractTradingModeProducer(modes_channel.ModeChannelProducer):
             symbol_filter = self.trading_mode.symbol \
                 if self.trading_mode.symbol is not None and not self.is_symbol_wildcard() \
                 else common_constants.CONFIG_WILDCARD
-            self.time_frame_filter = self.trading_mode.time_frame \
-                if self.trading_mode.time_frame is not None and self.is_time_frame_wildcard() \
-                else [tf.value
-                      for tf in self.exchange_manager.exchange_config.get_relevant_time_frames()
-                      if tf.value in trigger_time_frames or
-                      trigger_time_frames == common_constants.CONFIG_WILDCARD]
+            self.time_frame_filter = self._get_time_frame_filter(trigger_time_frames)
             if trigger_time_frames != common_constants.CONFIG_WILDCARD and \
                len(self.time_frame_filter) < len(trigger_time_frames):
                 missing_time_frames = [tf for tf in trigger_time_frames if tf not in self.time_frame_filter]
@@ -194,6 +189,23 @@ class AbstractTradingModeProducer(modes_channel.ModeChannelProducer):
             extra_global_topics=self.get_extra_global_topics()
         )
 
+    def _get_time_frame_filter(self, trigger_time_frames: list[str]) -> typing.Optional[list[str]]:
+        return (
+            [self.trading_mode.time_frame.value]
+            if (self.trading_mode.time_frame is not None and self.is_time_frame_wildcard())
+            else (
+                # use relevant time frames if any when no time frame filter is provided
+                [
+                    tf.value
+                    for tf in self.exchange_manager.exchange_config.get_relevant_time_frames()
+                    if tf.value in trigger_time_frames or
+                    trigger_time_frames == common_constants.CONFIG_WILDCARD
+                ]
+                # or fallback to wildcard (None means no time frame filter)
+                or None
+            )
+        )
+
     def get_extra_init_symbol_topics(self) -> typing.Optional[list]:
         # Implement if necessary
         return None
@@ -203,6 +215,7 @@ class AbstractTradingModeProducer(modes_channel.ModeChannelProducer):
         return None
 
     async def _subscribe_to_registration_topic(self, registration_topics, currency_filter, symbol_filter):
+        time_frame_filter = common_constants.CONFIG_WILDCARD if self.time_frame_filter is None else self.time_frame_filter
         for registration_topic in registration_topics:
             if registration_topic == channels_name.OctoBotEvaluatorsChannelsName.MATRIX_CHANNEL.value:
                 # register to matrix channel if necessary
@@ -219,7 +232,7 @@ class AbstractTradingModeProducer(modes_channel.ModeChannelProducer):
                         exchange_name=self.exchange_name,
                         # no time_frame filter to allow receiving updates from strategies without timeframes in wildcard
                         time_frame=common_constants.CONFIG_WILDCARD if self.is_time_frame_wildcard()
-                        else self.time_frame_filter,
+                        else time_frame_filter,
                         supervised=self.exchange_manager.is_backtesting
                     )
                     self.evaluator_consumers.append(
@@ -235,7 +248,7 @@ class AbstractTradingModeProducer(modes_channel.ModeChannelProducer):
                     priority_level=self.priority_level,
                     cryptocurrency=currency_filter,
                     symbol=symbol_filter,
-                    time_frame=self.time_frame_filter
+                    time_frame=time_frame_filter
                 )
                 self.trading_consumers.append(
                     (consumer, registration_topic)
@@ -361,11 +374,18 @@ class AbstractTradingModeProducer(modes_channel.ModeChannelProducer):
         """
         try:
             async with self.trading_mode_trigger(), self.trading_mode.remote_signal_publisher(symbol):
-                await self.set_final_eval(matrix_id=matrix_id,
-                                          cryptocurrency=cryptocurrency,
-                                          symbol=symbol,
-                                          time_frame=time_frame,
-                                          trigger_source=trigger_source)
+                if trigger_source == common_enums.TriggerSource.MANUAL.value:
+                    await self.manual_trigger(matrix_id=matrix_id,
+                                            cryptocurrency=cryptocurrency,
+                                            symbol=symbol,
+                                            time_frame=time_frame,
+                                            trigger_source=trigger_source)
+                else:
+                    await self.set_final_eval(matrix_id=matrix_id,
+                                            cryptocurrency=cryptocurrency,
+                                            symbol=symbol,
+                                            time_frame=time_frame,
+                                            trigger_source=trigger_source)
         except errors.InitializingError as e:
             self.logger.exception(
                 e,
@@ -413,8 +433,25 @@ class AbstractTradingModeProducer(modes_channel.ModeChannelProducer):
     async def post_trigger(self):
         pass
 
-    async def set_final_eval(self, matrix_id: str, cryptocurrency: str, symbol: str, time_frame,
-                             trigger_source: str) -> None:
+    async def manual_trigger(
+        self, matrix_id: str, cryptocurrency: str,
+        symbol: str, time_frame, trigger_source: str,
+    ) -> None:
+        """
+        Called when a manual trigger is received. Behaves like set_final_eval by default.
+        """
+        return await self.set_final_eval(
+            matrix_id=matrix_id,
+            cryptocurrency=cryptocurrency,
+            symbol=symbol,
+            time_frame=time_frame,
+            trigger_source=trigger_source,
+        )
+
+    async def set_final_eval(
+        self, matrix_id: str, cryptocurrency: str, symbol: str,
+        time_frame, trigger_source: str,
+    ) -> None:
         """
         Called to calculate the final note or state => when any notification appears
         """
@@ -427,14 +464,17 @@ class AbstractTradingModeProducer(modes_channel.ModeChannelProducer):
         data=None,
         dependencies: typing.Optional[commons_signals.SignalDependencies] = None
     ) -> None:
-        await self.send(trading_mode_name=self.trading_mode.get_name(),
-                        cryptocurrency=cryptocurrency,
-                        symbol=symbol,
-                        time_frame=time_frame,
-                        final_note=final_note,
-                        state=state.value,
-                        data=data if data is not None else {},
-                        dependencies=dependencies)
+        await self.send(
+            trading_mode_name=self.trading_mode.get_name(),
+            cryptocurrency=cryptocurrency,
+            symbol=symbol,
+            time_frame=time_frame,
+            final_note=final_note,
+            state=state.value,
+            data=data if data is not None else {},
+            dependencies=dependencies,
+            synchronous_execution=self.trading_mode.synchronous_execution
+        )
 
     @classmethod
     def get_should_cancel_loaded_orders(cls) -> bool:
@@ -480,7 +520,10 @@ class AbstractTradingModeProducer(modes_channel.ModeChannelProducer):
                     failed_to_cancel = True
             except errors.OctoBotExchangeError as err:
                 # do not propagate exchange error when canceling order
-                self.logger.exception(err, True, f"Error when cancelling order [{order}]: {err}")
+                self.logger.exception(
+                    err, True, 
+                    f"Error when cancelling order [{logging.get_private_minimized_message_if_necessary(order)}]: {err}"
+                )
                 failed_to_cancel = True
         return (cancelled and not failed_to_cancel), cancelled_dependencies or None
 

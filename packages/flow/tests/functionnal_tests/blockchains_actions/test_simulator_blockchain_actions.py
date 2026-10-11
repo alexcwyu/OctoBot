@@ -5,9 +5,10 @@ import octobot_trading.blockchain_wallets as blockchain_wallets
 import octobot_trading.constants as trading_constants
 import octobot_trading.enums as trading_enums
 
-import octobot_flow
+import octobot_flow.jobs
 import octobot_flow.entities
 import octobot_flow.enums
+import octobot_flow.logic.dsl.action_error_util
 
 import tests.functionnal_tests as functionnal_tests
 from tests.functionnal_tests import (
@@ -54,15 +55,15 @@ def actions_with_blockchain_deposit_and_withdrawal_with_holding_checks():
     return [
         {
             "id": "action_1",
-            "dsl_script": f"error('{octobot_flow.enums.ActionErrorStatus.NOT_ENOUGH_FUNDS.value}') if (blockchain_wallet_balance({blockchain_descriptor}, {wallet_descriptor}, '{ADDED_COIN_SYMBOL}') < 1) else 'ok'", # will pass
+            "dsl_script": f"error('{octobot_flow.enums.ActionErrorStatus.NOT_ENOUGH_FUNDS.value}', 'Add more funds 1') if (blockchain_wallet_balance({blockchain_descriptor}, {wallet_descriptor}, '{ADDED_COIN_SYMBOL}') < 1) else 'ok'", # will pass
         },
         {
             "id": "action_2",
-            "dsl_script": f"error('{octobot_flow.enums.ActionErrorStatus.NOT_ENOUGH_FUNDS.value}') if blockchain_wallet_balance({blockchain_descriptor}, {wallet_descriptor}, '{ADDED_COIN_SYMBOL}') < 2500 else 'ok'", # will fail
+            "dsl_script": f"error('{octobot_flow.enums.ActionErrorStatus.NOT_ENOUGH_FUNDS.value}', 'Add more funds 2') if blockchain_wallet_balance({blockchain_descriptor}, {wallet_descriptor}, '{ADDED_COIN_SYMBOL}') < 2500 else 'ok'", # will fail
         },
         {
             "id": "action_3",
-            "dsl_script": f"error('{octobot_flow.enums.ActionErrorStatus.NOT_ENOUGH_FUNDS.value}') if blockchain_wallet_balance({blockchain_descriptor}, {wallet_descriptor}, '{ADDED_COIN_SYMBOL}') < 1 else 'ok'", # will pass
+            "dsl_script": f"error('{octobot_flow.enums.ActionErrorStatus.NOT_ENOUGH_FUNDS.value}', 'Add more funds 3') if blockchain_wallet_balance({blockchain_descriptor}, {wallet_descriptor}, '{ADDED_COIN_SYMBOL}') < 1 else 'ok'", # will pass
         },
         {
             "id": "action_4",
@@ -70,7 +71,7 @@ def actions_with_blockchain_deposit_and_withdrawal_with_holding_checks():
         },
         {
             "id": "action_5",
-            "dsl_script": f"error('{octobot_flow.enums.ActionErrorStatus.NOT_ENOUGH_FUNDS.value}') if available('{ADDED_COIN_SYMBOL}') < 0.1 else 'ok'",
+            "dsl_script": f"error('{octobot_flow.enums.ActionErrorStatus.NOT_ENOUGH_FUNDS.value}', 'Add more funds 5') if available('{ADDED_COIN_SYMBOL}') < 0.1 else 'ok'",
         },
         {
             "id": "action_6",
@@ -82,7 +83,7 @@ def actions_with_blockchain_deposit_and_withdrawal_with_holding_checks():
         },
         {
             "id": "action_8",
-            "dsl_script": f"error('{octobot_flow.enums.ActionErrorStatus.NOT_ENOUGH_FUNDS.value}') if blockchain_wallet_balance({blockchain_descriptor}, {wallet_descriptor}, '{ADDED_COIN_SYMBOL}') < 0.95 else 'ok'",
+            "dsl_script": f"error('{octobot_flow.enums.ActionErrorStatus.NOT_ENOUGH_FUNDS.value}', 'Add more funds 8') if blockchain_wallet_balance({blockchain_descriptor}, {wallet_descriptor}, '{ADDED_COIN_SYMBOL}') < 0.95 else 'ok'",
         },
     ]
 
@@ -97,8 +98,8 @@ async def test_execute_actions_with_blockchain_deposit_and_withdrawal(
         functionnal_tests.mocked_community_repository() as insert_bot_logs_mock,
         mock.patch.object(trading_constants, 'ALLOW_FUNDS_TRANSFER', True),
     ):
-        async with octobot_flow.AutomationJob(global_state, [], auth_details) as automations_job:
-            automations_job.automation_state.update_automation_actions(
+        async with octobot_flow.jobs.AutomationJob(global_state, [], [], auth_details) as automations_job:
+            automations_job.automation_state.upsert_automation_actions(
                 resolved_actions(actions_with_blockchain_deposit_and_withdrawal_with_holding_checks),
             )
             await automations_job.run()
@@ -111,9 +112,11 @@ async def test_execute_actions_with_blockchain_deposit_and_withdrawal(
             if index == 1:
                 # only the second action will fail because of not enough funds
                 assert action.error_status == octobot_flow.enums.ActionErrorStatus.NOT_ENOUGH_FUNDS.value
+                assert action.error_message == "Add more funds 2"
                 assert action.result is None
             else:
                 assert action.error_status == octobot_flow.enums.ActionErrorStatus.NO_ERROR.value
+                assert action.error_message is None
                 assert isinstance(action.result, dict) or action.result == "ok"
                 assert action.result
             assert action.executed_at and action.executed_at >= current_time
@@ -124,7 +127,7 @@ async def test_execute_actions_with_blockchain_deposit_and_withdrawal(
         # no next execution time scheduled: trigger immediately
         assert after_execution_dump["automation"]["execution"]["current_execution"]["scheduled_to"] == 0
         # check portfolio content
-        after_execution_portfolio_content = after_execution_dump["automation"]["client_exchange_account_elements"]["portfolio"]["content"]
+        after_execution_portfolio_content = after_execution_dump["automation"]["exchange_account_elements"]["portfolio"]["content"]
         assert isinstance(after_execution_dump, dict)
         assert list(sorted(after_execution_portfolio_content.keys())) == ["BTC", "ETH", "USDT"]  # BTC is now added to the portfolio
         assert after_execution_portfolio_content["USDT"]["available"] > 2000  # sold BTC, therefore added some USDT to the portfolio (initially 1000 USDT)
@@ -133,7 +136,7 @@ async def test_execute_actions_with_blockchain_deposit_and_withdrawal(
         assert 0.009 < after_execution_portfolio_content["BTC"]["available"] <= 0.01  # deposited 0.1 BTC, sold 0.04 BTC and withdrew 0.05 BTC
         
         # check transactions
-        after_execution_transactions = after_execution_dump["automation"]["client_exchange_account_elements"]["transactions"]
+        after_execution_transactions = after_execution_dump["automation"]["exchange_account_elements"]["transactions"]
         assert isinstance(after_execution_transactions, list)
         assert len(after_execution_transactions) == 2
         # first transaction is the deposit
@@ -162,8 +165,8 @@ async def test_execute_actions_with_blockchain_deposit_and_withdrawal_with_holdi
         functionnal_tests.mocked_community_repository() as insert_bot_logs_mock,
         mock.patch.object(trading_constants, 'ALLOW_FUNDS_TRANSFER', True),
     ):
-        async with octobot_flow.AutomationJob(global_state, [], auth_details) as automations_job:
-            automations_job.automation_state.update_automation_actions(
+        async with octobot_flow.jobs.AutomationJob(global_state, [], [], auth_details) as automations_job:
+            automations_job.automation_state.upsert_automation_actions(
                 resolved_actions(actions_with_blockchain_deposit_and_withdrawal_with_holding_checks),
             )
             await automations_job.run()
@@ -176,9 +179,11 @@ async def test_execute_actions_with_blockchain_deposit_and_withdrawal_with_holdi
             if index == 1:
                 # only the second action will fail because of not enough funds
                 assert action.error_status == octobot_flow.enums.ActionErrorStatus.NOT_ENOUGH_FUNDS.value
+                assert action.error_message == "Add more funds 2"
                 assert action.result is None
             else:
                 assert action.error_status == octobot_flow.enums.ActionErrorStatus.NO_ERROR.value
+                assert action.error_message is None
                 assert isinstance(action.result, dict) or action.result == "ok"
                 assert action.result
             assert action.executed_at and action.executed_at >= current_time
@@ -189,7 +194,7 @@ async def test_execute_actions_with_blockchain_deposit_and_withdrawal_with_holdi
         # no next execution time scheduled: trigger immediately
         assert after_execution_dump["automation"]["execution"]["current_execution"]["scheduled_to"] == 0
         # check portfolio content
-        after_execution_portfolio_content = after_execution_dump["automation"]["client_exchange_account_elements"]["portfolio"]["content"]
+        after_execution_portfolio_content = after_execution_dump["automation"]["exchange_account_elements"]["portfolio"]["content"]
         assert isinstance(after_execution_dump, dict)
         assert list(sorted(after_execution_portfolio_content.keys())) == ["BTC", "ETH", "USDT"]  # BTC is now added to the portfolio
         assert after_execution_portfolio_content["USDT"]["available"] > 2000  # sold BTC, therefore added some USDT to the portfolio (initially 1000 USDT)
@@ -197,7 +202,7 @@ async def test_execute_actions_with_blockchain_deposit_and_withdrawal_with_holdi
         assert 0.009 < after_execution_portfolio_content["BTC"]["total"] <= 0.01  # deposited 0.1 BTC, sold 0.04 BTC and withdrew 0.05 BTC
         assert 0.009 < after_execution_portfolio_content["BTC"]["available"] <= 0.01  # deposited 0.1 BTC, sold 0.04 BTC and withdrew 0.05 BTC
         # check transactions
-        after_execution_transactions = after_execution_dump["automation"]["client_exchange_account_elements"]["transactions"]
+        after_execution_transactions = after_execution_dump["automation"]["exchange_account_elements"]["transactions"]
         assert isinstance(after_execution_transactions, list)
         assert len(after_execution_transactions) == 2
         # first transaction is the deposit

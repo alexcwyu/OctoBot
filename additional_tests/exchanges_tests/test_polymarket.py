@@ -49,15 +49,11 @@ class TestPolymarketAuthenticatedExchange(
     async def test_get_portfolio(self):
         await super().test_get_portfolio()
 
-    async def test_get_portfolio_with_market_filter(self):
-        # pass if not implemented
-        pass
-
     async def test_untradable_symbols(self):
         # pass if not implemented
         pass
 
-    async def test_get_max_orders_count(self):
+    async def test_get_max_open_orders_count(self):
         # pass if not implemented
         pass
 
@@ -85,13 +81,16 @@ class TestPolymarketAuthenticatedExchange(
     async def test_get_not_found_order(self):
         await super().test_get_not_found_order()
 
-    async def test_is_valid_account(self):
+    async def test_is_broker_enabled(self):
         # pass if not implemented
         pass
 
     async def test_get_special_orders(self):
         # pass if not implemented
         pass
+
+    async def test_cancel_uncancellable_order(self):
+        await super().test_cancel_uncancellable_order()
 
     async def test_create_and_cancel_limit_orders(self):
         await super().test_create_and_cancel_limit_orders()
@@ -101,6 +100,17 @@ class TestPolymarketAuthenticatedExchange(
 
     async def test_get_my_recent_trades(self):
         await super().test_get_my_recent_trades()
+
+    async def test_get_my_recent_trades_exhaust_history(self):
+        await super().test_get_my_recent_trades_exhaust_history()
+
+    async def test_get_deposits(self):
+        # untested yet
+        await super().test_get_deposits()
+
+    async def test_get_withdrawals(self):
+        # untested yet
+        await super().test_get_withdrawals()
 
     async def test_get_closed_orders(self):
         # pass if not implemented

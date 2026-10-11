@@ -16,10 +16,11 @@
 import asyncio
 import contextlib
 import json
-import time
-import typing
-import hashlib
 import os
+import time
+import threading
+import typing
+import octobot.community.config_path_binding as config_path_binding
 import decimal
 
 import octobot.constants as constants
@@ -38,13 +39,18 @@ import octobot.community.wallet_backend as wallet_backend
 import octobot.community.feeds as community_feeds
 import octobot.community.tentacles_packages as community_tentacles_packages
 import octobot.community.community_bot as community_bot
+import octobot_commons.asyncio_tools as asyncio_tools
 import octobot_commons.constants as commons_constants
 import octobot_commons.enums as commons_enums
 import octobot_commons.authentication as authentication
 import octobot_commons.configuration as commons_configuration
 import octobot_commons.profiles as commons_profiles
+import octobot_commons.user_root_folder_provider as user_root_folder_provider
 import octobot_trading.enums as trading_enums
 import octobot_sync.client as sync_client
+import octobot_sync.chain as sync_chain
+import octobot_sync.mirror.writer as sync_session_writer
+import starfish_spaces
 
 
 def expired_session_retrier(func):
@@ -108,6 +114,7 @@ class CommunityAuthentication(authentication.Authenticator):
 
     def __init__(self, config=None, backend_url=None, backend_key=None, use_as_singleton=True):
         super().__init__(use_as_singleton=use_as_singleton)
+        self._use_as_singleton = use_as_singleton
         self.config: typing.Optional[commons_configuration.Configuration] = config
         self.backend_url: str = backend_url or identifiers_provider.IdentifiersProvider.BACKEND_URL
         self.backend_key: str = backend_key or identifiers_provider.IdentifiersProvider.BACKEND_KEY
@@ -127,10 +134,12 @@ class CommunityAuthentication(authentication.Authenticator):
 
         self._fetch_account_task: typing.Optional[asyncio.Task] = None
         self._sync_client = None
-        self._sync_address: str = ""
-        self._sync_data_signer = None
+        self.sync_user_id: str = ""
+        self._sync_client_lock = threading.Lock()
+        self._dk_sessions: dict[str, starfish_spaces.Session] = {}
+        self._dk_session_lock = asyncio.Lock()
         self._wallet_backend: wallet_backend.WalletBackend = wallet_backend.WalletBackend(
-            self.configuration_storage.sync_storage, self.logger
+            self._get_wallet_sync_storage(), self.logger
         )
 
     @staticmethod
@@ -141,7 +150,27 @@ class CommunityAuthentication(authentication.Authenticator):
         )
 
     def update(self, configuration: commons_configuration.Configuration):
+        self.config = configuration
         self.configuration_storage.set_configuration(configuration)
+        self._wallet_backend = wallet_backend.WalletBackend(
+            self._get_wallet_sync_storage(), self.logger
+        )
+
+    def _get_wallet_sync_storage(self):
+        sync_data_root = os.path.normpath(user_root_folder_provider.get_sync_data_root())
+        user_root = os.path.normpath(user_root_folder_provider.get_user_root_folder())
+        if sync_data_root != user_root:
+            # This is a child octobot process using the master sync data root, 
+            # configure storage accordingly
+            master_config_path = os.path.join(sync_data_root, commons_constants.CONFIG_FILE)
+            master_config = commons_configuration.Configuration(
+                master_config_path,
+                os.path.join(sync_data_root, commons_constants.PROFILES_FOLDER),
+            )
+            if os.path.isfile(master_config_path):
+                master_config.read(should_raise=False, activate_profile=False)
+            return supabase_backend.SyncConfigurationStorage(master_config)
+        return self.configuration_storage.sync_storage
 
     def get_logged_in_email(self):
         if self.user_account.has_user_data():
@@ -288,8 +317,9 @@ class CommunityAuthentication(authentication.Authenticator):
             await self._re_create_client()
 
     def is_using_the_current_loop(self):
-        return self.supabase_client.event_loop is None \
-            or self.supabase_client.event_loop is asyncio.get_event_loop()
+        if self.supabase_client.event_loop is None:
+            return True
+        return asyncio_tools.is_on_async_loop(self.supabase_client.event_loop)
 
     def is_initialized(self):
         return self.initialized_event is not None and self.initialized_event.is_set()
@@ -565,23 +595,15 @@ class CommunityAuthentication(authentication.Authenticator):
         if constants.IS_CLOUD_ENV:
             # disabled on cloud environments
             return
-        previous_local_identifier = self._get_saved_bot_scoped_data_identifier()
-        current_local_identifier = self._get_bot_scoped_data_identifier()
-        if not previous_local_identifier:
-            self._save_bot_scoped_data_identifier(current_local_identifier)
-            # nothing to clear
-            return
-        if current_local_identifier != previous_local_identifier:
+        community_section = self.config.config.setdefault(constants.CONFIG_COMMUNITY, {})
+        previous_local_identifier = community_section.get(constants.CONFIG_COMMUNITY_LOCAL_DATA_IDENTIFIER)
+        resolution = config_path_binding.ensure_config_path_fingerprint(self.config)
+        if resolution.was_regenerated and previous_local_identifier is not None:
             self._clear_bot_scoped_config()
-            self._save_bot_scoped_data_identifier(current_local_identifier)
-
-    def _get_bot_scoped_data_identifier(self) -> str:
-        # identifier is based on the path to the local bot to ensure the same data are not re-used
-        # when copy/pasting a bot config to another bot
-        return hashlib.sha256(os.getcwd().encode()).hexdigest()
 
     async def stop(self):
-        self.logger.debug("Stopping ...")
+        if self._use_as_singleton:
+            self.logger.debug("Stopping ...")
         if self._fetch_account_task is not None and not self._fetch_account_task.done():
             self._fetch_account_task.cancel()
         await self.supabase_client.aclose()
@@ -592,7 +614,12 @@ class CommunityAuthentication(authentication.Authenticator):
         if self._sync_client:
             await self._sync_client.close()
             self._sync_client = None
-        self.logger.debug("Stopped")
+        for session in self._dk_sessions.values():
+            await session.content_client.close()
+            await session.account_client.close()
+        self._dk_sessions.clear()
+        if self._use_as_singleton:
+            self.logger.debug("Stopped")
 
     def _update_supports(self, resp_status, json_data):
         if resp_status == 200:
@@ -636,73 +663,165 @@ class CommunityAuthentication(authentication.Authenticator):
         finally:
             self.initialized_event.set()
 
-    def _get_or_create_wallet_private_key(self, chain_id: str) -> typing.Optional[str]:
-        return self._wallet_backend.get_or_create_wallet_private_key(chain_id)
+    def list_wallets(self) -> list[wallet_backend.WalletInfo]:
+        return self._wallet_backend.list_wallets()
+
+    def list_wallet_entries(self) -> list[wallet_backend.WalletEntry]:
+        return self._wallet_backend.list_wallet_entries()
 
     def is_node_wallet_configured(self) -> bool:
-        return self._wallet_backend.is_node_wallet_configured()
+        return bool(self._wallet_backend.list_wallets())
 
-    def get_node_wallet_address(self) -> typing.Optional[str]:
-        return self._wallet_backend.get_node_wallet_address()
+    def create_wallet(self, name: typing.Optional[str], passphrase: str, is_admin: bool = False):
+        return self._wallet_backend.create_wallet(name, passphrase, is_admin)
 
-    def create_and_encrypt_node_wallet(self, passphrase: str):
-        return self._wallet_backend.create_and_encrypt_node_wallet(passphrase)
+    def import_wallet(self, private_key: str, passphrase: str, name: typing.Optional[str], is_admin: bool = False):
+        return self._wallet_backend.import_wallet(private_key, passphrase, name, is_admin)
 
-    def import_and_encrypt_node_wallet(self, private_key: str, passphrase: str):
-        return self._wallet_backend.import_and_encrypt_node_wallet(private_key, passphrase)
+    def import_wallet_from_seed(self, seed: str, passphrase: str, name: typing.Optional[str], is_admin: bool = False):
+        return self._wallet_backend.import_wallet_from_seed(seed, passphrase, name, is_admin)
 
-    def decrypt_node_wallet(self, passphrase: str):
-        return self._wallet_backend.decrypt_node_wallet(passphrase)
+    def authenticate_wallet(self, address: str, passphrase: str) -> dict:
+        """Verify passphrase and return wallet metadata in a single storage read.
 
-    def verify_node_passphrase(self, passphrase: str) -> bool:
-        return self._wallet_backend.verify_node_passphrase(passphrase)
+        Returns {"is_admin": bool, "name": Optional[str]}.
+        Raises KeyError if wallet not found, ValueError if passphrase incorrect.
+        """
+        return self._wallet_backend.authenticate(address, passphrase)
 
-    def init_sync_client(self):
-        if self._sync_client is not None:
-            return
-        try:
-            chain_id = constants.SYNC_CHAIN_ID
-            sync_url = identifiers_provider.IdentifiersProvider.SYNC_SERVER_URL
-            if not sync_url and not constants.ENABLE_REPLICA_SERVER:
-                self.logger.debug("No sync server URL configured, skipping sync client init")
-                return
-            private_key = self._get_or_create_wallet_private_key(chain_id)
-            if private_key is None:
-                self.logger.debug("Wallet is encrypted: sync client requires passphrase to initialize")
-                return
-            self._sync_client, self._sync_address, self._sync_data_signer = sync_client.create_sync_client(
-                private_key=private_key,
-                chain_id=chain_id,
-                sync_url=sync_url,
-                start_replica_server=constants.ENABLE_REPLICA_SERVER,
-                replica_port=constants.REPLICA_SERVER_PORT,
-                replica_write_mode=constants.REPLICA_WRITE_MODE,
-                replica_sync_interval_ms=constants.REPLICA_SYNC_INTERVAL_MS,
+    def verify_wallet_passphrase(self, address: str, passphrase: str) -> bool:
+        return self._wallet_backend.verify_wallet_passphrase(address, passphrase)
+
+    def recover_passphrase_from_ownership_proof(
+        self,
+        address: str,
+        new_passphrase: str,
+        seed: typing.Optional[str] = None,
+        private_key: typing.Optional[str] = None,
+    ) -> None:
+        return self._wallet_backend.recover_passphrase_from_ownership_proof(
+            address,
+            new_passphrase,
+            seed=seed,
+            private_key=private_key,
+        )
+
+    def decrypt_wallet_by_address(self, address: str, passphrase: str):
+        return self._wallet_backend.decrypt_wallet_by_address(address, passphrase)
+
+    def decrypt_wallet_entry_by_address(self, address: str, passphrase: str):
+        return self._wallet_backend.decrypt_wallet_entry_by_address(address, passphrase)
+
+    def remove_wallet(self, address: str) -> None:
+        return self._wallet_backend.remove_wallet(address)
+
+    def rename_wallet(self, address: str, name: typing.Optional[str]) -> None:
+        return self._wallet_backend.rename_wallet(address, name)
+
+    def is_admin_wallet(self, address: str) -> bool:
+        return self._wallet_backend.is_admin_wallet(address)
+
+    def get_wallet_name(self, address: str) -> typing.Optional[str]:
+        return self._wallet_backend.get_wallet_name(address)
+
+    def get_sync_client_for_address(self, address: str) -> sync_client.StarfishClient:
+        self.init_sync_client_for_wallet(address)
+        if self._sync_client is None:
+            raise wallet_backend.WalletNotFoundError(
+                f"Wallet with address {address} not found"
             )
-        except Exception as e:
-            self.logger.exception(e, True, f"Failed to initialize sync client: {e}")
+        return self._sync_client
 
-    def init_sync_client_with_passphrase(self, passphrase: str) -> None:
-        if self._sync_client is not None:
-            return
-        try:
-            chain_id = constants.SYNC_CHAIN_ID
+    def get_wallet(self, address: str) -> sync_chain.Wallet:
+        return self._wallet_backend.get_wallet_for_bot(address)
+
+    def get_wallet_by_user_id(self, user_id: str) -> sync_chain.Wallet:
+        return self._wallet_backend.get_wallet_by_user_id(user_id)
+
+    def has_wallet_for_user_id(self, user_id: str) -> bool:
+        return self._wallet_backend.has_wallet_for_user_id(user_id)
+
+    async def get_session_for_address(self, address: str) -> starfish_spaces.Session:
+        """Build (and cache) a dk-namespace starfish_spaces Session for the given wallet.
+
+        Used for trading-signal publish/pull — see octobot_sync.artifacts. Distinct from
+        get_sync_client_for_address's bare StarfishClient: a space needs a Session.
+        """
+        cached = self._dk_sessions.get(address)
+        if cached is not None:
+            return cached
+        async with self._dk_session_lock:
+            cached = self._dk_sessions.get(address)
+            if cached is not None:
+                return cached
             sync_url = identifiers_provider.IdentifiersProvider.SYNC_SERVER_URL
-            if not sync_url and not constants.ENABLE_REPLICA_SERVER:
-                self.logger.debug("No sync server URL configured, skipping sync client init")
-                return
-            wallet = self.decrypt_node_wallet(passphrase)
-            self._sync_client, self._sync_address, self._sync_data_signer = sync_client.create_sync_client(
-                private_key=wallet.private_key,
-                chain_id=chain_id,
-                sync_url=sync_url,
-                start_replica_server=constants.ENABLE_REPLICA_SERVER,
-                replica_port=constants.REPLICA_SERVER_PORT,
-                replica_write_mode=constants.REPLICA_WRITE_MODE,
-                replica_sync_interval_ms=constants.REPLICA_SYNC_INTERVAL_MS,
+            if not sync_url:
+                raise wallet_backend.WalletError("No sync server URL configured")
+            wallet = self.get_wallet(address)
+            derived = sync_session_writer.derived_identity_for_mirror(wallet.private_key)
+            session = await sync_session_writer.build_mirror_session(
+                derived, sync_url, name="octobot-signals"
             )
+            self._dk_sessions[address] = session
+            return session
+
+    def init_sync_client_for_wallet(self, address: str) -> None:
+        """Initialize the sync client for the given wallet address without passphrase."""
+        if self._sync_client is not None:
+            return  # fast path — no lock needed for a read after init
+        with self._sync_client_lock:
+            if self._sync_client is not None:
+                return  # another thread won the race
+            try:
+                sync_url = identifiers_provider.IdentifiersProvider.SYNC_SERVER_URL
+                if not sync_url:
+                    self.logger.debug("No sync server URL configured, skipping sync client init")
+                    return
+                wallet = self.get_wallet(address)
+                self._sync_client, self.sync_user_id = sync_client.create_sync_client(
+                    private_key=wallet.private_key,
+                    sync_url=sync_url,
+                )
+            except wallet_backend.WalletError as e:
+                self.logger.error(f"Sync client init skipped for {address}: {e}")
+            except Exception as e:
+                self.logger.exception(e, True, f"Failed to initialize sync client for wallet {address}: {e}")
+                raise
+
+    def auto_init_sync_client(self) -> bool:
+        """Initialize the sync client without passphrase input.
+
+        Reads the admin wallet's private key directly from storage.
+        Returns True if successful, False otherwise (logs an info message on failure).
+        """
+        if self._sync_client is not None:
+            return True
+        try:
+            wallets = self.list_wallets()
+            if not wallets:
+                return False
+            admin = next((w for w in wallets if w.is_admin), wallets[0])
+            wallet = self.get_wallet(admin.address)
+            with self._sync_client_lock:
+                if self._sync_client is not None:
+                    return True
+                sync_url = identifiers_provider.IdentifiersProvider.SYNC_SERVER_URL
+                if not sync_url:
+                    self.logger.debug(
+                        "No sync server URL configured, skipping auto sync client init"
+                    )
+                    return False
+                self._sync_client, self.sync_user_id = sync_client.create_sync_client(
+                    private_key=wallet.private_key,
+                    sync_url=sync_url,
+                )
+            return True
+        except wallet_backend.WalletError as e:
+            self.logger.warning(f"Bot auto-unlock skipped — wallet unreachable or misconfigured: {e}")
+            return False
         except Exception as e:
-            self.logger.exception(e, True, f"Failed to initialize sync client: {e}")
+            self.logger.exception(e, True, f"Failed to auto-initialize sync client: {e}")
+            return False
 
     async def _init_community_data(self, fetch_private_data):
         coros = [
@@ -763,12 +882,12 @@ class CommunityAuthentication(authentication.Authenticator):
                 self.user_account.owned_packages = packages
                 self.logger.debug(f"Account extension packages: {', '.join(packages) if packages else packages}")
                 self.save_installed_package_urls(package_urls)
+                install_only = self.config is not None and self.config.uses_shared_reference_tentacles()
                 has_tentacles_to_install = \
                     await community_tentacles_packages.has_tentacles_to_install_and_uninstall_tentacles_if_necessary(
-                        self
+                        self, install_only=install_only
                     )
                 if has_tentacles_to_install:
-                    # tentacles are not installed, save the fact that some are pending
                     self.logger.info(f"New tentacles are available for installation")
                     self.user_account.has_pending_packages_to_install = True
                 if fetched_mqtt_uuid and fetched_mqtt_uuid != mqtt_uuid:

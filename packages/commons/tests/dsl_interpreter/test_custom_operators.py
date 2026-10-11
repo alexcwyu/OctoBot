@@ -23,12 +23,14 @@ import octobot_commons.enums as commons_enums
 import octobot_commons.constants as commons_constants
 import octobot_commons.errors as commons_errors
 
+import octobot_commons.tests.dsl_test_keyword_support as dsl_test_keyword_support
+
 
 async def get_x_value_async() -> int:
     return 666
 
 
-class SumPlusXOperatorWithoutInit(dsl_interpreter.NaryOperator):
+class SumPlusXOperatorWithoutInit(dsl_test_keyword_support.TestKeywordMixin, dsl_interpreter.NaryOperator):
     def __init__(self, *parameters: dsl_interpreter.OperatorParameterType, **kwargs: typing.Any):
         super().__init__(*parameters, **kwargs)
         self.x_value = 42
@@ -42,7 +44,7 @@ class SumPlusXOperatorWithoutInit(dsl_interpreter.NaryOperator):
         return sum(computed_parameters) + self.x_value
 
 
-class SumPlusXOperatorWithPreCompute(dsl_interpreter.NaryOperator):
+class SumPlusXOperatorWithPreCompute(dsl_test_keyword_support.TestKeywordMixin, dsl_interpreter.NaryOperator):
     def __init__(self, *parameters: dsl_interpreter.OperatorParameterType, **kwargs: typing.Any):
         super().__init__(*parameters, **kwargs)
         self.x_value = 42
@@ -54,8 +56,8 @@ class SumPlusXOperatorWithPreCompute(dsl_interpreter.NaryOperator):
     @classmethod
     def get_parameters(cls) -> list[dsl_interpreter.OperatorParameter]:
         return [
-            dsl_interpreter.OperatorParameter(name="data", description="the data to compute the sum of", required=True, type=int),
-            dsl_interpreter.OperatorParameter(name="data2", description="the data to compute the sum of", required=False, type=int),
+            dsl_interpreter.OperatorParameter(name="data", description="the data to compute the sum of", required=True, type=commons_enums.DslValueType.NUMBER.value),
+            dsl_interpreter.OperatorParameter(name="data2", description="the data to compute the sum of", required=False, type=commons_enums.DslValueType.NUMBER.value),
         ]
 
     async def pre_compute(self) -> None:
@@ -67,7 +69,7 @@ class SumPlusXOperatorWithPreCompute(dsl_interpreter.NaryOperator):
         return sum(computed_parameters) + self.x_value
 
 
-class TimeFrameToSecondsOperator(dsl_interpreter.CallOperator):
+class TimeFrameToSecondsOperator(dsl_test_keyword_support.TestKeywordMixin, dsl_interpreter.CallOperator):
     MIN_PARAMS = 1
     MAX_PARAMS = 1
 
@@ -83,7 +85,7 @@ class TimeFrameToSecondsOperator(dsl_interpreter.CallOperator):
         return commons_enums.TimeFramesMinutes[commons_enums.TimeFrames(computed_parameters[0])] * commons_constants.MINUTE_TO_SECONDS
 
 
-class AddOperator(dsl_interpreter.BinaryOperator):
+class AddOperator(dsl_test_keyword_support.TestKeywordMixin, dsl_interpreter.BinaryOperator):
     @staticmethod
     def get_name() -> str:
         return ast.Add.__name__
@@ -93,7 +95,7 @@ class AddOperator(dsl_interpreter.BinaryOperator):
         return left + right
 
 
-class SubOperator(dsl_interpreter.BinaryOperator):
+class SubOperator(dsl_test_keyword_support.TestKeywordMixin, dsl_interpreter.BinaryOperator):
     @staticmethod
     def get_name() -> str:
         return ast.Sub.__name__
@@ -103,7 +105,7 @@ class SubOperator(dsl_interpreter.BinaryOperator):
         return left - right
 
 
-class LtOperator(dsl_interpreter.CompareOperator):
+class LtOperator(dsl_test_keyword_support.TestKeywordMixin, dsl_interpreter.CompareOperator):
     @staticmethod
     def get_name() -> str:
         return ast.Lt.__name__
@@ -113,7 +115,7 @@ class LtOperator(dsl_interpreter.CompareOperator):
         return left < right
 
 
-class LtEOperator(dsl_interpreter.CompareOperator):
+class LtEOperator(dsl_test_keyword_support.TestKeywordMixin, dsl_interpreter.CompareOperator):
     @staticmethod
     def get_name() -> str:
         return ast.LtE.__name__
@@ -123,7 +125,7 @@ class LtEOperator(dsl_interpreter.CompareOperator):
         return left <= right
 
 
-class GtOperator(dsl_interpreter.CompareOperator):
+class GtOperator(dsl_test_keyword_support.TestKeywordMixin, dsl_interpreter.CompareOperator):
     @staticmethod
     def get_name() -> str:
         return ast.Gt.__name__
@@ -133,7 +135,7 @@ class GtOperator(dsl_interpreter.CompareOperator):
         return left > right
 
 
-class GtEOperator(dsl_interpreter.CompareOperator):
+class GtEOperator(dsl_test_keyword_support.TestKeywordMixin, dsl_interpreter.CompareOperator):
     @staticmethod
     def get_name() -> str:
         return ast.GtE.__name__
@@ -143,7 +145,7 @@ class GtEOperator(dsl_interpreter.CompareOperator):
         return left >= right
 
 
-class EqOperator(dsl_interpreter.CompareOperator):
+class EqOperator(dsl_test_keyword_support.TestKeywordMixin, dsl_interpreter.CompareOperator):
     @staticmethod
     def get_name() -> str:
         return ast.Eq.__name__
@@ -153,7 +155,7 @@ class EqOperator(dsl_interpreter.CompareOperator):
         return left == right
 
 
-class NotEqOperator(dsl_interpreter.CompareOperator):
+class NotEqOperator(dsl_test_keyword_support.TestKeywordMixin, dsl_interpreter.CompareOperator):
     @staticmethod
     def get_name() -> str:
         return ast.NotEq.__name__
@@ -163,7 +165,7 @@ class NotEqOperator(dsl_interpreter.CompareOperator):
         return left != right
 
 
-class IsOperator(dsl_interpreter.CompareOperator):
+class IsOperator(dsl_test_keyword_support.TestKeywordMixin, dsl_interpreter.CompareOperator):
     @staticmethod
     def get_name() -> str:
         return ast.Is.__name__
@@ -173,7 +175,7 @@ class IsOperator(dsl_interpreter.CompareOperator):
         return left is right
 
 
-class IsNotOperator(dsl_interpreter.CompareOperator):
+class IsNotOperator(dsl_test_keyword_support.TestKeywordMixin, dsl_interpreter.CompareOperator):
     @staticmethod
     def get_name() -> str:
         return ast.IsNot.__name__
@@ -183,7 +185,7 @@ class IsNotOperator(dsl_interpreter.CompareOperator):
         return left is not right
 
 
-class AndOperator(dsl_interpreter.NaryOperator):
+class AndOperator(dsl_test_keyword_support.TestKeywordMixin, dsl_interpreter.NaryOperator):
     MIN_PARAMS = 1
 
     @staticmethod
@@ -194,7 +196,7 @@ class AndOperator(dsl_interpreter.NaryOperator):
         return all(self.get_computed_parameters())
 
 
-class OrOperator(dsl_interpreter.NaryOperator):
+class OrOperator(dsl_test_keyword_support.TestKeywordMixin, dsl_interpreter.NaryOperator):
     MIN_PARAMS = 1
 
     @staticmethod
@@ -204,7 +206,7 @@ class OrOperator(dsl_interpreter.NaryOperator):
     def compute(self) -> dsl_interpreter.ComputedOperatorParameterType:
         return any(self.get_computed_parameters())
 
-class Add2Operator(dsl_interpreter.CallOperator):
+class Add2Operator(dsl_test_keyword_support.TestKeywordMixin, dsl_interpreter.CallOperator):
     @staticmethod
     def get_name() -> str:
         return "add2"
@@ -212,15 +214,15 @@ class Add2Operator(dsl_interpreter.CallOperator):
     @classmethod
     def get_parameters(cls) -> list[dsl_interpreter.OperatorParameter]:
         return [
-            dsl_interpreter.OperatorParameter(name="left", description="the left operand", required=True, type=int),
-            dsl_interpreter.OperatorParameter(name="right", description="the right operand", required=True, type=int),
+            dsl_interpreter.OperatorParameter(name="left", description="the left operand", required=True, type=commons_enums.DslValueType.NUMBER.value),
+            dsl_interpreter.OperatorParameter(name="right", description="the right operand", required=True, type=commons_enums.DslValueType.NUMBER.value),
         ]
 
     def compute(self) -> dsl_interpreter.ComputedOperatorParameterType:
         left, right = self.get_computed_left_and_right_parameters()
         return left + right
 
-class PreComputeSumOperator(dsl_interpreter.PreComputingCallOperator):
+class PreComputeSumOperator(dsl_test_keyword_support.TestKeywordMixin, dsl_interpreter.PreComputingCallOperator):
     @staticmethod
     def get_name() -> str:
         return "pre_compute_sum"
@@ -228,8 +230,8 @@ class PreComputeSumOperator(dsl_interpreter.PreComputingCallOperator):
     @classmethod
     def get_parameters(cls) -> list[dsl_interpreter.OperatorParameter]:
         return [
-            dsl_interpreter.OperatorParameter(name="a", description="first value", required=True, type=int),
-            dsl_interpreter.OperatorParameter(name="b", description="second value", required=True, type=int),
+            dsl_interpreter.OperatorParameter(name="a", description="first value", required=True, type=commons_enums.DslValueType.NUMBER.value),
+            dsl_interpreter.OperatorParameter(name="b", description="second value", required=True, type=commons_enums.DslValueType.NUMBER.value),
         ]
 
     async def pre_compute(self) -> None:
@@ -238,7 +240,7 @@ class PreComputeSumOperator(dsl_interpreter.PreComputingCallOperator):
         self.value = value_by_parameter["a"] + value_by_parameter["b"]
 
 
-class CallWithDefaultParametersOperator(dsl_interpreter.CallOperator):
+class CallWithDefaultParametersOperator(dsl_test_keyword_support.TestKeywordMixin, dsl_interpreter.CallOperator):
     @staticmethod
     def get_name() -> str:
         return "call_with_default_parameters"
@@ -246,10 +248,10 @@ class CallWithDefaultParametersOperator(dsl_interpreter.CallOperator):
     @classmethod
     def get_parameters(cls) -> list[dsl_interpreter.OperatorParameter]:
         return [
-            dsl_interpreter.OperatorParameter(name="value1", description="the first value", required=True, type=int),
-            dsl_interpreter.OperatorParameter(name="value2", description="the second value", required=False, type=int, default=0),
-            dsl_interpreter.OperatorParameter(name="added_extra_value", description="value to add to the result", required=False, type=int, default=0),
-            dsl_interpreter.OperatorParameter(name="substracted_extra_value", description="value to substract from the result", required=False, type=int, default=0),
+            dsl_interpreter.OperatorParameter(name="value1", description="the first value", required=True, type=commons_enums.DslValueType.NUMBER.value),
+            dsl_interpreter.OperatorParameter(name="value2", description="the second value", required=False, type=commons_enums.DslValueType.NUMBER.value, default=0),
+            dsl_interpreter.OperatorParameter(name="added_extra_value", description="value to add to the result", required=False, type=commons_enums.DslValueType.NUMBER.value, default=0),
+            dsl_interpreter.OperatorParameter(name="substracted_extra_value", description="value to substract from the result", required=False, type=commons_enums.DslValueType.NUMBER.value, default=0),
         ]
 
     def compute(self) -> dsl_interpreter.ComputedOperatorParameterType:
@@ -262,7 +264,7 @@ class CallWithDefaultParametersOperator(dsl_interpreter.CallOperator):
         )
 
     
-class ParamMerger(dsl_interpreter.CallOperator):
+class ParamMerger(dsl_test_keyword_support.TestKeywordMixin, dsl_interpreter.CallOperator):
     @staticmethod
     def get_name() -> str:
         return "param_merger"
@@ -270,8 +272,8 @@ class ParamMerger(dsl_interpreter.CallOperator):
     @classmethod
     def get_parameters(cls) -> list[dsl_interpreter.OperatorParameter]:
         return [
-            dsl_interpreter.OperatorParameter(name="p1", description="the first value", required=True, type=int),
-            dsl_interpreter.OperatorParameter(name="p2", description="the second value", required=True, type=int),
+            dsl_interpreter.OperatorParameter(name="p1", description="the first value", required=True, type=commons_enums.DslValueType.NUMBER.value),
+            dsl_interpreter.OperatorParameter(name="p2", description="the second value", required=True, type=commons_enums.DslValueType.NUMBER.value),
         ]
 
     def compute(self) -> dsl_interpreter.ComputedOperatorParameterType:
@@ -279,7 +281,7 @@ class ParamMerger(dsl_interpreter.CallOperator):
         return str(value_by_parameter)
 
 
-class NestedDictSumOperator(dsl_interpreter.CallOperator):
+class NestedDictSumOperator(dsl_test_keyword_support.TestKeywordMixin, dsl_interpreter.CallOperator):
     @staticmethod
     def get_name() -> str:
         return "nested_dict_sum"
@@ -287,7 +289,7 @@ class NestedDictSumOperator(dsl_interpreter.CallOperator):
     @classmethod
     def get_parameters(cls) -> list[dsl_interpreter.OperatorParameter]:
         return [
-            dsl_interpreter.OperatorParameter(name="values", description="the dictionary to sum the values of", required=True, type=dict),
+            dsl_interpreter.OperatorParameter(name="values", description="the dictionary to sum the values of", required=True, type=commons_enums.DslValueType.ANY.value),
         ]
 
     def nested_sum(self, values: dict) -> float:
@@ -357,11 +359,17 @@ async def test_interpreter_call_with_default_parameters(interpreter):
     assert await interpreter.interprete("call_with_default_parameters(1, 2, added_extra_value=4, substracted_extra_value=5)") == 2
     with pytest.raises(commons_errors.InvalidParametersError, match="call_with_default_parameters requires at least 1 parameter"):
         await interpreter.interprete("call_with_default_parameters()")
-    with pytest.raises(commons_errors.InvalidParametersError, match="call_with_default_parameters supports up to 4 parameters:"):
+    # Too many positional args: rejected in parameters_util.resolve_operator_args_and_kwargs
+    too_many_positional_msg = re.escape("call_with_default_parameters supports up to 4 parameters:")
+    with pytest.raises(commons_errors.InvalidParametersError, match=too_many_positional_msg):
         await interpreter.interprete("call_with_default_parameters(1, 2, 3, 4, 5)")
     with pytest.raises(commons_errors.InvalidParametersError, match=re.escape("Parameter(s) 'added_extra_value' have multiple values")):
         await interpreter.interprete("call_with_default_parameters(1, 2, 3, added_extra_value=4)")
-    with pytest.raises(commons_errors.InvalidParametersError, match=re.escape("call_with_default_parameters supports up to 4 parameters:")):
+    # Positional slot full + duplicate keyword: Operator._validate_parameters
+    too_many_total_msg = re.escape(
+        "call_with_default_parameters got 5 parameters (1, 2, 3, 4, 5) but supports up to 4 parameters:"
+    )
+    with pytest.raises(commons_errors.InvalidParametersError, match=too_many_total_msg):
         await interpreter.interprete("call_with_default_parameters(1, 2, 3, 4, added_extra_value=5)")
 
 
@@ -389,9 +397,10 @@ async def test_interpreter_invalid_parameters(interpreter):
         interpreter.prepare("add2()")
     with pytest.raises(commons_errors.InvalidParametersError, match=re.escape("add2 requires at least 2 parameter(s): 1: left")):
         await interpreter.interprete("add2()")
-    with pytest.raises(commons_errors.InvalidParametersError, match="add2 supports up to 2 parameters:"):
+    add2_too_many = re.escape("add2 supports up to 2 parameters:")
+    with pytest.raises(commons_errors.InvalidParametersError, match=add2_too_many):
         interpreter.prepare("add2(1, 2, 3)")
-    with pytest.raises(commons_errors.InvalidParametersError, match="add2 supports up to 2 parameters:"):
+    with pytest.raises(commons_errors.InvalidParametersError, match=add2_too_many):
         await interpreter.interprete("add2(1, 2, 3)")
     with pytest.raises(commons_errors.InvalidParametersError, match=re.escape("time_frame_to_seconds requires at least 1 parameter(s)")):
         interpreter.prepare("time_frame_to_seconds()")
@@ -448,12 +457,14 @@ def test_get_input_value_by_parameter():
         ParamMerger(1, unknown_param=3).get_input_value_by_parameter()
     with pytest.raises(
         commons_errors.InvalidParametersError,
-        match=re.escape("param_merger supports up to 2 parameters"),
+        match=re.escape(
+            "param_merger got 4 parameters (1, 2, 99, 1) but supports up to 2 parameters:"
+        ),
     ):
         ParamMerger(p1=1, p2=2, extra=99, another=1).get_input_value_by_parameter()
 
 
-class OperatorWithName(dsl_interpreter.Operator):
+class OperatorWithName(dsl_test_keyword_support.TestKeywordMixin, dsl_interpreter.Operator):
     NAME = "custom_name"
     DESCRIPTION = "A custom operator with NAME set"
     EXAMPLE = "custom_name(1, 2)"
@@ -466,7 +477,7 @@ class OperatorWithName(dsl_interpreter.Operator):
         return sum(self.get_computed_parameters())
 
 
-class OperatorWithoutName(dsl_interpreter.Operator):
+class OperatorWithoutName(dsl_test_keyword_support.TestKeywordMixin, dsl_interpreter.Operator):
     DESCRIPTION = "An operator without NAME, uses get_name()"
     EXAMPLE = "fallback_name(5)"
     
@@ -478,7 +489,7 @@ class OperatorWithoutName(dsl_interpreter.Operator):
         return sum(self.get_computed_parameters())
 
 
-class OperatorWithParameters(dsl_interpreter.Operator):
+class OperatorWithParameters(dsl_test_keyword_support.TestKeywordMixin, dsl_interpreter.Operator):
     NAME = "param_op"
     DESCRIPTION = "Operator with parameters"
     EXAMPLE = "param_op(1, 2)"
@@ -490,15 +501,15 @@ class OperatorWithParameters(dsl_interpreter.Operator):
     @classmethod
     def get_parameters(cls) -> list[dsl_interpreter.OperatorParameter]:
         return [
-            dsl_interpreter.OperatorParameter(name="x", description="first parameter", required=True, type=int),
-            dsl_interpreter.OperatorParameter(name="y", description="second parameter", required=False, type=int),
+            dsl_interpreter.OperatorParameter(name="x", description="first parameter", required=True, type=commons_enums.DslValueType.NUMBER.value),
+            dsl_interpreter.OperatorParameter(name="y", description="second parameter", required=False, type=commons_enums.DslValueType.NUMBER.value),
         ]
     
     def compute(self) -> dsl_interpreter.ComputedOperatorParameterType:
         return sum(self.get_computed_parameters())
 
 
-class OperatorWithoutParameters(dsl_interpreter.Operator):
+class OperatorWithoutParameters(dsl_test_keyword_support.TestKeywordMixin, dsl_interpreter.Operator):
     NAME = "no_param_op"
     DESCRIPTION = "Operator without parameters"
     EXAMPLE = "no_param_op()"
@@ -511,7 +522,7 @@ class OperatorWithoutParameters(dsl_interpreter.Operator):
         return 42
 
 
-class OperatorWithCustomLibrary(dsl_interpreter.Operator):
+class OperatorWithCustomLibrary(dsl_test_keyword_support.TestKeywordMixin, dsl_interpreter.Operator):
     NAME = "custom_lib_op"
     DESCRIPTION = "Operator with custom library"
     EXAMPLE = "custom_lib_op()"
@@ -528,8 +539,11 @@ class OperatorWithCustomLibrary(dsl_interpreter.Operator):
         return 42
 
 
-class OperatorWithEmptyFields(dsl_interpreter.Operator):
-    # NAME, DESCRIPTION, EXAMPLE all empty/default
+class OperatorWithEmptyFields(dsl_test_keyword_support.TestKeywordMixin, dsl_interpreter.Operator):
+    # NAME, DESCRIPTION, EXAMPLE empty for get_docs(); mixin still supplies catalog fields.
+    DESCRIPTION = ""
+    EXAMPLE = ""
+
     @staticmethod
     def get_name() -> str:
         return "empty_fields_op"
@@ -573,12 +587,12 @@ def test_get_docs_with_parameters():
     assert docs.parameters[0].name == "x"
     assert docs.parameters[0].description == "first parameter"
     assert docs.parameters[0].required
-    assert docs.parameters[0].type == int
+    assert docs.parameters[0].type == commons_enums.DslValueType.NUMBER.value
     assert isinstance(docs.parameters[1], dsl_interpreter.OperatorParameter)
     assert docs.parameters[1].name == "y"
     assert docs.parameters[1].description == "second parameter"
     assert not docs.parameters[1].required
-    assert docs.parameters[1].type == int
+    assert docs.parameters[1].type == commons_enums.DslValueType.NUMBER.value
 
 
 def test_get_docs_without_parameters():
@@ -630,11 +644,11 @@ def test_get_docs_to_json():
     assert json_data["parameters"][0]["name"] == "x"
     assert json_data["parameters"][0]["description"] == "first parameter"
     assert json_data["parameters"][0]["required"] is True
-    assert json_data["parameters"][0]["type"] == "int"
+    assert json_data["parameters"][0]["type"] == commons_enums.DslValueType.NUMBER.value
     assert json_data["parameters"][1]["name"] == "y"
     assert json_data["parameters"][1]["description"] == "second parameter"
     assert json_data["parameters"][1]["required"] is False
-    assert json_data["parameters"][1]["type"] == "int"
+    assert json_data["parameters"][1]["type"] == commons_enums.DslValueType.NUMBER.value
 
 
 @pytest.mark.asyncio

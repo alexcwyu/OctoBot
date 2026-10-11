@@ -18,11 +18,11 @@ import asyncio
 import contextlib
 import typing
 
-import trading_backend
-
+import octobot_commons
 import octobot_commons.symbols as commons_symbols
 import octobot_commons.enums as commons_enums
 
+import octobot_protocol.models as protocol_models
 import octobot_trading.constants
 import octobot_trading.enums
 import octobot_trading.exchanges as exchanges
@@ -273,6 +273,29 @@ def get_trading_symbols(exchange_manager, include_additional_pairs: bool = False
         return exchange_manager.exchange_config.traded_symbols
 
 
+def get_all_available_symbols(
+    exchange_manager, exchange_type: typing.Optional[octobot_trading.enums.ExchangeTypes] = None
+) -> list[str]:
+    all_symbols = exchange_manager.exchange.get_all_available_symbols(active_only=True)
+    if exchange_type is None:
+        return all_symbols
+    return [
+        symbol
+        for symbol in all_symbols
+        if (
+            exchange_type is octobot_trading.enums.ExchangeTypes.SPOT
+            and commons_symbols.parse_symbol(symbol).is_spot()
+        ) or (
+            exchange_type is octobot_trading.enums.ExchangeTypes.FUTURE
+            and commons_symbols.parse_symbol(symbol).is_future()
+        )
+    ]
+
+
+def get_all_available_time_frames(exchange_manager) -> set[str]:
+    return exchange_manager.exchange.connector.get_client_time_frames()
+
+
 def get_trading_timeframes(exchange_manager) -> list:
     return exchange_manager.exchange_config.traded_time_frames
 
@@ -332,8 +355,16 @@ def get_default_exchange_type(exchange_name: str) -> str:
     return exchanges.get_default_exchange_type(exchange_name)
 
 
+def get_default_exchange_reference_market(exchange_name: str) -> str:
+    return exchanges.util.exchange_util.get_default_exchange_reference_market(exchange_name)
+
+
+def get_default_reference_market_per_exchange(exchange_names: list[str]) -> dict[str, str]:
+    return exchanges.util.exchange_util.get_default_reference_market_per_exchange(exchange_names)
+
+
 def is_sponsoring(exchange_name: str) -> bool:
-    return trading_backend.is_sponsoring(exchange_name)
+    return exchanges.is_broker_enabled_on_exchange(exchange_name)
 
 
 def is_broker_enabled(exchange_manager) -> bool:
@@ -370,7 +401,11 @@ def get_auto_filled_exchange_names(tentacles_setup_config) -> list:
 
 
 def supports_custom_limit_order_book_fetch(exchange_manager) -> bool:
-    return exchange_manager.exchange.SUPPORTS_CUSTOM_LIMIT_ORDER_BOOK_FETCH
+    return bool(
+        exchange_manager.exchange.get_option_value(
+            octobot_trading.enums.ExchangeClientOptions.SUPPORTS_CUSTOM_LIMIT_ORDER_BOOK_FETCH
+        )
+    )
 
 
 async def get_exchange_details(
@@ -386,3 +421,15 @@ def cancel_ccxt_throttle_task():
         # manually cancel ccxt async throttle task since it apparently can't be cancelled otherwise
         if str(task._coro).startswith("<coroutine object Throttler.looper at"):
             task.cancel()
+
+
+def exchange_uses_network_qualified_markets(exchange_manager) -> bool:
+    network_separator = octobot_commons.NETWORK_SEPARATOR
+    return any(
+        network_separator in market_symbol
+        for market_symbol in exchange_manager.client_symbols
+    )
+
+
+def get_exchanges_availability() -> list[protocol_models.ExchangeAvailability]:
+    return exchanges.util.exchange_util.get_exchanges_availability()

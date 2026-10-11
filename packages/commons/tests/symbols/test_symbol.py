@@ -149,3 +149,146 @@ def test__eq__(spot_symbol, option_symbol):
     assert spot_symbol != option_symbol
     assert option_symbol == octobot_commons.symbols.Symbol("ETH/USDT:USDT-211225-40000-C")
     assert option_symbol != octobot_commons.symbols.Symbol("ETH/USDT:USDT-211225-40000-P")
+
+
+class TestSymbolParseNetworkAndDex:
+    def test_spot_symbol_with_network_and_dex(self):
+        symbol = octobot_commons.symbols.Symbol("SOL/USDT@solana!raydium")
+        assert symbol.base == "SOL"
+        assert symbol.quote == "USDT"
+        assert symbol.network == "solana"
+        assert symbol.dex == "raydium"
+        assert symbol.is_spot() is True
+
+    def test_option_symbol_with_network_and_dex(self):
+        symbol = octobot_commons.symbols.Symbol("WETH/USDT:USDT-211225-40000-C@ETH!uniswap")
+        assert symbol.base == "WETH"
+        assert symbol.quote == "USDT"
+        assert symbol.settlement_asset == "USDT"
+        assert symbol.identifier == "211225"
+        assert symbol.strike_price == "40000"
+        assert symbol.option_type == octobot_commons.enums.OptionTypes.CALL.value
+        assert symbol.network == "ETH"
+        assert symbol.dex == "uniswap"
+        assert symbol.is_option() is True
+
+    def test_option_symbol_with_network_and_any_dex(self):
+        symbol = octobot_commons.symbols.Symbol("WETH/USDT:USDT-211225-40000-C@ETH!*")
+        assert symbol.network == "ETH"
+        assert symbol.dex == "*"
+        assert symbol.is_any_dex() is True
+
+    def test_spot_symbol_with_network_only(self):
+        symbol = octobot_commons.symbols.Symbol("SOL/USDT@solana")
+        assert symbol.base == "SOL"
+        assert symbol.quote == "USDT"
+        assert symbol.network == "solana"
+        assert symbol.dex is None
+        assert symbol.has_network() is True
+        assert symbol.has_dex() is False
+
+
+class TestSymbolMergedStrSymbolNetworkDex:
+    def test_spot_symbol_with_network_and_dex(self):
+        symbol = octobot_commons.symbols.Symbol("SOL/USDT@solana!raydium")
+        assert symbol.merged_str_symbol() == "SOL/USDT@solana!raydium"
+
+    def test_option_symbol_with_network_and_dex(self):
+        symbol = octobot_commons.symbols.Symbol("WETH/USDT:USDT-211225-40000-C@ETH!uniswap")
+        assert symbol.merged_str_symbol() == "WETH/USDT:USDT-211225-40000-C@ETH!uniswap"
+
+    def test_option_symbol_with_network_and_any_dex(self):
+        symbol = octobot_commons.symbols.Symbol("WETH/USDT:USDT-211225-40000-C@ETH!*")
+        assert symbol.merged_str_symbol() == "WETH/USDT:USDT-211225-40000-C@ETH!*"
+
+
+class TestSymbolIsAnyDex:
+    def test_returns_true_for_wildcard_dex(self):
+        symbol = octobot_commons.symbols.Symbol("SOL/USDT@solana!*")
+        assert symbol.is_any_dex() is True
+
+    def test_returns_false_for_specific_dex(self):
+        symbol = octobot_commons.symbols.Symbol("SOL/USDT@solana!raydium")
+        assert symbol.is_any_dex() is False
+
+    def test_returns_false_without_dex(self):
+        symbol = octobot_commons.symbols.Symbol("SOL/USDT@solana")
+        assert symbol.is_any_dex() is False
+
+
+class TestSymbolEqNetworkDex:
+    def test_equal_when_network_and_dex_match(self):
+        first = octobot_commons.symbols.Symbol("SOL/USDT@solana!raydium")
+        second = octobot_commons.symbols.Symbol("SOL/USDT@solana!raydium")
+        assert first == second
+
+    def test_not_equal_when_dex_differs(self):
+        first = octobot_commons.symbols.Symbol("SOL/USDT@solana!raydium")
+        second = octobot_commons.symbols.Symbol("SOL/USDT@solana!uniswap")
+        assert first != second
+
+
+class TestSymbolParseNetworkAndDexInvalid:
+    def test_raises_when_network_is_empty(self):
+        with pytest.raises(ValueError, match="network must be specified"):
+            octobot_commons.symbols.Symbol("BTC/USDT@")
+
+
+class TestSymbolTickerWiseNetworks:
+    def test_network_qualified_asset(self):
+        symbol = octobot_commons.symbols.Symbol("USDT@ETH")
+        assert symbol.base == "USDT"
+        assert symbol.quote is None
+        assert symbol.network == "ETH"
+        assert symbol.base_network is None
+        assert symbol.quote_network is None
+        assert symbol.is_network_qualified_asset() is True
+        assert symbol.has_ticker_wise_networks() is False
+        assert symbol.merged_str_symbol() == "USDT@ETH"
+
+    def test_ticker_wise_spot_pair(self):
+        symbol = octobot_commons.symbols.Symbol("ETH@ETH/USDT@BNB")
+        assert symbol.base == "ETH@ETH"
+        assert symbol.base_network == "ETH"
+        assert symbol.quote == "USDT@BNB"
+        assert symbol.quote_network == "BNB"
+        assert symbol.base_asset_ticker() == "ETH"
+        assert symbol.quote_asset_ticker() == "USDT"
+        assert symbol.network is None
+        assert symbol.dex is None
+        assert symbol.has_ticker_wise_networks() is True
+        assert symbol.is_network_qualified_asset() is False
+        assert symbol.is_spot() is True
+        assert symbol.merged_str_symbol() == "ETH@ETH/USDT@BNB"
+
+    def test_ticker_wise_coinrabbit_market_symbol(self):
+        symbol = octobot_commons.symbols.Symbol("BTC@BTC/USDT@ETH")
+        assert symbol.base == "BTC@BTC"
+        assert symbol.base_network == "BTC"
+        assert symbol.quote == "USDT@ETH"
+        assert symbol.quote_network == "ETH"
+        assert symbol.base_asset_ticker() == "BTC"
+        assert symbol.quote_asset_ticker() == "USDT"
+        assert symbol.has_ticker_wise_networks() is True
+        assert symbol.merged_str_symbol() == "BTC@BTC/USDT@ETH"
+
+    def test_ticker_wise_merged_str_round_trip(self):
+        for symbol_str in ("BTC@BTC/USDT@ETH", "ETH@ETH/USDT@BNB"):
+            assert octobot_commons.symbols.Symbol(symbol_str).merged_str_symbol() == symbol_str
+
+
+class TestSymbolAssetTickers:
+    def test_spot_asset_tickers_match_base_and_quote(self):
+        symbol = octobot_commons.symbols.Symbol("BTC/USDT")
+        assert symbol.base_asset_ticker() == "BTC"
+        assert symbol.quote_asset_ticker() == "USDT"
+
+    def test_pair_level_network_asset_tickers_match_base_and_quote(self):
+        symbol = octobot_commons.symbols.Symbol("BTC/USDT@SOL")
+        assert symbol.base_asset_ticker() == "BTC"
+        assert symbol.quote_asset_ticker() == "USDT"
+
+    def test_network_qualified_single_asset_base_asset_ticker(self):
+        symbol = octobot_commons.symbols.Symbol("USDT@ETH")
+        assert symbol.base_asset_ticker() == "USDT"
+        assert symbol.quote_asset_ticker() is None

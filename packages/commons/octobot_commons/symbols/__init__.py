@@ -22,8 +22,13 @@ from octobot_commons.symbols.symbol_util import (
     merge_currencies,
     convert_symbol,
     is_symbol,
+    get_bare_ticker_from_coin_with_maybe_network,
     is_usd_like_coin,
+    is_same_coin,
+    is_usd_like_to_usd_like_pair,
     get_most_common_usd_like_symbol,
+    trading_type_from_symbol,
+    trading_type_from_traded_symbols,
 )
 
 from octobot_commons.symbols import symbol
@@ -39,7 +44,12 @@ __all__ = [
     "merge_currencies",
     "convert_symbol",
     "is_symbol",
+    "get_bare_ticker_from_coin_with_maybe_network",
     "is_usd_like_coin",
+    "is_same_coin",
+    "is_usd_like_to_usd_like_pair",
     "get_most_common_usd_like_symbol",
+    "trading_type_from_symbol",
+    "trading_type_from_traded_symbols",
     "Symbol",
 ]

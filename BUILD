@@ -38,11 +38,12 @@ PACKAGE_SOURCES = [
     "packages/evaluators:octobot_evaluators",
     "packages/node:octobot_node",
     "packages/flow:octobot_flow",
+    "packages/copy:octobot_copy",
+    "packages/protocol:octobot_protocol",
     "packages/services:octobot_services",
     "packages/sync:octobot_sync",
     "packages/tentacles_manager:octobot_tentacles_manager",
     "packages/trading:octobot_trading",
-    "packages/trading_backend:trading_backend",
 ]
 
 PACKAGE_REQS = [
@@ -51,9 +52,9 @@ PACKAGE_REQS = [
     "packages/evaluators:reqs",
     "packages/node:reqs",
     "packages/sync:reqs",
+    "packages/protocol:reqs",
     "packages/tentacles_manager:reqs",
     "packages/trading:reqs",
-    "packages/trading_backend:reqs",
 ]
 
 PACKAGE_FULL_REQS = [
@@ -160,7 +161,7 @@ python_distribution(
     ] + PACKAGE_SOURCES + PACKAGE_REQS + PACKAGE_FULL_REQS,
     provides=python_artifact(
         name="octobot",
-        version="2.1.1",
+        version="3.0.0-beta3",
         url='https://github.com/Drakkar-Software/OctoBot',
         license='GPL-3.0',
         author="Drakkar-Software",
@@ -185,6 +186,11 @@ files(
 )
 
 files(
+    name="start_script",
+    sources=["start.py"],
+)
+
+files(
     name="wheel_files",
     sources=["dist/"],
     dependencies=[":OctoBot"],
@@ -199,6 +205,7 @@ docker_image(
         ":octobot_config",
         ":octobot_strategy_optimizer_data",
         ":docker_files",
+        ":start_script",
     ],
     repository="drakkarsoftware/octobot",
     image_tags=["local"],

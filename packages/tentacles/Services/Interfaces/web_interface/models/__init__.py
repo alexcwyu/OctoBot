@@ -69,8 +69,6 @@ from tentacles.Services.Interfaces.web_interface.models.commands import (
     update_bot,
 )
 from tentacles.Services.Interfaces.web_interface.models.community import (
-    get_community_metrics_to_display,
-    can_get_community_metrics,
     get_owned_packages,
     has_owned_packages_to_install,
     has_open_source_package,
@@ -143,9 +141,7 @@ from tentacles.Services.Interfaces.web_interface.models.configuration import (
     update_tentacles_activation_config,
     get_active_exchanges,
     update_global_config,
-    activate_metrics,
     activate_beta_env,
-    get_metrics_enabled,
     get_beta_env_enabled_in_config,
     get_services_list,
     get_notifiers_list,
@@ -188,6 +184,7 @@ from tentacles.Services.Interfaces.web_interface.models.configuration import (
     get_config_required_candles_count,
     get_sandbox_exchanges,
     get_distribution,
+    get_octobot_display_name,
 )
 from tentacles.Services.Interfaces.web_interface.models.dashboard import (
     parse_get_symbol,
@@ -216,7 +213,6 @@ from tentacles.Services.Interfaces.web_interface.models.interface_settings impor
 from tentacles.Services.Interfaces.web_interface.models.logs import (
     LOG_EXPORT_FORMAT,
     export_logs,
-    async_share_logs,
 )
 from tentacles.Services.Interfaces.web_interface.models.medias import (
     is_valid_tentacle_image_path,
@@ -232,6 +228,7 @@ from tentacles.Services.Interfaces.web_interface.models.profiles import (
     convert_to_live_profile,
     select_profile,
     get_profiles,
+    refresh_sync_profiles_for_display,
     get_profiles_tentacles_details,
     update_profile,
     remove_profile,
@@ -292,6 +289,8 @@ from tentacles.Services.Interfaces.web_interface.models.web_interface_tab import
 from tentacles.Services.Interfaces.web_interface.models.distributions import (
     save_market_making_configuration,
     get_market_making_services,
+    get_node_local_endpoint,
+    get_node_web_ui_url,
 )
 
 
@@ -321,8 +320,6 @@ __all__ = [
     "is_rebooting",
     "stop_bot",
     "update_bot",
-    "get_community_metrics_to_display",
-    "can_get_community_metrics",
     "get_owned_packages",
     "has_owned_packages_to_install",
     "has_open_source_package",
@@ -383,9 +380,7 @@ __all__ = [
     "update_tentacles_activation_config",
     "get_active_exchanges",
     "update_global_config",
-    "activate_metrics",
     "activate_beta_env",
-    "get_metrics_enabled",
     "get_beta_env_enabled_in_config",
     "get_services_list",
     "get_notifiers_list",
@@ -447,6 +442,7 @@ __all__ = [
     "convert_to_live_profile",
     "select_profile",
     "get_profiles",
+    "refresh_sync_profiles_for_display",
     "get_profiles_tentacles_details",
     "update_profile",
     "remove_profile",
@@ -511,8 +507,11 @@ __all__ = [
     "get_config_required_candles_count",
     "get_sandbox_exchanges",
     "get_distribution",
+    "get_octobot_display_name",
     "WebInterfaceTab",
     "save_market_making_configuration",
     "get_market_making_services",
+    "get_node_local_endpoint",
+    "get_node_web_ui_url",
     "get_dsl_keywords_docs",
 ]

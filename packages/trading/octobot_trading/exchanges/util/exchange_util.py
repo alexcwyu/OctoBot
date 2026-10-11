@@ -16,29 +16,67 @@
 import contextlib
 import typing
 import ccxt
+import uuid
 import decimal
-import trading_backend
+import cachetools
 
 import octobot_commons.logging as logging
 import octobot_commons.constants as common_constants
 import octobot_commons.enums as common_enums
 import octobot_commons.symbols as common_symbols
+import octobot_commons.configuration as common_configuration
 import octobot_commons.tentacles_management as tentacles_management
+import octobot_commons.databases as databases
+import octobot_commons.tree as commons_tree
+import octobot_commons.profiles as commons_profiles
 
 import octobot_tentacles_manager.api as api
+import octobot_tentacles_manager.configuration as tentacles_setup_configuration
 
+import octobot_protocol.models as protocol_models
 import octobot_trading.enums as enums
 import octobot_trading.errors as errors
 import octobot_trading.constants as constants
 import octobot_trading.exchanges.types as exchanges_types
 import octobot_trading.exchanges.implementations as exchanges_implementations
-import octobot_trading.exchanges.connectors.ccxt.enums as ccxt_enums
 import octobot_trading.exchanges.connectors.ccxt.ccxt_client_util as ccxt_client_util
+import octobot_trading.exchanges.connectors.ccxt.enums as ccxt_enums
 import octobot_trading.exchanges.exchange_details as exchange_details
 import octobot_trading.exchanges.exchange_builder as exchange_builder
+import octobot_trading.exchange_data
+import octobot_trading.storage.util as storage_util
+import octobot_trading.util as util
+import octobot_trading.util.protocol_trading_mapping as protocol_trading_mapping
 
 if typing.TYPE_CHECKING:
-    import octobot_trading.exchanges.exchange_manager
+    import octobot_trading.exchanges
+
+_AUTH_REQUIRED_EXCHANGES: dict[str, bool] = {}
+
+
+def _get_logger():
+    return logging.get_logger("ExchangeUtil")
+
+
+def _historical_ohlcv_pagination_stalled(
+    symbol,
+    previous_start_time,
+    next_start_time,
+    *,
+    reason: str,
+) -> bool:
+    if next_start_time > previous_start_time:
+        return False
+    _get_logger().warning(
+        "Stopping historical OHLCV fetch for %s: start_time did not advance "
+        "(%s -> %s). %s",
+        symbol,
+        previous_start_time,
+        next_start_time,
+        reason,
+    )
+    return True
+
 
 def get_rest_exchange_class(
     exchange_name: str, tentacles_setup_config, exchange_config_by_exchange: typing.Optional[dict[str, dict]]
@@ -59,7 +97,7 @@ def search_exchange_class_from_exchange_name(
     if enable_default:
         return None
 
-    logging.get_logger("ExchangeUtil").debug(f"No specific exchange implementation for {exchange_name} found, "
+    _get_logger().debug(f"No specific exchange implementation for {exchange_name} found, "
                                              f"using a default one.")
     children_classes = tentacles_management.get_all_classes_from_parent(exchanges_implementations.DefaultRestExchange)
     if children_classes:
@@ -137,7 +175,7 @@ async def get_exchange_details(
             exchange.name,
             exchange.urls[ccxt_enums.ExchangeColumns.WEBSITE.value],
             exchange.urls[ccxt_enums.ExchangeColumns.API.value],
-            exchange.urls[ccxt_enums.ExchangeColumns.LOGO_URL.value],
+            _get_exchange_image_url_from_exchange_metadata(exchange.describe()),
             False,
         )
     except AttributeError as err:
@@ -192,6 +230,14 @@ def get_partners_explanation_message():
     return f"More info on partner exchanges on {_get_exchanges_docs_url()}#partner-exchanges---support-octobot"
 
 
+def is_broker_enabled_on_exchange(exchange_name: str) -> bool:
+    return bool(
+        ccxt_client_util.get_option_value_from_new_ccxt_client(
+            exchange_name, enums.ExchangeClientOptions.HAS_BROKER
+        )
+    )
+
+
 def _get_minimal_exchange_config(exchange_name, exchange_config):
     return {
         common_constants.CONFIG_EXCHANGES: {
@@ -217,6 +263,101 @@ def get_enabled_exchanges(config):
         )
     ]
 
+async def _get_exchange_builder_from_exchange_data(
+    exchange_data: "octobot_trading.exchanges.ExchangeData",
+    config: common_configuration.Configuration,
+    real_trading: bool,
+    tentacles_setup_config,
+) -> "octobot_trading.exchanges.ExchangeBuilder":
+    bot_id = str(uuid.uuid4())
+    if tentacles_setup_config is not None:
+        await databases.init_bot_storage(
+            bot_id,
+            storage_util.get_run_databases_identifier(
+                config.config,
+                tentacles_setup_config,
+                enable_storage=False,
+            ),
+            False
+        )
+    builder = octobot_trading.exchanges.ExchangeBuilder(
+        config.config,
+        exchange_data.exchange_details.name
+    ) \
+        .set_bot_id(bot_id) \
+        .enable_storage(False)
+    if real_trading:
+        builder.is_real()
+    else:
+        builder.is_simulated()
+    return builder
+
+
+@contextlib.asynccontextmanager
+async def exchange_manager_from_exchange_data(
+    exchange_data: "octobot_trading.exchanges.ExchangeData",
+    profile_data: commons_profiles.ProfileData,
+    tentacles_setup_config: tentacles_setup_configuration.TentaclesSetupConfiguration,
+    price_fallback: typing.Optional[typing.Callable[["octobot_trading.exchanges.ExchangeData", str], float]] = None,
+    matrix_id: typing.Optional[str] = None,
+) -> typing.AsyncGenerator[
+    typing.Optional["octobot_trading.exchanges.exchange_manager.ExchangeManager"],
+    None
+]:
+    exchange_manager_bot_id = None
+    try:
+        as_simulator = profile_data.trader_simulator.enabled
+        authentication_required = not as_simulator
+        config = util.get_config(profile_data, exchange_data, tentacles_setup_config, authentication_required, False, True)
+        builder = await _get_exchange_builder_from_exchange_data(
+            exchange_data,
+            config,
+            authentication_required,
+            tentacles_setup_config,
+        )
+        if matrix_id is not None:
+            builder.has_matrix(matrix_id)
+        exchange_config_by_exchange = profile_data.get_config_by_tentacle()
+        exchange_config = builder.config[common_constants.CONFIG_EXCHANGES][exchange_data.exchange_details.name]
+        ignore_config = (
+            not authentication_required and not is_auth_required_exchanges(
+                exchange_data, tentacles_setup_config, exchange_config_by_exchange
+            )
+        )
+
+        def _get_price_from_exchange_data_or_fallback(exchange_data: "octobot_trading.exchanges.ExchangeData", symbol: str) -> typing.Optional[float]:
+            try:
+                return exchange_data.get_price(symbol)
+            except (IndexError, KeyError):
+                if price_fallback is None:
+                    raise
+                return price_fallback(exchange_data, symbol)
+
+        async with get_local_exchange_manager(
+            exchange_data.exchange_details.name, exchange_config, tentacles_setup_config,
+            exchange_data.auth_details.sandboxed, ignore_config=ignore_config,
+            builder=builder, use_cached_markets=True,
+            is_broker_enabled=exchange_data.auth_details.broker_enabled,
+            exchange_config_by_exchange=exchange_config_by_exchange,
+            disable_unauth_retry=True,  # unauth fallback is never required, if auth fails, this should fail
+        ) as exchange_manager:
+            exchange_manager_bot_id = exchange_manager.bot_id
+            octobot_trading.exchange_data.initialize_contracts_from_exchange_data(exchange_manager, exchange_data)
+            price_by_symbol = {
+                market.symbol: _get_price_from_exchange_data_or_fallback(exchange_data, market.symbol)
+                for market in exchange_data.markets
+            }
+            await exchange_manager.initialize_from_exchange_data(
+                exchange_data, price_by_symbol, False,
+                False, as_simulator
+            )
+            yield exchange_manager
+    finally:
+        if exchange_manager_bot_id:
+            if databases.RunDatabasesProvider.instance().has_bot_id(exchange_manager_bot_id):
+                databases.RunDatabasesProvider.instance().remove_bot_id(exchange_manager_bot_id)
+            commons_tree.EventProvider.instance().remove_event_tree(exchange_manager_bot_id)
+
 
 @contextlib.asynccontextmanager
 async def get_local_exchange_manager(
@@ -231,6 +372,10 @@ async def get_local_exchange_manager(
         _get_minimal_exchange_config(exchange_name, exchange_config),
         exchange_name
     )
+    if tentacles_setup_config.profile is None and exchange_config_by_exchange:
+        profile_data = commons_profiles.ProfileData()
+        profile_data.set_tentacles_config(exchange_config_by_exchange)
+        tentacles_setup_config.profile = commons_profiles.EphemeralProfile.from_profile_data(profile_data)
     exchange_manager = await builder.use_tentacles_setup_config(tentacles_setup_config) \
         .is_checking_credentials(False) \
         .disable_unauth_retry(disable_unauth_retry) \
@@ -261,14 +406,9 @@ async def get_local_exchange_manager(
 def exchange_error_translator(exchange_manager):
     try:
         yield
-    except ccxt.ExchangeError as err:
-        # convert permission and compliancy errors while the exchange manager still exists and can be used
-        if exchange_manager.exchange.is_api_permission_error(err):
-            raise errors.AuthenticationError(f"{err} ({err.__class__})") from err
-        if exchange_manager.exchange.is_exchange_rules_compliancy_error(err):
-            raise errors.ExchangeCompliancyError(f"{err} ({err.__class__})") from err
-        # default raise
-        raise
+    except ccxt.PermissionDenied as err:
+        # convert permission errors while the exchange manager still exists and can be used
+        raise errors.AuthenticationError(f"{err} ({err.__class__})") from err
 
 
 async def is_compatible_account(exchange_name: str, exchange_config: dict, tentacles_setup_config, is_sandboxed: bool) \
@@ -281,26 +421,19 @@ async def is_compatible_account(exchange_name: str, exchange_config: dict, tenta
         exchange_name, exchange_config, tentacles_setup_config, is_sandboxed, ignore_config=False,
         disable_unauth_retry=True,
     ) as local_exchange_manager:
-        backend = trading_backend.exchange_factory.create_exchange_backend(local_exchange_manager.exchange)
         try:
-            is_compatible, error = await backend.is_valid_account(always_check_key_rights=True)
-            if not local_exchange_manager.is_spot_only:
-                message = f"Future trading on {exchange_name.capitalize()} requires a supporting account. {error}." \
-                          f"Please create a new {exchange_name.capitalize()} account to use futures trading. "
-                # only ensure compatibility for non spot trading
-                return is_compatible, True, message if error else error
-            else:
-                # auth didn't fail, spot trading is always allowed
-                return True, True, None
-        except trading_backend.TimeSyncError:
-            return False, False, _get_time_sync_error_message(exchange_name, "backend.is_valid_account")
-        except trading_backend.APIKeyPermissionsError as err:
+            await local_exchange_manager.exchange.request_exchange_to_ensure_authentication()
+            await local_exchange_manager.exchange.ensure_api_key_permissions()
+            return True, True, None
+        except errors.FailedRequest as err:
+            return False, False, str(err)
+        except errors.ExchangeAccountSymbolPermissionError as err:
             return False, False, f"Please update your API Key permissions: {err}"
-        except trading_backend.APIKeyIPWhitelistError as err:
+        except errors.InvalidAPIKeyIPWhitelistError as err:
             return False, False, f"Please update your API Key IP whitelist: {err}"
-        except trading_backend.UnexpectedError as err:
-            return False, False, f"Impossible to check API key: {err}"
-        except trading_backend.ExchangeAuthError:
+        except errors.InvalidAPIKeyPermissionsError as err:
+            return False, False, f"Please update your API Key permissions: {err}"
+        except errors.AuthenticationError as err:
             message = f"Invalid {exchange_name.capitalize()} authentication details"
             if is_sandboxed:
                 message = f"{message}. Warning: exchange sandbox is enabled, " \
@@ -308,7 +441,7 @@ async def is_compatible_account(exchange_name: str, exchange_config: dict, tenta
                           f"{exchange_name.capitalize()} to trade and validate your api key. " \
                           f"Disable sandbox in your accounts configuration if this is not intended."
             return False, False, message
-        except (AttributeError, Exception) as e:
+        except Exception as e:
             return True, False, f"Error when loading exchange account: {e}"
 
 
@@ -329,6 +462,7 @@ async def get_historical_ohlcv(
     exchange_time = local_exchange_manager.exchange.get_exchange_current_time()
     max_theoretical_time = exchange_time - exchange_time % time_frame_sec
     while start_time < end_time and not reached_max:
+        previous_start_time = start_time
         candles = await local_exchange_manager.exchange.retry_till_success(
             request_retry_timeout,
             local_exchange_manager.exchange.get_symbol_prices,
@@ -341,15 +475,39 @@ async def get_historical_ohlcv(
             if candles:
                 if candles[-1][common_enums.PriceIndexes.IND_PRICE_TIME.value] >= max_theoretical_time:
                     reached_max = True
-                yield candles
-                start_time = candles[-1][common_enums.PriceIndexes.IND_PRICE_TIME.value] * 1000
-                # avoid fetching the last element twice
-                start_time += 1
+                next_start_time = (
+                    candles[-1][common_enums.PriceIndexes.IND_PRICE_TIME.value] * 1000
+                    + 1
+                )
+                if _historical_ohlcv_pagination_stalled(
+                    symbol,
+                    previous_start_time,
+                    next_start_time,
+                    reason="Exchange may be returning duplicate candles.",
+                ):
+                    reached_max = True
+                else:
+                    yield candles
+                    start_time = next_start_time
             else:
                 reached_max = True
-        elif local_exchange_manager.exchange.MAX_FETCHED_OHLCV_COUNT:
+        elif local_exchange_manager.exchange.get_option_value(enums.ExchangeClientOptions.MAX_FETCHED_OHLCV_COUNT):
             # history needs to be fetched step by step
-            start_time = start_time + (time_frame_msec * local_exchange_manager.exchange.MAX_FETCHED_OHLCV_COUNT)
+            next_start_time = start_time + (
+                time_frame_msec
+                * local_exchange_manager.exchange.get_option_value(
+                    enums.ExchangeClientOptions.MAX_FETCHED_OHLCV_COUNT
+                )
+            )
+            if _historical_ohlcv_pagination_stalled(
+                symbol,
+                previous_start_time,
+                next_start_time,
+                reason="Exchange may be returning empty candle batches.",
+            ):
+                reached_max = True
+            else:
+                start_time = next_start_time
         else:
             reached_max = True
 
@@ -370,6 +528,26 @@ def get_default_exchange_type(exchange_name):
     if exchange_name in constants.DEFAULT_FUTURE_EXCHANGES:
         return common_constants.CONFIG_EXCHANGE_FUTURE
     return common_constants.DEFAULT_EXCHANGE_TYPE
+
+
+def get_default_exchange_reference_market(exchange_name: str) -> str:
+    try:
+        quote_currency = ccxt_client_util.get_option_value_from_new_ccxt_client(
+            exchange_name,
+            enums.ExchangeClientOptions.DEFAULT_QUOTE_CURRENCY,
+        )
+    except AttributeError:
+        quote_currency = None
+    if quote_currency:
+        return str(quote_currency)
+    return common_constants.DEFAULT_REFERENCE_MARKET
+
+
+def get_default_reference_market_per_exchange(exchange_names: list[str]) -> dict[str, str]:
+    return {
+        exchange_name: get_default_exchange_reference_market(exchange_name)
+        for exchange_name in exchange_names
+    }
 
 
 def get_supported_exchange_types(exchange_name, tentacles_setup_config, exchange_config_by_exchange=None):
@@ -459,9 +637,10 @@ def apply_trades_fees(raw_order, raw_trades_by_exchange_order_id):
 def get_common_traded_quote(exchange_manager) -> typing.Union[str, None]:
     quote = None
     for symbol in exchange_manager.exchange_config.traded_symbols:
+        symbol_quote = symbol.quote
         if quote is None:
-            quote = symbol.quote
-        elif quote != symbol.quote:
+            quote = symbol_quote
+        elif quote != symbol_quote:
             return None
     return quote
 
@@ -491,10 +670,12 @@ def get_traded_assets(exchange_manager: "octobot_trading.exchanges.exchange_mana
     # use list to maintain order
     assets = []
     for symbol in exchange_manager.exchange_config.traded_symbols:
-        if symbol.base not in assets:
-            assets.append(symbol.base)
-        if symbol.quote not in assets:
-            assets.append(symbol.quote)
+        base_asset = symbol.base
+        quote_asset = symbol.quote
+        if base_asset not in assets:
+            assets.append(base_asset)
+        if quote_asset not in assets:
+            assets.append(quote_asset)
     return assets
 
 
@@ -505,3 +686,149 @@ def force_set_mark_price(
 ) -> None:
     exchange_manager.exchange_symbols_data.get_exchange_symbol_data(symbol).prices_manager.\
         set_mark_price(decimal.Decimal(str(price)), enums.MarkPriceSources.EXCHANGE_MARK_PRICE.value)
+
+
+def is_auth_required_exchanges(
+    exchange_data: "octobot_trading.exchanges.ExchangeData",
+    tentacles_setup_config,
+    exchange_config_by_exchange: typing.Optional[dict[str, dict]]
+):
+    try:
+        if exchange_config_by_exchange and any(
+            exchange_config.get(common_constants.CONFIG_FORCE_AUTHENTICATION, False)
+            for exchange_config in exchange_config_by_exchange.values()
+        ):
+            # don't use cache when force authentication is True: this can be specific to this context
+            return _get_is_auth_required_exchange(
+                exchange_data, tentacles_setup_config, exchange_config_by_exchange
+            )
+        # use cache to avoid using introspection each time
+        return _AUTH_REQUIRED_EXCHANGES[exchange_data.exchange_details.name]
+    except KeyError:
+        _AUTH_REQUIRED_EXCHANGES[exchange_data.exchange_details.name] = _get_is_auth_required_exchange(
+            exchange_data, tentacles_setup_config, exchange_config_by_exchange
+        )
+        return _AUTH_REQUIRED_EXCHANGES[exchange_data.exchange_details.name]
+
+
+def _get_is_auth_required_exchange(
+    exchange_data: "octobot_trading.exchanges.ExchangeData",
+    tentacles_setup_config,
+    exchange_config_by_exchange: typing.Optional[dict[str, dict]]
+):
+    exchange_class = get_rest_exchange_class(
+        exchange_data.exchange_details.name, tentacles_setup_config, exchange_config_by_exchange
+    )
+    return exchange_class.requires_authentication(
+        None,
+        tentacles_setup_config,
+        exchange_config_by_exchange,
+        ccxt_rest_exchange_id=None,
+    )
+
+
+def _get_exchange_support_status(exchange_name: str) -> protocol_models.ExchangeSupportStatus:
+    if exchange_name in constants.TESTED_EXCHANGES:
+        return protocol_models.ExchangeSupportStatus.OFFICIALLY_SUPPORTED
+    if exchange_name in constants.SIMULATOR_TESTED_EXCHANGES:
+        return protocol_models.ExchangeSupportStatus.PARTIALLY_TESTED
+    return protocol_models.ExchangeSupportStatus.UNTESTED
+
+
+def _get_ccxt_exchange_metadata(exchange_name: str) -> dict:
+    exchange_class = ccxt_client_util.ccxt_exchange_class_factory(exchange_name)
+    return exchange_class.__new__(exchange_class).describe()
+
+
+def _to_available_trading_types(exchange_name: str) -> list[protocol_models.TradingType]:
+    return [
+        protocol_trading_mapping.EXCHANGE_TYPE_TO_TRADING_TYPE[exchange_type]
+        for exchange_type in get_supported_exchange_types(exchange_name, None)
+        if exchange_type in protocol_trading_mapping.EXCHANGE_TYPE_TO_TRADING_TYPE
+    ]
+
+
+def _get_exchange_image_url_from_exchange_metadata(exchange_metadata: dict) -> typing.Optional[str]:
+    options = exchange_metadata.get("options") or {}
+    octobot_options = options.get("octobot") or {}
+    octobot_urls = octobot_options.get("urls") or {}
+    icon_url = octobot_urls.get(ccxt_enums.ExchangeColumns.ICON_URL.value)
+    if icon_url:
+        return icon_url
+    exchange_urls = exchange_metadata.get("urls") or {}
+    return exchange_urls.get(ccxt_enums.ExchangeColumns.LOGO_URL.value)
+
+
+def _get_register_url_from_exchange_urls(exchange_urls: dict) -> typing.Optional[str]:
+    referral = exchange_urls.get(ccxt_enums.ExchangeColumns.REFERRAL.value)
+    if isinstance(referral, dict):
+        return referral.get("url")
+    if isinstance(referral, str):
+        return referral
+    return None
+
+
+def _is_exchange_sandboxable(exchange_metadata: dict) -> bool:
+    return bool(exchange_metadata.get("has", {}).get("sandbox"))
+
+
+def _build_ccxt_exchange_availability(exchange_name: str) -> protocol_models.ExchangeAvailability:
+    exchange_metadata = _get_ccxt_exchange_metadata(exchange_name)
+    exchange_urls = exchange_metadata.get("urls") or {}
+    return protocol_models.ExchangeAvailability(
+        internal_name=exchange_name,
+        name=exchange_metadata.get("name") or exchange_name,
+        logo=_get_exchange_image_url_from_exchange_metadata(exchange_metadata),
+        available_trading_types=_to_available_trading_types(exchange_name),
+        support_type=_get_exchange_support_status(exchange_name),
+        sandboxable=_is_exchange_sandboxable(exchange_metadata),
+        broker_enabled=is_broker_enabled_on_exchange(exchange_name),
+        register_url=_get_register_url_from_exchange_urls(exchange_urls),
+        api_url=None,
+    )
+
+
+def _iter_ccxt_availability_internal_names() -> list[str]:
+    all_exchange_names = set(ccxt.exchanges)
+    ob_base_names = {
+        exchange_name.removeprefix(constants.OB_EXCHANGE_PREFIX)
+        for exchange_name in all_exchange_names
+        if exchange_name.startswith(constants.OB_EXCHANGE_PREFIX)
+    }
+    internal_names = set(ob_base_names)
+    for exchange_name in all_exchange_names:
+        if exchange_name.startswith(constants.OB_EXCHANGE_PREFIX):
+            continue
+        if exchange_name not in ob_base_names:
+            internal_names.add(exchange_name)
+    return sorted(internal_names)
+
+
+def _collect_tentacle_exchange_availabilities() -> list[protocol_models.ExchangeAvailability]:
+    exchange_availabilities = []
+    for exchange_candidate in tentacles_management.get_all_classes_from_parent(exchanges_types.RestExchange):
+        if exchange_candidate.is_simulated_exchange() or exchange_candidate.is_default_exchange():
+            continue
+        exchange_availabilities.extend(exchange_candidate.get_exchange_availabilities())
+    return exchange_availabilities
+
+
+def _build_exchanges_availability() -> list[protocol_models.ExchangeAvailability]:
+    exchange_availabilities = []
+    for exchange_name in _iter_ccxt_availability_internal_names():
+        try:
+            exchange_availabilities.append(_build_ccxt_exchange_availability(exchange_name))
+        except AttributeError as error:
+            _get_logger().debug(
+                "Skipping unavailable ccxt exchange %s: %s",
+                exchange_name,
+                error,
+            )
+    exchange_availabilities.extend(_collect_tentacle_exchange_availabilities())
+    return sorted(exchange_availabilities, key=lambda availability: availability.internal_name)
+
+
+@cachetools.cached(cachetools.LRUCache(maxsize=1))
+def get_exchanges_availability() -> list[protocol_models.ExchangeAvailability]:
+    return _build_exchanges_availability()
+

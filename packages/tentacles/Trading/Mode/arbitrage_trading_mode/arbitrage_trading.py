@@ -15,6 +15,7 @@
 #  License along with this library.
 import asyncio
 import decimal
+import typing
 
 import async_channel.constants as channel_constants
 import async_channel.channels as channel_instances
@@ -57,9 +58,12 @@ class ArbitrageTradingMode(trading_modes.AbstractTradingMode):
             min_val=0, max_val=100,
             title="Stop loss price: price percent from the price of the initial order to set the stop loss on.",
         )
-        exchanges = list(self.config[commons_constants.CONFIG_EXCHANGES].keys())
+        exchanges = list(
+            (self.config.get(commons_constants.CONFIG_EXCHANGES) or {}).keys()
+        )
         self.UI.user_input(
-            "exchanges_to_trade_on", commons_enums.UserInputTypes.MULTIPLE_OPTIONS, [exchanges[0]], inputs,
+            "exchanges_to_trade_on", commons_enums.UserInputTypes.MULTIPLE_OPTIONS,
+            [exchanges[0]] if exchanges else [], inputs,
             options=exchanges,
             title="Trading exchanges: exchanges on which to perform arbitrage trading: these will be used to create "
                   "arbitrage orders. Leaving this empty will result in arbitrage trading on every exchange, "
@@ -577,7 +581,9 @@ class ArbitrageModeProducer(trading_modes.AbstractTradingModeProducer):
             f"{registered_exchange_name} exchange as price data feed reference to identify arbitrage opportunities."
         )
 
-    async def set_final_eval(self, matrix_id: str, cryptocurrency: str, symbol: str, time_frame, trigger_source: str):
+    async def set_final_eval(
+        self, matrix_id: str, cryptocurrency: str, symbol: str, time_frame, trigger_source: str,
+    ):
         # Ignore matrix calls
         pass
 

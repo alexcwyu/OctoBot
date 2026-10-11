@@ -58,7 +58,7 @@ def test_bundled_collections():
     names = {c.name for c in bundled}
     assert names == {"alpha-docs", "beta-prefs"}
     for c in bundled:
-        assert c.encryption == "identity"
+        assert c.encryption == "delegated"
         assert c.storage_path == "users/{identity}"
 
 
@@ -69,9 +69,9 @@ def test_pull_only_collections():
 
 
 def test_server_encrypted_collections():
-    server_encrypted = [c for c in _load().collections if c.encryption == "server"]
-    assert len(server_encrypted) == 1
-    assert server_encrypted[0].name == "zeta-internal"
+    # In v3, zeta-internal uses "delegated" encryption (v2 "server" is removed)
+    zeta = next(c for c in _load().collections if c.name == "zeta-internal")
+    assert zeta.encryption == "delegated"
 
 
 def test_rate_limit_config():
@@ -85,6 +85,48 @@ def test_fallback_to_default_config():
     """When collections file is missing, DEFAULT_SYNC_CONFIG is returned."""
     config = collections_module.load_sync_config("/nonexistent/path.json")
     assert config.version == 1
-    assert len(config.collections) == 3
-    names = {c.name for c in config.collections}
-    assert names == {"bots", "accounts", "errors"}
+    assert config.namespaces is not None
+    ns_collections = config.namespaces["octobot"].collections
+    assert len(ns_collections) == 11
+    by_name = {c.name: c for c in ns_collections}
+    assert set(by_name) == {
+        "user-data",
+        "user-accounts",
+        "user-accounts-auth",
+        "user-accounts-trading",
+        "user-accounts-history",
+        "user-accounts-history-aggregated-real",
+        "user-accounts-history-aggregated-simulated",
+        "user-settings",
+        "user-strategies",
+        "user-actions",
+        "debug",
+    }
+    assert by_name["user-data"].storage_path == "users/{identity}/data"
+    assert by_name["user-accounts"].storage_path == "users/{identity}/accounts"
+    assert by_name["user-accounts-auth"].storage_path == "users/{identity}/accounts/auth"
+    assert by_name["user-accounts-trading"].storage_path == "users/{identity}/accounts/{account_id}/trading"
+    assert by_name["user-accounts-history"].storage_path == "users/{identity}/accounts/{account_id}/history"
+    assert by_name["user-accounts-history-aggregated-real"].storage_path == "users/{identity}/accounts/history/real"
+    assert by_name["user-accounts-history-aggregated-simulated"].storage_path == (
+        "users/{identity}/accounts/history/simulated"
+    )
+    assert by_name["user-settings"].storage_path == "users/{identity}/settings"
+    assert by_name["user-strategies"].storage_path == "users/{identity}/strategies"
+    assert by_name["user-actions"].storage_path == "users/{identity}/actions"
+    assert by_name["debug"].storage_path == "users/{identity}/debug"
+    for col in by_name.values():
+        assert col.read_roles == ["self"]
+        assert col.write_roles == ["self"]
+        assert col.encryption == "delegated"
+    for history_collection_name in (
+        "user-accounts-history",
+        "user-accounts-history-aggregated-real",
+        "user-accounts-history-aggregated-simulated",
+    ):
+        assert by_name[history_collection_name].pull_only is True
+    actions = by_name["user-actions"]
+    assert actions.append_only is not None
+    assert actions.append_only.type == "by_timestamp"
+    assert actions.append_only.persist is False
+    assert actions.append_only.require_author_signature is False

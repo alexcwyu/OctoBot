@@ -50,6 +50,22 @@ from octobot_commons.dsl_interpreter.operators.re_callable_operator_mixin import
     ReCallingOperatorResult,
     ReCallingOperatorResultKeys,
 )
+from octobot_commons.dsl_interpreter.operators.signalable_operator_mixin import (
+    OperatorSignal,
+    OperatorSignals,
+    SignalableOperatorMixin,
+)
+from octobot_commons.dsl_interpreter.operators.process_bound_operator_mixin import (
+    ProcessBoundOperatorMixin,
+    is_process_bound,
+)
+from octobot_commons.dsl_interpreter.operators.nested_interpretation_mixin import (
+    NestedInterpretationMixin,
+)
+from octobot_commons.dsl_interpreter.operators.dynamic_dependencies_operator_mixin import (
+    DynamicDependency,
+    DynamicDependenciesOperatorMixin,
+)
 
 __all__ = [
     "BinaryOperator",
@@ -65,4 +81,12 @@ __all__ = [
     "ReCallableOperatorMixin",
     "ReCallingOperatorResult",
     "ReCallingOperatorResultKeys",
+    "SignalableOperatorMixin",
+    "OperatorSignal",
+    "OperatorSignals",
+    "ProcessBoundOperatorMixin",
+    "is_process_bound",
+    "NestedInterpretationMixin",
+    "DynamicDependency",
+    "DynamicDependenciesOperatorMixin",
 ]

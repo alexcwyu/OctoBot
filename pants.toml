@@ -27,22 +27,20 @@ root_patterns = [
     "/packages/evaluators",
     "/packages/node",
     "/packages/flow",
+    "/packages/copy",
+    "/packages/protocol",
     "/packages/services",
     "/packages/sync",
     "/packages/tentacles_manager",
     "/packages/trading",
-    "/packages/trading_backend",
     "pants-plugins",
     "/",
 ]
 
 [python]
 # Python interpreter compatibility
-interpreter_constraints = [">=3.12"]
-
-# Module mappings for packages with different import names
-[python.resolves_to_interpreter_constraints]
-python-default = ["==3.13"]
+interpreter_constraints = ["==3.13.*"]
+enable_resolves = false
 
 [python-infer]
 # Enable dependency inference
@@ -56,3 +54,4 @@ build_verbose = true
 env_vars.add = [
   "DOCKER_BUILDKIT=1",
 ]
+

@@ -23,6 +23,7 @@ from octobot_commons.cryptography.encryption import (
     rsa_encrypt_aes_key,
     aes_gcm_decrypt,
     aes_gcm_encrypt,
+    hkdf_derive_key,
     pbkdf2_derive_key_from_pin,
     pbkdf2_encrypt_aes_key,
     pbkdf2_decrypt_aes_key,
@@ -30,6 +31,7 @@ from octobot_commons.cryptography.encryption import (
 from octobot_commons.cryptography import signing
 from octobot_commons.cryptography.signing import (
     generate_ecdsa_key_pair,
+    parse_private_key_pem,
     sign_data,
     verify_signature,
 )
@@ -43,10 +45,12 @@ __all__ = [
     "rsa_encrypt_aes_key",
     "aes_gcm_decrypt",
     "aes_gcm_encrypt",
+    "hkdf_derive_key",
     "pbkdf2_derive_key_from_pin",
     "pbkdf2_encrypt_aes_key",
     "pbkdf2_decrypt_aes_key",
     "generate_ecdsa_key_pair",
+    "parse_private_key_pem",
     "sign_data",
     "verify_signature",
 ]

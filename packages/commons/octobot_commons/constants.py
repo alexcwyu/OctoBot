@@ -15,6 +15,15 @@
 #  License along with this library.
 import os
 import octobot_commons.enums as enums
+import octobot_protocol.models.trading_type as protocol_trading_type
+
+
+def parse_boolean_str(value: str) -> bool:
+    """
+    :param value: the value to parse
+    :return: True when the value is "True" or "true" else false
+    """
+    return bool(value.lower() == "true")
 
 
 def parse_boolean_environment_var(env_key: str, default_value: str) -> bool:
@@ -23,7 +32,7 @@ def parse_boolean_environment_var(env_key: str, default_value: str) -> bool:
     :param default_value: the default value
     :return: True when the var value is "True" or "true" else false
     """
-    return bool(os.getenv(env_key, default_value).lower() == "true")
+    return parse_boolean_str(os.getenv(env_key, default_value))
 
 
 # time
@@ -46,6 +55,8 @@ CONFIG_ENABLED_OPTION = "enabled"
 CONFIG_DEBUG_OPTION = "DEV-MODE"
 CONFIG_TIME_FRAME = "time_frame"
 USER_FOLDER = "user"
+AUTOMATIONS_FOLDER = "automations"
+USER_AUTOMATIONS_FOLDER = f"{USER_FOLDER}/{AUTOMATIONS_FOLDER}"
 CONFIG_FOLDER = "config"
 CONFIG_FILE = "config.json"
 SAFE_DUMP_SUFFIX = ".back"
@@ -54,6 +65,8 @@ DEFAULT_CONFIG_FILE_PATH = f"{CONFIG_FOLDER}/{DEFAULT_CONFIG_FILE}"
 SCHEMA = "schema"
 CONFIG_FILE_EXT = ".json"
 CONFIG_FILE_SCHEMA = f"{CONFIG_FOLDER}/config_{SCHEMA}.json"
+CONFIG_SYNC = "sync"
+CONFIG_SYNC_ENCRYPTION_SECRET = "encryption_secret"
 CONFIG_REFRESH_RATE = "refresh_rate_seconds"
 CONFIG_SAVED_HISTORICAL_TIMEFRAMES = "saved_historical_timeframes"
 CONFIG_OPTIMIZER_ID = "optimizer_id"
@@ -63,7 +76,15 @@ DEFAULT_CURRENT_LIVE_ID = 1
 
 # profiles
 PROFILES_FOLDER = "profiles"
+PROFILES_MIGRATED_FOLDER = "profiles_migrated"
 USER_PROFILES_FOLDER = f"{USER_FOLDER}/{PROFILES_FOLDER}"
+USER_PROFILES_MIGRATED_FOLDER = f"{USER_FOLDER}/profiles_migrated"
+SYNC_PROFILE_RUNTIME_FOLDER = f"{USER_FOLDER}/sync_profile_runtime"
+ENV_OCTOBOT_SYNC_DATA_ROOT = "OCTOBOT_SYNC_DATA_ROOT"
+CONFIG_READONLY_PROFILES_PATH = "readonly_profiles_path"
+CONFIG_READONLY_REFERENCE_TENTACLES_PATH = "readonly_reference_tentacles_path"
+REFERENCE_TENTACLES_CONFIG_DIR = "reference_tentacles_config"
+TENTACLES_SPECIFIC_CONFIG_FOLDER = "specific_config"
 PROFILE_CONFIG_FILE = "profile.json"
 CONFIG_PROFILE = "profile"
 CONFIG_BACKTESTING_PROFILE = "backtesting_profile"
@@ -114,6 +135,18 @@ CONFIG_EXCHANGE_FUTURE = "future"
 CONFIG_EXCHANGE_MARGIN = "margin"
 CONFIG_EXCHANGE_OPTION = "option"
 CONFIG_EXCHANGE_SPOT = "spot"
+TRADING_TYPE_TO_EXCHANGE_TYPE: dict[protocol_trading_type.TradingType, str] = {
+    protocol_trading_type.TradingType.SPOT: CONFIG_EXCHANGE_SPOT,
+    protocol_trading_type.TradingType.FUTURES: CONFIG_EXCHANGE_FUTURE,
+    protocol_trading_type.TradingType.OPTIONS: CONFIG_EXCHANGE_OPTION,
+    protocol_trading_type.TradingType.MARGIN: CONFIG_EXCHANGE_MARGIN,
+}
+EXCHANGE_TYPE_TO_TRADING_TYPE: dict[str, protocol_trading_type.TradingType] = {
+    CONFIG_EXCHANGE_SPOT: protocol_trading_type.TradingType.SPOT,
+    CONFIG_EXCHANGE_FUTURE: protocol_trading_type.TradingType.FUTURES,
+    CONFIG_EXCHANGE_OPTION: protocol_trading_type.TradingType.OPTIONS,
+    CONFIG_EXCHANGE_MARGIN: protocol_trading_type.TradingType.MARGIN,
+}
 CONFIG_EXCHANGE_REST_ONLY = "rest_only"
 CONFIG_EXCHANGE_WEB_SOCKET = "web-socket"
 CONFIG_EXCHANGE_SUB_ACCOUNT = "sub_account"
@@ -180,13 +213,13 @@ ALLOW_DEFAULT_CONFIG = "allow_default_config"
 # terms of service
 CONFIG_ACCEPTED_TERMS = "accepted_terms"
 
+# child-process display name (DSL-spawned OctoBot instances)
+CONFIG_OCTOBOT_NAME = "octobot_name"
+
 # distribution
 DEFAULT_DISTRIBUTION = "default"
 CONFIG_DISTRIBUTION = "distribution"
 
-# metrics
-CONFIG_METRICS = "metrics"
-CONFIG_METRICS_BOT_ID = "metrics-bot-id"
 TIMER_BEFORE_METRICS_REGISTRATION_SECONDS = 600
 TIMER_BETWEEN_METRICS_UPTIME_UPDATE = float(
     os.getenv("TIMER_BETWEEN_METRICS_UPTIME_UPDATE", str(3600 * 4))
@@ -251,10 +284,15 @@ FORCE_BACKTESTING_LOGS = parse_boolean_environment_var(
 BASE_OPERATORS_LIBRARY = "base"
 CONTEXTUAL_OPERATORS_LIBRARY = "contextual"
 UNRESOLVED_PARAMETER_PLACEHOLDER = "UNRESOLVED_PARAMETER"
+LOCAL_VALUE_PLACEHOLDER = "LOCAL_VALUE_PLACEHOLDER"
 
 # Logging
 EXCEPTION_DESC = "exception_desc"
 IS_EXCEPTION_DESC = "is_exception_desc"
+ALLOW_PRIVATE_DATA_LOGS = parse_boolean_environment_var("ALLOW_PRIVATE_DATA_LOGS", "true")
+PRIVATE_MESSAGE_PLACEHOLDER = "***"
+PRIVATE_MESSAGE_ALLOWED_CHARS_COUNT = 3
+
 
 # from https://www.coingecko.com/en/categories/stablecoins
 USD_LIKE_COINS = [
@@ -296,4 +334,5 @@ KNOWN_POTENTIALLY_SSL_FAILED_REQUIRED_URL = (
     "https://tentacles.octobot.online/officials/packages/full/base/1.0.9/metadata.yaml"
 )
 IS_DEV_MODE_ENABLED = parse_boolean_environment_var(CONFIG_DEBUG_OPTION, "False")
-USE_MINIMAL_LIBS = parse_boolean_environment_var("USE_MINIMAL_LIBS", "false")
+ENV_USE_MINIMAL_LIBS = "USE_MINIMAL_LIBS"
+USE_MINIMAL_LIBS = parse_boolean_environment_var(ENV_USE_MINIMAL_LIBS, "false")

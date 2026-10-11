@@ -14,9 +14,12 @@
 #  You should have received a copy of the GNU Lesser General Public
 #  License along with this library.
 import mock
+import decimal
+import numpy
 import pytest
 
 import octobot_commons.constants as constants
+import octobot_commons.enums as commons_enums
 import octobot_commons.dsl_interpreter.parameters_util as parameters_util
 import octobot_commons.dsl_interpreter.operator_parameter as operator_parameter
 import octobot_commons.errors as commons_errors
@@ -40,6 +43,15 @@ class TestFormatParameterValue:
         assert parameters_util.format_parameter_value(3.14) == "3.14"
         assert parameters_util.format_parameter_value(1.0) == "1.0"
 
+    def test_decimal(self):
+        assert parameters_util.format_parameter_value(decimal.Decimal("1.75")) == "1.75"
+        assert parameters_util.format_parameter_value(decimal.Decimal("0.05")) == "0.05"
+
+    def test_decimal_in_dict(self):
+        assert parameters_util.format_parameter_value(
+            {"stop_loss_price_percent": decimal.Decimal("0.1")}
+        ) == "{'stop_loss_price_percent': 0.1}"
+
     def test_plain_string(self):
         assert parameters_util.format_parameter_value("hello") == "'hello'"
         assert parameters_util.format_parameter_value("") == "''"
@@ -61,6 +73,11 @@ class TestFormatParameterValue:
         assert parameters_util.format_parameter_value({"a": 1}) == "{'a': 1}"
         assert parameters_util.format_parameter_value({}) == "{}"
 
+    def test_numpy_scalar_in_dict(self):
+        assert parameters_util.format_parameter_value(
+            {"eval_note": numpy.float64(-1.0), "symbol": "BTC/USDC"}
+        ) == "{'eval_note': -1.0, 'symbol': 'BTC/USDC'}"
+
     def test_other_type_uses_repr(self):
         class Custom:
             def __repr__(self):
@@ -77,10 +94,10 @@ class TestResoveOperatorParams:
 
     def test_required_params_only(self):
         param_a = operator_parameter.OperatorParameter(
-            name="a", description="first", required=True, type=int
+            name="a", description="first", required=True, type=commons_enums.DslValueType.NUMBER.value
         )
         param_b = operator_parameter.OperatorParameter(
-            name="b", description="second", required=True, type=str
+            name="b", description="second", required=True, type=commons_enums.DslValueType.TEXT.value
         )
         operator_class = mock.Mock()
         operator_class.get_parameters.return_value = [param_a, param_b]
@@ -90,7 +107,7 @@ class TestResoveOperatorParams:
 
     def test_optional_params_only(self):
         param_x = operator_parameter.OperatorParameter(
-            name="x", description="optional", required=False, type=int
+            name="x", description="optional", required=False, type=commons_enums.DslValueType.NUMBER.value
         )
         operator_class = mock.Mock()
         operator_class.get_parameters.return_value = [param_x]
@@ -100,10 +117,10 @@ class TestResoveOperatorParams:
 
     def test_mixed_required_and_optional(self):
         param_req = operator_parameter.OperatorParameter(
-            name="req", description="required", required=True, type=int
+            name="req", description="required", required=True, type=commons_enums.DslValueType.NUMBER.value
         )
         param_opt = operator_parameter.OperatorParameter(
-            name="opt", description="optional", required=False, type=str
+            name="opt", description="optional", required=False, type=commons_enums.DslValueType.TEXT.value
         )
         operator_class = mock.Mock()
         operator_class.get_parameters.return_value = [param_req, param_opt]
@@ -113,10 +130,10 @@ class TestResoveOperatorParams:
 
     def test_skips_missing_params(self):
         param_req = operator_parameter.OperatorParameter(
-            name="req", description="required", required=True, type=int
+            name="req", description="required", required=True, type=commons_enums.DslValueType.NUMBER.value
         )
         param_opt = operator_parameter.OperatorParameter(
-            name="opt", description="optional", required=False, type=str
+            name="opt", description="optional", required=False, type=commons_enums.DslValueType.TEXT.value
         )
         operator_class = mock.Mock()
         operator_class.get_parameters.return_value = [param_req, param_opt]
@@ -126,7 +143,7 @@ class TestResoveOperatorParams:
 
     def test_extra_values_ignored(self):
         param_a = operator_parameter.OperatorParameter(
-            name="a", description="first", required=True, type=int
+            name="a", description="first", required=True, type=commons_enums.DslValueType.NUMBER.value
         )
         operator_class = mock.Mock()
         operator_class.get_parameters.return_value = [param_a]
@@ -147,10 +164,10 @@ class TestResolveOperatorArgsAndKwargs:
 
     def test_positional_args_only(self):
         param_a = operator_parameter.OperatorParameter(
-            name="a", description="first", required=True, type=int
+            name="a", description="first", required=True, type=commons_enums.DslValueType.NUMBER.value
         )
         param_b = operator_parameter.OperatorParameter(
-            name="b", description="second", required=True, type=int
+            name="b", description="second", required=True, type=commons_enums.DslValueType.NUMBER.value
         )
         operator_class = mock.Mock()
         operator_class.get_parameters.return_value = [param_a, param_b]
@@ -162,10 +179,10 @@ class TestResolveOperatorArgsAndKwargs:
 
     def test_positional_arg_as_keyword_arg(self):
         param_a = operator_parameter.OperatorParameter(
-            name="a", description="first", required=True, type=int
+            name="a", description="first", required=True, type=commons_enums.DslValueType.NUMBER.value
         )
         param_b = operator_parameter.OperatorParameter(
-            name="b", description="second", required=True, type=int
+            name="b", description="second", required=True, type=commons_enums.DslValueType.NUMBER.value
         )
         operator_class = mock.Mock()
         operator_class.get_parameters.return_value = [param_a, param_b]
@@ -177,13 +194,13 @@ class TestResolveOperatorArgsAndKwargs:
 
     def test_positional_arg_as_keyword_arg_in_a_wrong_order(self):
         param_a = operator_parameter.OperatorParameter(
-            name="a", description="first", required=True, type=int
+            name="a", description="first", required=True, type=commons_enums.DslValueType.NUMBER.value
         )
         param_b = operator_parameter.OperatorParameter(
-            name="b", description="second", required=True, type=int
+            name="b", description="second", required=True, type=commons_enums.DslValueType.NUMBER.value
         )
         param_c = operator_parameter.OperatorParameter(
-            name="c", description="third", required=True, type=int
+            name="c", description="third", required=True, type=commons_enums.DslValueType.NUMBER.value
         )
         operator_class = mock.Mock()
         operator_class.get_parameters.return_value = [param_a, param_b, param_c]
@@ -195,13 +212,13 @@ class TestResolveOperatorArgsAndKwargs:
 
     def test_positional_all_args_as_keywords_in_a_wrong_order(self):
         param_a = operator_parameter.OperatorParameter(
-            name="a", description="first", required=True, type=int
+            name="a", description="first", required=True, type=commons_enums.DslValueType.NUMBER.value
         )
         param_b = operator_parameter.OperatorParameter(
-            name="b", description="second", required=True, type=int
+            name="b", description="second", required=True, type=commons_enums.DslValueType.NUMBER.value
         )
         param_c = operator_parameter.OperatorParameter(
-            name="c", description="third", required=True, type=int
+            name="c", description="third", required=True, type=commons_enums.DslValueType.NUMBER.value
         )
         operator_class = mock.Mock()
         operator_class.get_parameters.return_value = [param_a, param_b, param_c]
@@ -213,10 +230,10 @@ class TestResolveOperatorArgsAndKwargs:
 
     def test_kwargs_only(self):
         param_a = operator_parameter.OperatorParameter(
-            name="a", description="first", required=True, type=int
+            name="a", description="first", required=True, type=commons_enums.DslValueType.NUMBER.value
         )
         param_b = operator_parameter.OperatorParameter(
-            name="b", description="second", required=True, type=int
+            name="b", description="second", required=True, type=commons_enums.DslValueType.NUMBER.value
         )
         operator_class = mock.Mock()
         operator_class.get_parameters.return_value = [param_a, param_b]
@@ -228,13 +245,13 @@ class TestResolveOperatorArgsAndKwargs:
 
     def test_mixed_args_and_kwargs(self):
         param_a = operator_parameter.OperatorParameter(
-            name="a", description="first", required=True, type=int
+            name="a", description="first", required=True, type=commons_enums.DslValueType.NUMBER.value
         )
         param_b = operator_parameter.OperatorParameter(
-            name="b", description="second", required=True, type=int
+            name="b", description="second", required=True, type=commons_enums.DslValueType.NUMBER.value
         )
         param_c = operator_parameter.OperatorParameter(
-            name="c", description="optional", required=False, type=int
+            name="c", description="optional", required=False, type=commons_enums.DslValueType.NUMBER.value
         )
         operator_class = mock.Mock()
         operator_class.get_parameters.return_value = [param_a, param_b, param_c]
@@ -246,7 +263,7 @@ class TestResolveOperatorArgsAndKwargs:
 
     def test_extra_kwargs_preserved(self):
         param_a = operator_parameter.OperatorParameter(
-            name="a", description="first", required=True, type=int
+            name="a", description="first", required=True, type=commons_enums.DslValueType.NUMBER.value
         )
         operator_class = mock.Mock()
         operator_class.get_parameters.return_value = [param_a]
@@ -258,7 +275,7 @@ class TestResolveOperatorArgsAndKwargs:
 
     def test_raises_when_too_many_positional_args(self):
         param_a = operator_parameter.OperatorParameter(
-            name="a", description="first", required=True, type=int
+            name="a", description="first", required=True, type=commons_enums.DslValueType.NUMBER.value
         )
         operator_class = mock.Mock()
         operator_class.get_parameters.return_value = [param_a]
@@ -271,10 +288,10 @@ class TestResolveOperatorArgsAndKwargs:
 
     def test_partial_params_allowed(self):
         param_a = operator_parameter.OperatorParameter(
-            name="a", description="first", required=True, type=int
+            name="a", description="first", required=True, type=commons_enums.DslValueType.NUMBER.value
         )
         param_b = operator_parameter.OperatorParameter(
-            name="b", description="second", required=False, type=int
+            name="b", description="second", required=False, type=commons_enums.DslValueType.NUMBER.value
         )
         operator_class = mock.Mock()
         operator_class.get_parameters.return_value = [param_a, param_b]
@@ -338,48 +355,71 @@ class TestApplyResolvedParameterValue:
 
 class TestAddResolvedParameterValue:
     def test_adds_to_call_with_no_parenthesis(self):
-        result = parameters_util.add_resolved_parameter_value("op", "x", "a")
+        result = parameters_util.add_resolved_parameter_value("op", "op", "x", "a")
         assert result == "op(x='a')"
 
     def test_adds_to_empty_params_op(self):
-        result = parameters_util.add_resolved_parameter_value("op()", "x", 42)
+        result = parameters_util.add_resolved_parameter_value("op()", "op", "x", 42)
         assert result == "op(x=42)"
 
     def test_adds_to_empty_params_with_spaces(self):
-        result = parameters_util.add_resolved_parameter_value("op( )", "x", 42)
+        result = parameters_util.add_resolved_parameter_value("op( )", "op", "x", 42)
         assert result == "op( x=42)"
 
     def test_adds_after_positional_arg(self):
-        result = parameters_util.add_resolved_parameter_value("op(1)", "x", 42)
+        result = parameters_util.add_resolved_parameter_value("op(1)", "op", "x", 42)
         assert result == "op(1, x=42)"
 
     def test_adds_after_keyword_arg(self):
-        result = parameters_util.add_resolved_parameter_value("op(a=1)", "x", 42)
+        result = parameters_util.add_resolved_parameter_value("op(a=1)", "op", "x", 42)
         assert result == "op(a=1, x=42)"
 
     def test_adds_after_multiple_args(self):
-        result = parameters_util.add_resolved_parameter_value("op(1, b=2)", "x", 42)
+        result = parameters_util.add_resolved_parameter_value("op(1, b=2)", "op", "x", 42)
         assert result == "op(1, b=2, x=42)"
 
     def test_adds_string_value(self):
-        result = parameters_util.add_resolved_parameter_value("op()", "name", "hello")
+        result = parameters_util.add_resolved_parameter_value("op()", "op", "name", "hello")
         assert result == "op(name='hello')"
+
+    def test_adds_to_all_instances_of_operator(self):
+        script = "wait(1, a=True) if wait(blockchain_wallet_balance() < 1) else True"
+        result = parameters_util.add_resolved_parameter_value(
+            script, "wait", "last_execution_result", [123, "plop"]
+        )
+        assert result == (
+            "wait(1, a=True, last_execution_result=[123, 'plop']) if "
+            "wait(blockchain_wallet_balance() < 1, last_execution_result=[123, 'plop']) else True"
+        )
+
+    def test_does_not_touch_other_operators(self):
+        result = parameters_util.add_resolved_parameter_value(
+            "foo(1) if wait(2) else bar()", "wait", "x", 1
+        )
+        assert result == "foo(1) if wait(2, x=1) else bar()"
+
+    def test_raises_when_operator_not_found_and_script_has_calls(self):
+        with pytest.raises(
+            commons_errors.InvalidParametersError,
+            match=r"Operator 'wait' call sites not found",
+        ):
+            parameters_util.add_resolved_parameter_value("foo(1)", "wait", "x", 1)
 
     def test_raises_when_parameter_already_in_kwargs(self):
         with pytest.raises(commons_errors.InvalidParametersError, match="Parameter x is already in operator keyword args"):
-            parameters_util.add_resolved_parameter_value("op(x=1)", "x", 42)
+            parameters_util.add_resolved_parameter_value("op(x=1)", "op", "x", 42)
 
     def test_raises_when_parameter_already_first_kwarg(self):
         with pytest.raises(commons_errors.InvalidParametersError, match="Parameter a is already"):
-            parameters_util.add_resolved_parameter_value("op(a=1, b=2)", "a", 99)
+            parameters_util.add_resolved_parameter_value("op(a=1, b=2)", "op", "a", 99)
 
     def test_raises_when_parameter_already_last_kwarg(self):
         with pytest.raises(commons_errors.InvalidParametersError, match="Parameter b is already"):
-            parameters_util.add_resolved_parameter_value("op(a=1, b=2)", "b", 99)
+            parameters_util.add_resolved_parameter_value("op(a=1, b=2)", "op", "b", 99)
 
     def test_raises_when_script_has_unclosed_parenthesis(self):
         with pytest.raises(commons_errors.InvalidParametersError, match="has unclosed parenthesis"):
-            parameters_util.add_resolved_parameter_value("op(1", "x", 42)
+            parameters_util.add_resolved_parameter_value("op(1", "op", "x", 42)
 
 
 class TestHasUnresolvedParameters:
@@ -406,3 +446,11 @@ class TestHasUnresolvedParameters:
     def test_returns_true_when_placeholder_alone(self):
         script = constants.UNRESOLVED_PARAMETER_PLACEHOLDER
         assert parameters_util.has_unresolved_parameters(script) is True
+
+
+class TestGetDslStatementOperatorName:
+    def test_extracts_operator_name_from_dsl_script(self):
+        assert (
+            parameters_util.get_dsl_statement_operator_name("dma_evaluator(symbol='BTC/USDC')")
+            == "dma_evaluator"
+        )

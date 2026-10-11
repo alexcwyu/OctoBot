@@ -16,6 +16,7 @@
 import time
 import asyncio
 
+import octobot_commons.logging as commons_logging
 import octobot_trading.constants
 import octobot_trading.enums as enums
 import octobot_trading.errors
@@ -50,7 +51,7 @@ class PendingCreationOrderState(order_state.OrderState):
             # open orders refresh.
             self.ensure_not_cleared(self.order)
             self.get_logger().info(
-                f"Synchronizing [{self._underlying_refreshed_state.value}] order {self.order} "
+                f"Synchronizing [{self._underlying_refreshed_state.value}] order {commons_logging.get_private_minimized_message_if_necessary(self.order)} "
                 f"with {self.order.exchange_manager.exchange_name} exchange"
             )
             while self.order.is_pending_creation() \
@@ -69,7 +70,9 @@ class PendingCreationOrderState(order_state.OrderState):
                     message = f"Failed to receive an order update ({iteration} attempts). " \
                       f"Retrying in {self.PENDING_REFRESH_INTERVAL} seconds."
                     self.ensure_not_cleared(self.order)
-                    if self.order.exchange_manager.exchange.EXPECT_POSSIBLE_ORDER_NOT_FOUND_DURING_ORDER_CREATION:
+                    if self.order.exchange_manager.exchange.get_option_value(
+                        enums.ExchangeClientOptions.EXPECT_POSSIBLE_NOT_FOUND_ORDER_DURING_ORDER_CREATION
+                    ):
                         self.get_logger().debug(message)
                     else:
                         self.get_logger().error(

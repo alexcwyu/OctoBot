@@ -59,23 +59,30 @@ async def get_amount_from_input_amount(
     elif amount_type is dsl.QuantityType.CURRENT_SYMBOL_ASSETS_PERCENT:
         if not context.symbol:
             raise trading_errors.InvalidArgumentError(f"{amount_type} input types requires context.symbol to be set")
-        base, quote = commons_symbols.parse_symbol(context.symbol).base_and_quote()
-        total_symbol_assets_holdings_value = context.exchange_manager.exchange_personal_data.portfolio_manager.\
-            portfolio_value_holder.get_assets_holdings_value(
-                (base, quote), commons_symbols.parse_symbol(context.symbol).base
-            )
+        parsed_symbol = commons_symbols.parse_symbol(context.symbol)
+        base_asset = parsed_symbol.base
+        quote_asset = parsed_symbol.quote
+        portfolio_value_holder = (
+            context.exchange_manager.exchange_personal_data.portfolio_manager.portfolio_value_holder
+        )
+        total_symbol_assets_holdings_value = portfolio_value_holder.get_assets_holdings_value(
+            (base_asset, quote_asset), base_asset
+        )
         amount_value = total_symbol_assets_holdings_value * amount_value / trading_constants.ONE_HUNDRED
     elif amount_type is dsl.QuantityType.TRADED_SYMBOLS_ASSETS_PERCENT:
         if not context.symbol:
             raise trading_errors.InvalidArgumentError(f"{amount_type} input types requires context.symbol to be set")
+        parsed_symbol = commons_symbols.parse_symbol(context.symbol)
+        portfolio_value_holder = (
+            context.exchange_manager.exchange_personal_data.portfolio_manager.portfolio_value_holder
+        )
         assets = set()
         for symbol in context.exchange_manager.exchange_config.traded_symbols:
             assets.add(symbol.base)
             assets.add(symbol.quote)
-        total_symbol_assets_holdings_value = context.exchange_manager.exchange_personal_data.portfolio_manager.\
-            portfolio_value_holder.get_assets_holdings_value(
-                assets, commons_symbols.parse_symbol(context.symbol).base
-            )
+        total_symbol_assets_holdings_value = portfolio_value_holder.get_assets_holdings_value(
+            assets, parsed_symbol.base
+        )
         amount_value = total_symbol_assets_holdings_value * amount_value / trading_constants.ONE_HUNDRED
     elif amount_type in (dsl.QuantityType.POSITION_PERCENT, dsl.QuantityType.POSITION_PERCENT_ALIAS):
         if context.exchange_manager.is_future:
@@ -92,13 +99,17 @@ async def get_amount_from_input_amount(
             raise NotImplementedError(f"{amount_type} input type is not implemented for non-future exchanges")
     else:
         raise trading_errors.InvalidArgumentError(f"Unsupported input: {input_amount} make sure to use a supported syntax for amount")
-    adapted_amount = await account_balance.adapt_amount_to_holdings(
-        context, amount_value, side, use_total_holding, reduce_only, is_stop_order,
-        target_price=target_price, orders_to_be_ignored=orders_to_be_ignored
-    )
-    if adapted_amount < amount_value and not allow_holdings_adaptation:
-        raise trading_errors.MissingFunds(
-            f"Not enough funds for {amount_value} amount: maximum available amount is {adapted_amount} and "
-            f"allow_holdings_adaptation is {allow_holdings_adaptation}"
+    if context.exchange_manager.exchange.supports_fetching_balance():
+        adapted_amount = await account_balance.adapt_amount_to_holdings(
+            context, amount_value, side, use_total_holding, reduce_only, is_stop_order,
+            target_price=target_price, orders_to_be_ignored=orders_to_be_ignored
         )
+        if adapted_amount < amount_value and not allow_holdings_adaptation:
+            raise trading_errors.MissingFunds(
+                f"Not enough funds for {amount_value} amount: maximum available amount is {adapted_amount} and "
+                f"allow_holdings_adaptation is {allow_holdings_adaptation}"
+            )
+    else:
+        # can't confirm holdings, return the input amount
+        adapted_amount = amount_value
     return adapted_amount

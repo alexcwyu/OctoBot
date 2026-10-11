@@ -18,7 +18,7 @@ import typing
 import dataclasses
 import numpy as np
 
-import octobot_commons.constants
+import octobot_commons.constants as commons_constants
 import octobot_commons.errors
 import octobot_commons.logging
 import octobot_commons.enums as commons_enums
@@ -28,6 +28,7 @@ import octobot_trading.exchange_data
 import octobot_trading.api
 import octobot_trading.constants
 import octobot_trading.dsl
+import octobot_trading.enums
 
 import tentacles.Meta.DSL_operators.exchange_operators.exchange_operator as exchange_operator
 
@@ -41,16 +42,29 @@ class ExchangeDataDependency(octobot_trading.dsl.SymbolDependency):
 
 
 class OHLCVOperator(exchange_operator.ExchangeOperator):
+    CATEGORY = commons_enums.DslKeywordCategory.SOURCE.value
+
     @staticmethod
     def get_library() -> str:
         # this is a contextual operator, so it should not be included by default in the get_all_operators function return values
-        return octobot_commons.constants.CONTEXTUAL_OPERATORS_LIBRARY
+        return commons_constants.CONTEXTUAL_OPERATORS_LIBRARY
 
     @classmethod
     def get_parameters(cls) -> list[dsl_interpreter.OperatorParameter]:
         return [
-            dsl_interpreter.OperatorParameter(name="symbol", description="the symbol to get the OHLCV data for", required=False, type=str),
-            dsl_interpreter.OperatorParameter(name="time_frame", description="the time frame to get the OHLCV data for", required=False, type=str),
+            dsl_interpreter.OperatorParameter(
+                name="symbol",
+                description="the symbol to get the OHLCV data for",
+                required=False,
+                type=commons_enums.DslValueType.TEXT.value,
+            ),
+            dsl_interpreter.OperatorParameter(
+                name="time_frame",
+                description="the time frame to get the OHLCV data for",
+                required=False,
+                type=commons_enums.DslValueType.TIME_FRAME.value,
+                options=dsl_interpreter.TIME_FRAME_OPERATOR_PARAMETER_OPTIONS,
+            ),
         ]
 
     def get_symbol_and_time_frame(self) -> typing.Tuple[typing.Optional[str], typing.Optional[str]]:
@@ -82,16 +96,28 @@ def create_ohlcv_operators(
             )
         _symbol = input_symbol or symbol
         _time_frame = input_time_frame or time_frame
-        if exchange_manager is None:
-            if candle_manager_by_time_frame_by_symbol is not None:
-                candles_manager = candle_manager_by_time_frame_by_symbol[_time_frame][_symbol]
-            symbol_data = None
-        else:
-            symbol_data = octobot_trading.api.get_symbol_data(
-                exchange_manager, _symbol, allow_creation=False
-            )
-            candles_manager = octobot_trading.api.get_symbol_candles_manager(
-                symbol_data, _time_frame
+        try:
+            if exchange_manager is None:
+                if candle_manager_by_time_frame_by_symbol is not None:
+                    candles_manager = candle_manager_by_time_frame_by_symbol[_time_frame][_symbol]
+                symbol_data = None
+            else:
+                if exchange_manager.exchange.get_option_value(
+                    octobot_trading.enums.ExchangeClientOptions.CREATE_OHLCV_FROM_TICKERS
+                ):
+                    raise octobot_commons.errors.DSLInterpreterError(
+                        "OHLCV data are not available for this exchange"
+                    )
+                _symbol = exchange_manager.get_exchange_symbol(_symbol)
+                symbol_data = octobot_trading.api.get_symbol_data(
+                    exchange_manager, _symbol, allow_creation=False
+                )
+                candles_manager = octobot_trading.api.get_symbol_candles_manager(
+                    symbol_data, _time_frame
+                )
+        except KeyError:
+            raise octobot_commons.errors.DSLInterpreterError(
+                f"No candles manager found for {_symbol} {_time_frame}"
             )
         candles_values = _get_candles_values(candles_manager, value_type, limit)
         if symbol_data is not None and (kline := _get_kline(symbol_data, _time_frame)):
@@ -101,7 +127,7 @@ def create_ohlcv_operators(
                 # kline is an update of the last candle
                 return _adapt_last_candle_value(candles_manager, value_type, candles_values, kline)
             else:
-                tf_seconds = commons_enums.TimeFramesMinutes[commons_enums.TimeFrames(_time_frame)] * octobot_commons.constants.MINUTE_TO_SECONDS
+                tf_seconds = commons_enums.TimeFramesMinutes[commons_enums.TimeFrames(_time_frame)] * commons_constants.MINUTE_TO_SECONDS
                 if kline_time == last_candle_time + tf_seconds:
                     # kline is a new candle
                     kline_value = kline[value_type.value]
@@ -125,6 +151,13 @@ def create_ohlcv_operators(
     class _LocalOHLCVOperator(OHLCVOperator):
         PRICE_INDEX: commons_enums.PriceIndexes = None # type: ignore
 
+        @classmethod
+        def get_return_values(cls) -> list[dsl_interpreter.OperatorParameter]:
+            return cls.result_return_value(
+                commons_enums.DslValueType.SERIES.value,
+                description="OHLCV candle series",
+            )
+
         def get_dependencies(self) -> typing.List[dsl_interpreter.InterpreterDependency]:
             local_dependencies = _static_get_dependencies()
             param_by_name = self.get_input_value_by_parameter()
@@ -135,6 +168,8 @@ def create_ohlcv_operators(
                 )
                 if symbol_dep not in local_dependencies:
                     local_dependencies.append(symbol_dep)
+            for dependency in local_dependencies:
+                dependency.resolve_symbol(exchange_manager)
             return super().get_dependencies() + local_dependencies
 
         async def pre_compute(self) -> None:

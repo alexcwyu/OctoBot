@@ -101,6 +101,7 @@ class TradingViewSignalsTradingMode(dsl_trading_mode.DSLTradingMode):
     ENSURE_BLOCKCHAIN_WALLET_BALANCE_SIGNAL = "ensure_blockchain_wallet_balance"
     WITHDRAW_FUNDS_SIGNAL = "withdraw_funds" # disabled by default unless ALLOW_FUNDS_TRANSFER is True
     TRANSFER_FUNDS_SIGNAL = "transfer_funds" # disabled by default unless ALLOW_FUNDS_TRANSFER is True
+    BLOCKCHAIN_WALLET_INIT_SIGNAL = "blockchain_wallet_init"
 
     TRADINGVIEW_TO_DSL_PARAM = {
         # translation of TradingView signal parameters to DSL keywords parameters
@@ -127,6 +128,7 @@ class TradingViewSignalsTradingMode(dsl_trading_mode.DSLTradingMode):
         ENSURE_BLOCKCHAIN_WALLET_BALANCE_SIGNAL,
         WITHDRAW_FUNDS_SIGNAL,
         TRANSFER_FUNDS_SIGNAL,
+        BLOCKCHAIN_WALLET_INIT_SIGNAL,
     }
     META_ACTION_ONLY_SIGNALS = set()
 
@@ -225,7 +227,7 @@ class TradingViewSignalsTradingMode(dsl_trading_mode.DSLTradingMode):
                 default_reference_market = reference_market
             else:
                 # replace the generic USD stablecoin symbol with the actual stablecoin symbol for this exchange
-                default_reference_market = scripting_library.get_default_exchange_reference_market(exchange_name)
+                default_reference_market = trading_api.exchange.get_default_exchange_reference_market(exchange_name)
             replaced_symbol = parsed_data[cls.SYMBOL_KEY].replace(cls.GENERIC_USD_STABLECOIN_SYMBOL, default_reference_market)
             commons_logging.get_logger(cls.__name__).info(
                 f"Replaced generic USD stablecoin symbol {parsed_data[cls.SYMBOL_KEY]} with {replaced_symbol} for exchange {exchange_name} in signal data: {parsed_data}"
@@ -380,7 +382,9 @@ class TradingViewSignalsModeProducer(dsl_trading_mode.DSLTradingModeProducer):
         # do not register on matrix or candles channels
         return []
 
-    async def set_final_eval(self, matrix_id: str, cryptocurrency: str, symbol: str, time_frame, trigger_source: str):
+    async def set_final_eval(
+        self, matrix_id: str, cryptocurrency: str, symbol: str, time_frame, trigger_source: str,
+    ):
         # Ignore matrix calls
         pass
 

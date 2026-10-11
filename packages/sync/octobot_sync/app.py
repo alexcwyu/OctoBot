@@ -14,110 +14,173 @@
 #  You should have received a copy of the GNU General Public
 #  License along with OctoBot. If not, see <https://www.gnu.org/licenses/>.
 
-"""Application factory — creates the FastAPI app with all routes."""
+from collections.abc import Callable
 
-import os
-
-import httpx
 from fastapi import FastAPI
 from starfish_server.storage.base import AbstractObjectStore
-from starfish_server.router.route_builder import create_sync_router, SyncRouterOptions
-from starfish_server.replica import ReplicaManager, create_replica_router
+from starfish_server.router.route_builder import create_sync_router, SyncRouterOptions, RoleEnricher
+from starfish_server.config.schema import ConfigEndpointOptions, SyncConfig
+from starfish_protocol.plugins import ServerPlugin
+from starfish_server.router.cap_resolver import create_cap_cert_role_resolver, CapAuthError
+from starfish_server.auth.nonce_cache import create_in_memory_nonce_cache
+from starfish_server.auth.revocation_store import create_in_memory_revocation_store
 
-import octobot_sync.auth as auth
-import octobot_sync.chain as chain
+import starfish_identities
+
+import octobot_commons.logging as octobot_commons_logging
 import octobot_sync.constants as constants
 import octobot_sync.sync as sync
 
+import octobot.community.node_journal as node_journal
+
+
+_VERSION_MARKER = f"/{constants.STARFISH_SERVER_MAJOR_VERSION}/"
+
+
+class SignedPathMiddleware:
+    """Normalize the inbound path to the cap-signed form (``/v1/...``).
+
+    The Starfish cap resolver verifies each request signature against
+    ``request.url.path``. The client signs the bare ``/v1/{namespace}/...`` path
+    (it has no knowledge of where the server mounts the app), so any prefix the
+    server adds — a Starlette ``/sync`` mount in-process, an nginx ``location`` in
+    production — must be stripped before the resolver sees the path, or every
+    signature mismatches. We slice from the leading ``/v1/`` segment and clear
+    ``root_path`` so ``request.url.path`` equals exactly what the client signed,
+    independent of how the app is mounted. (Replaces the v2
+    ``NamespaceRewriteMiddleware``, which rewrote the old ``/{ns}/v1`` shape.)
+    """
+
+    def __init__(self, app):
+        self.app = app
+
+    async def __call__(self, scope, receive, send):
+        if scope["type"] == "http":
+            full = (scope.get("root_path", "") or "") + scope.get("path", "")
+            idx = full.find(_VERSION_MARKER)
+            if idx != -1:
+                new_path = full[idx:]
+                scope = dict(scope)
+                scope["path"] = new_path
+                scope["root_path"] = ""
+                if scope.get("raw_path") is not None:
+                    scope["raw_path"] = new_path.encode("latin-1")
+        await self.app(scope, receive, send)
+
+
+class HostNormalizeMiddleware:
+    """Rewrite the inbound ``Host`` header to a configured external host.
+
+    The Starfish cap resolver binds each request signature to a host (the ``h``
+    field of the canonical signing input) to stop a signed request from being
+    replayed against a different server. The client signs the host it dialed
+    (e.g. a tailnet hostname); when a reverse proxy in front of this app — such
+    as ``tailscale serve`` — terminates TLS and forwards to this process, the
+    ``Host`` header the ASGI server sees is the proxy's local target, not the
+    host the client signed, so every signature mismatches. When ``external_host``
+    is set, force the header the resolver reads back to that value so it equals
+    what the client signed. No-op when unset (e.g. the community sync server,
+    which is not behind such a proxy).
+    """
+
+    def __init__(self, app, external_host: str | None):
+        self.app = app
+        self.external_host = external_host
+
+    async def __call__(self, scope, receive, send):
+        if scope["type"] == "http" and self.external_host:
+            headers = [
+                (name, value)
+                for name, value in scope.get("headers", [])
+                if name != b"host"
+            ]
+            headers.append((b"host", self.external_host.encode("latin-1")))
+            scope = dict(scope)
+            scope["headers"] = headers
+        await self.app(scope, receive, send)
+
+
+def _build_role_resolver(is_allowed_user_id: Callable[[str], bool] | None):
+    """Cap-cert role resolver (device caps), optionally gated by a userId allowlist.
+
+    The allowlist is a coarse, service-level gate: cap scoping already confines
+    each caller to its own ``users/{user_id}/*`` paths, so this only decides who
+    may use the server at all. Allowed userIds are derived from the node's own
+    wallet keys (see ``node_api``), keyed on the same identity the cap resolver
+    binds (``AuthResult.identity`` == the device cap's ``issUserId``).
+    """
+    resolver = create_cap_cert_role_resolver(
+        nonce_cache=create_in_memory_nonce_cache(),
+        revocation_store=create_in_memory_revocation_store(),
+        plugins=[starfish_identities.identities_server_plugin],
+        allow_anonymous=False,
+        # Pre-auth body ceiling, enforced BEFORE the per-collection maxBodyBytes.
+        # Defaults to 64KB, which would 413 large private documents; raise it to
+        # the largest collection limit so per-collection maxBodyBytes governs.
+        max_body_bytes=constants.MAX_BODY_SIZE_PRIVATE,
+    )
+    if is_allowed_user_id is None:
+        return resolver
+
+    async def gated_resolver(request):
+        try:
+            result = await resolver(request)
+        except CapAuthError as err:
+            node_journal.record_sync_read_failed(
+                collection="user-data",
+                failure_reason="cap_auth",
+                error=err,
+            )
+            raise
+        if result.identity and not is_allowed_user_id(result.identity):
+            auth_error = CapAuthError(403, "user not allowed")
+            node_journal.record_sync_read_failed(
+                collection="user-data",
+                failure_reason="cap_auth",
+                error=auth_error,
+            )
+            raise auth_error
+        return result
+
+    return gated_resolver
+
 
 def create_app(
-    nonce: auth.NonceStore,
     object_store: AbstractObjectStore,
-    registry: chain.ChainRegistry,
     collections_path: str | None = None,
-    primary_url: str | None = None,
-    auth_provider: auth.StarfishAuthProvider | None = None,
-    write_mode: str = "bidirectional",
-    sync_interval_ms: int = 60_000,
-) -> FastAPI:
+    is_allowed_user_id: Callable[[str], bool] | None = None,
+    sync_config: SyncConfig | None = None,
+    plugins: list[ServerPlugin] | None = None,
+    external_host: str | None = None,
+    role_enricher: RoleEnricher | None = None,
+):
+    if sync_config is None:
+        sync_config = sync.load_sync_config(collections_path)
+
     app = FastAPI(title="OctoBot Sync — Signal Sync Server")
 
-    platform_pubkey = os.environ["PLATFORM_PUBKEY_EVM"]
-    encryption_secret = os.environ["ENCRYPTION_SECRET"]
-    platform_encryption_secret = os.environ["PLATFORM_ENCRYPTION_SECRET"]
+    octobot_commons_logging.register_unhandled_exception_handler(app, "OctoBot-Sync")
 
-    sync_config = sync.load_sync_config(collections_path)
-
-    replica_manager = None
-    if primary_url:
-        sync_config = sync.make_replica_config(
-            sync_config, primary_url, write_mode, sync_interval_ms,
-        )
-
-        replica_client = _create_authenticated_client(auth_provider)
-        replica_manager = ReplicaManager(
-            store=object_store,
-            collections=sync_config.collections,
-            client=replica_client,
-        )
-
-        replica_router = create_replica_router(
-            replica_manager=replica_manager,
-            collections=sync_config.collections,
-        )
-        app.include_router(replica_router)
-
-    # Starfish sync router (handles all sync collections)
     sync_router = create_sync_router(
         SyncRouterOptions(
             store=object_store,
             config=sync_config,
-            role_resolver=sync.create_role_resolver(registry, nonce, platform_pubkey),
-            role_enricher=sync.create_role_enricher(registry),
-            encryption_secret=encryption_secret,
-            identity_encryption_info=constants.HKDF_INFO_USER_DATA,
-            server_encryption_secret=platform_encryption_secret,
-            server_identity=platform_pubkey,
-            server_encryption_info=constants.HKDF_INFO_PLATFORM_DATA,
-            signature_verifier=sync.create_signature_verifier(registry),
-            replica_manager=replica_manager,
+            role_resolver=_build_role_resolver(is_allowed_user_id),
+            role_enricher=role_enricher,
+            config_endpoint=ConfigEndpointOptions(auth="public"),
+            plugins=plugins,
         )
     )
-    app.include_router(sync_router, prefix="/v1")
+    app.include_router(sync_router, prefix=f"/{constants.STARFISH_SERVER_MAJOR_VERSION}")
 
     @app.get("/health")
     async def health():
         return {"ok": True}
 
-    if replica_manager:
-        @app.on_event("startup")
-        async def _start_replica():
-            await replica_manager.start()
-
-        @app.on_event("shutdown")
-        async def _stop_replica():
-            await replica_manager.stop()
-
-    return app
-
-
-def _create_authenticated_client(
-    auth_provider: auth.StarfishAuthProvider | None,
-) -> httpx.AsyncClient:
-    """Create an httpx client that signs requests using the StarfishAuthProvider."""
-    if auth_provider is None:
-        return httpx.AsyncClient(timeout=30.0)
-
-    async def _auth_hook(request: httpx.Request):
-        body_str = request.content.decode("utf-8") if request.content else None
-        headers = await auth_provider(
-            method=request.method,
-            path=str(request.url.raw_path, "ascii"),
-            body=body_str,
-        )
-        request.headers.update(headers)
-
-    return httpx.AsyncClient(
-        timeout=30.0,
-        event_hooks={"request": [_auth_hook]},
-    )
+    # Always wrap: the cap resolver verifies the request signature against
+    # request.url.path, which must equal the client-signed /v1/... path
+    # regardless of how this app is mounted (see SignedPathMiddleware), and
+    # against request.url's host, which must equal the client-signed host even
+    # behind a reverse proxy that presents a different Host (see
+    # HostNormalizeMiddleware).
+    return HostNormalizeMiddleware(SignedPathMiddleware(app), external_host)

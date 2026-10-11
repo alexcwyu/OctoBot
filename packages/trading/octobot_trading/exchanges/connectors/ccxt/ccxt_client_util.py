@@ -15,6 +15,7 @@
 #  License along with this library.
 import asyncio
 import contextlib
+import cachetools
 try:
     from aiohttp_socks import ProxyConnectionError
 except ImportError:
@@ -31,6 +32,7 @@ import ccxt.pro as ccxt_pro
 import ccxt.async_support as async_ccxt
 
 import octobot_commons
+import octobot_commons.proxy_config as commons_proxy_config
 import octobot_commons.time_frame_manager as time_frame_manager
 import octobot_commons.aiohttp_util as aiohttp_util
 import octobot_commons.logging as commons_logging
@@ -40,7 +42,7 @@ import octobot_trading.errors as errors
 import octobot_trading.exchanges.connectors.ccxt.constants as ccxt_constants
 import octobot_trading.exchanges.connectors.ccxt.enums as ccxt_enums
 import octobot_trading.exchanges.connectors.ccxt.ccxt_clients_cache as ccxt_clients_cache
-import octobot_trading.exchanges.config.proxy_config as proxy_config_import
+import octobot_trading.exchanges.config.exchange_proxy_config as exchange_proxy_config
 import octobot_trading.exchanges.config.exchange_credentials_data as exchange_credentials_data
 import octobot_trading.exchanges.util.exchange_util as exchange_util
 
@@ -61,7 +63,7 @@ def create_client(
         exchange_type = exchange_util.get_exchange_type(exchange_manager)
         logger.info(
             f"Creating {'' if should_be_authenticated_exchange else 'un'}authenticated {exchange_class.__name__} "
-            f"{exchange_type.name} exchange with ccxt in version {ccxt.__version__}"
+            f"{exchange_type.name} exchange with octobot-ccxt in version {ccxt.__version__}"
         )
     if exchange_manager.ignore_config or exchange_manager.check_config(exchange_manager.exchange_name):
         try:
@@ -70,7 +72,12 @@ def create_client(
             )
             if keys_adapter:
                 creds = keys_adapter(creds)
-            if not (creds.has_credentials()) and not exchange_manager.is_simulated and not exchange_manager.ignore_config:
+            if (
+                not creds.has_credentials()
+                and not exchange_manager.is_simulated
+                and not exchange_manager.ignore_config
+                and _exchange_class_requires_api_credentials(exchange_class)
+            ):
                 logger.warning(f"No exchange API key set for {exchange_manager.exchange_name}. "
                                f"Enter your account details to enable real trading on this exchange.")
             if should_be_authenticated_exchange:
@@ -116,7 +123,7 @@ async def close_client(client):
 
 
 def get_unauthenticated_exchange(
-    exchange_class, options, headers, additional_config, identifier: str, proxy_config: proxy_config_import.ProxyConfig
+    exchange_class, options, headers, additional_config, identifier: str, proxy_config: exchange_proxy_config.ExchangeProxyConfig
 ) -> async_ccxt.Exchange:
     return instantiate_exchange(
         exchange_class,
@@ -127,14 +134,14 @@ def get_unauthenticated_exchange(
 
 
 def instantiate_exchange(
-    exchange_class, config: dict, identifier: str, proxy_config: proxy_config_import.ProxyConfig,
+    exchange_class, config: dict, identifier: str, proxy_config: exchange_proxy_config.ExchangeProxyConfig,
     allow_request_counter: bool = True
 ) -> async_ccxt.Exchange:
     client = exchange_class(config)
     _use_proxy_if_necessary(client, proxy_config)
     if constants.ENABLE_CCXT_REQUESTS_COUNTER and allow_request_counter:
         if proxy_config.socks_proxy or proxy_config.socks_proxy_callback:
-            commons_logging.get_logger(__name__).error("socks proxy and request counter can't yet be used together.")
+            _get_logger().error("socks proxy and request counter can't yet be used together.")
         else:
             _use_request_counter(identifier, client, proxy_config)
     return client
@@ -142,16 +149,34 @@ def instantiate_exchange(
 
 def set_sandbox_mode(exchange_connector, is_sandboxed):
     try:
-        if exchange_connector.exchange_manager.exchange.uses_demo_trading_instead_of_sandbox():
+        if exchange_connector.exchange_manager.exchange.uses_demo_trading_instead_of_sandbox(
+            exchange_util.get_exchange_type(exchange_connector.exchange_manager)
+        ):
             exchange_connector.client.enable_demo_trading(is_sandboxed)
         else:
             exchange_connector.client.set_sandbox_mode(is_sandboxed)
-    except ccxt.NotSupported as e:
+    except ccxt.NotSupported as err:
         default_type = exchange_connector.client.options.get('defaultType', None)
         additional_info = f" in type {default_type}" if default_type else ""
-        exchange_connector.logger.warning(f"{exchange_connector.name} does not support sandboxing {additional_info}: {e}")
+        message = (
+            f"{exchange_connector.name} does not support sandboxing{additional_info}: "
+            f"sandbox/test URLs are unavailable ({err})"
+        )
+        exchange_connector.logger.warning(message)
         # raise exception to stop this exchange and prevent dealing with a real funds exchange
-        raise e
+        raise ccxt.NotSupported(message) from err
+    except TypeError as err:
+        # ccxt raises TypeError when urls['test'] is None (sandbox endpoints missing).
+        if is_sandboxed:
+            default_type = exchange_connector.client.options.get('defaultType', None)
+            additional_info = f" in type {default_type}" if default_type else ""
+            message = (
+                f"{exchange_connector.name} does not support sandboxing{additional_info}: "
+                f"sandbox/test URLs are unavailable ({err})"
+            )
+            exchange_connector.logger.warning(message)
+            # raise exception to stop this exchange and prevent dealing with a real funds exchange
+            raise ccxt.NotSupported(message) from err
     return None
 
 
@@ -166,7 +191,7 @@ def filtered_fetched_markets(client, market_filter: typing.Callable[[dict], bool
             for market in all_markets
             if market_filter(market)
         ]
-        commons_logging.get_logger(__name__).info(
+        _get_logger().info(
             f"Keeping {len(filtered_markets)} out of {len(all_markets)} fetched markets"
         )
         return filtered_markets
@@ -178,6 +203,9 @@ def filtered_fetched_markets(client, market_filter: typing.Callable[[dict], bool
 
 
 def load_markets_from_cache(client: async_ccxt.Exchange, authenticated_cache: bool, market_filter: typing.Union[None, typing.Callable[[dict], bool]] = None):
+    if not get_option_value(client, enums.ExchangeClientOptions.SUPPORTS_MARKETS_CACHE):
+        _get_logger().info(f"Forcing markets load: {client.name} does not support markets cache")
+        raise KeyError()
     client_key = ccxt_clients_cache.get_client_key(client, authenticated_cache)
     ccxt_clients_cache.apply_exchange_markets_cache(client_key, client, market_filter)
     if time_difference := ccxt_clients_cache.get_exchange_time_difference(client_key):
@@ -186,7 +214,7 @@ def load_markets_from_cache(client: async_ccxt.Exchange, authenticated_cache: bo
 
 
 def set_ccxt_client_cache(client: async_ccxt.Exchange, authenticated_cache: bool):
-    if client.markets:
+    if client.markets and get_option_value(client, enums.ExchangeClientOptions.SUPPORTS_MARKETS_CACHE):
         client_key = ccxt_clients_cache.get_client_key(client, authenticated_cache)
         ccxt_clients_cache.set_exchange_markets_cache(client_key, client)
         if time_difference := client.options.get(ccxt_constants.CCXT_TIME_DIFFERENCE):
@@ -302,6 +330,8 @@ def converted_ccxt_common_errors(f):
     async def converted_ccxt_common_errors_wrapper(*args, **kwargs):
         try:
             return await f(*args, **kwargs)
+        except ccxt.BadSymbol as err:
+            raise errors.UnSupportedSymbolError(err) from err
         except ccxt.RateLimitExceeded as err:
             raise errors.RateLimitExceeded(err) from err
         except ccxt.NotSupported as err:
@@ -309,7 +339,7 @@ def converted_ccxt_common_errors(f):
     return converted_ccxt_common_errors_wrapper
 
 
-def _use_proxy_if_necessary(client, proxy_config: proxy_config_import.ProxyConfig):
+def _use_proxy_if_necessary(client: async_ccxt.Exchange, proxy_config: exchange_proxy_config.ExchangeProxyConfig):
     client.aiohttp_trust_env = proxy_config.aiohttp_trust_env
     if proxy_config.http_proxy:
         client.http_proxy = proxy_config.http_proxy
@@ -332,23 +362,29 @@ def _use_proxy_if_necessary(client, proxy_config: proxy_config_import.ProxyConfi
     if proxy_config.socks_proxy or proxy_config.socks_proxy_callback:
         # rewrite of async_ccxt.exchange.client.fetch() ProxyConnector creation
         _init_ccxt_client_session_requirements(client)
-        if proxy_config.get_proxy_url is None:
-            raise ValueError("Proxy .get_proxy_url() must be set to use a socks proxy")
-        proxy_url = proxy_config.get_proxy_url()
+        if proxy_config.get_proxy_url is None and proxy_config.socks_proxy:
+            proxy_url = proxy_config.socks_proxy
+        elif proxy_config.get_proxy_url is not None:
+            proxy_url = proxy_config.get_proxy_url()
+        else:
+            raise ValueError("socks_proxy or get_proxy_url() must be set to use a socks proxy")
         if (client.socks_proxy_sessions is None):
             client.socks_proxy_sessions = {}
-        if (proxy_url not in client.socks_proxy_sessions):
+        # from ccxt get_socks_proxy_session()
+        reverse_dns, selected_proxy_url = commons_proxy_config.parse_socks_proxy_url_for_connector(proxy_url)
+        if (selected_proxy_url not in client.socks_proxy_sessions):
             try:
                 import aiohttp_socks
                 previous_aiohttp_socks_connector = client.aiohttp_socks_connector
                 client.aiohttp_socks_connector = aiohttp_socks.ProxyConnector.from_url(
-                    proxy_url,
+                    selected_proxy_url,
                     # extra args copied from self.open()
                     ssl=client.ssl_context,
                     loop=client.asyncio_loop,
-                    enable_cleanup_closed=True
+                    enable_cleanup_closed=True,
+                    rdns=reverse_dns if reverse_dns else None
                 )
-                client.socks_proxy_sessions[proxy_url] = aiohttp.ClientSession(
+                client.socks_proxy_sessions[selected_proxy_url] = aiohttp.ClientSession(
                     loop=client.asyncio_loop, connector=client.aiohttp_socks_connector,
                     trust_env=client.aiohttp_trust_env
                 )
@@ -408,7 +444,7 @@ def get_custom_domain_config(exchange_class):
     if not (old and new):
         return {}
     if url_config := exchange_class().describe()[ccxt_enums.ExchangeColumns.URLS.value]:
-        commons_logging.get_logger(__name__).info(
+        _get_logger().info(
             f"Using custom domain for {exchange_class.__name__}: {old} is replaced by {new}, hostname has been updated"
         )
         return {
@@ -425,7 +461,7 @@ def _get_replaced_custom_domains(exchange_class):
         if len(split) == 2:
             return split[0], split[1]
         else:
-            commons_logging.get_logger(__name__).error(
+            _get_logger().error(
                 f"Invalid {identifier} custom domain config. Expected syntax is to_replace_domain:updated_domain "
                 f"Example: MEXC_CUSTOM_DOMAIN=mexc.com:mexc.co"
             )
@@ -452,7 +488,7 @@ async def _close_previous_session_and_connector(session, connector):
 
 
 def _use_request_counter(
-    identifier: str, ccxt_client: async_ccxt.Exchange, proxy_config: proxy_config_import.ProxyConfig
+    identifier: str, ccxt_client: async_ccxt.Exchange, proxy_config: exchange_proxy_config.ExchangeProxyConfig
 ):
     """
     Replaces the given exchange async session by an aiohttp_util.CounterClientSession
@@ -482,14 +518,22 @@ def _use_request_counter(
         ccxt_client.session = counter_session
         # 4. close replaced session in task to avoid making this function a coroutine
         asyncio.create_task(_close_previous_session_and_connector(previous_session, previous_connector))
-        commons_logging.get_logger(__name__).info(f"Request counter enabled for {identifier}")
+        _get_logger().info(f"Request counter enabled for {identifier}")
     except Exception as err:
-        commons_logging.get_logger(__name__).exception(
+        _get_logger().exception(
             err, True, f"Error when initializing {identifier} request counter: {err}"
         )
 
 
 def ccxt_exchange_class_factory(exchange_name):
+    # Prefer OctoBot-specific ccxt subclasses (async_support.ob_<id>) when exported.
+    if not exchange_name.startswith(constants.OB_EXCHANGE_PREFIX):
+        if ob_subclass := getattr(
+            async_ccxt,
+            f"{constants.OB_EXCHANGE_PREFIX}{exchange_name}",
+            None,
+        ):
+            return ob_subclass
     return getattr(async_ccxt, exchange_name)
 
 
@@ -529,6 +573,66 @@ def _is_retriable_proxy_error(proxy_error: Exception) -> bool:
         if desc in str_err:
             return True
     return False
+
+
+@cachetools.cached(cachetools.LRUCache(maxsize=512))
+def get_option_value_from_new_ccxt_client(
+    exchange: str, option_key: enums.ExchangeClientOptions
+) -> typing.Union[bool, float, int, str, None]:
+    ex_class = ccxt_exchange_class_factory(exchange)
+    return get_option_value(ex_class(), option_key)
+
+
+@cachetools.cached(cachetools.LRUCache(maxsize=32))
+def _exchange_class_requires_api_credentials(exchange_class: type) -> bool:
+    return any(exchange_class().requiredCredentials.values())
+
+
+def get_option_value(
+    client: async_ccxt.Exchange, option_key: enums.ExchangeClientOptions,
+) -> typing.Union[bool, float, int, str, None]:
+    if octobot_options := client.options.get(ccxt_constants.CCXT_OCTOBOT_OPTIONS):
+        return octobot_options.get(option_key.value, enums.DEFAULT_EXCHANGE_OPTION_VALUES[option_key]) # type: ignore
+    return enums.DEFAULT_EXCHANGE_OPTION_VALUES[option_key]
+
+
+def supports_order_type(
+    client: async_ccxt.Exchange, trading_type: enums.ExchangeTypes, order_type: enums.TradeOrderType
+) -> bool:
+    if supported_elements := _get_supported_elements(client, trading_type):
+        supported_order_types = supported_elements.get(enums.ExchangeSupportedElements.ORDERS.value)
+        if supported_order_types is not None:
+            return order_type.value in supported_order_types
+    # default to True for market and limit orders
+    return order_type in [enums.TradeOrderType.MARKET, enums.TradeOrderType.LIMIT]
+
+
+def supports_bundled_orders(
+    client: async_ccxt.Exchange, trading_type: enums.ExchangeTypes, order_type: enums.TradeOrderType
+) -> bool:
+    if supported_elements := _get_supported_elements(client, trading_type):
+        if supported_orders := supported_elements.get(
+            enums.ExchangeSupportedElements.BUNDLED_ORDERS.value
+        ):
+            raise NotImplementedError(f"Bundled orders are not supported yet")
+            return order_type in supported_orders  # pylint: disable=unreachable
+    return False
+
+
+def _get_supported_elements(
+    client: async_ccxt.Exchange, trading_type: enums.ExchangeTypes
+) -> typing.Optional[dict]:
+    if supported_elements := get_option_value(
+        client, enums.ExchangeClientOptions.SUPPORTED_ELEMENTS
+    ):
+        if trading_type == enums.ExchangeTypes.SPOT:
+            return supported_elements.get(
+                enums.ExchangeSupportedElements.SPOT.value,
+            )
+        return supported_elements.get(
+            enums.ExchangeSupportedElements.FUTURES.value
+        )
+    return None
 
 
 def get_proxy_error_if_any(ccxt_connector, error: Exception) -> typing.Optional[Exception]:
@@ -587,18 +691,22 @@ def fix_client_missing_markets_fees(
                         (confirmed_fees[symbol] if has_cached_fees else fees_by_pair_suffix[pair_suffix])[1]
                     )
                 )
-                commons_logging.get_logger("fix_missing_markets_fees").info(
+                _get_logger().info(
                     f"Fixed missing {symbol} fees using {'cached fees' if has_cached_fees else str(pair_suffix)} fees: {fees_by_pair_suffix[pair_suffix]}" 
                 )
         except KeyError as err:
-            commons_logging.get_logger("fix_missing_markets_fees").error(
+            _get_logger().error(
                 f"Failed to fix missing market fees for {symbol}: {err}"
             )
         except Exception as err:
-            commons_logging.get_logger("fix_missing_markets_fees").exception(
+            _get_logger().exception(
                 err, True, f"Unexpected error when fixing missing market fees for {symbol}: {err}"
             )
 
 
 def _get_market_symbol_suffix(symbol):
     return symbol[symbol.index(octobot_commons.MARKET_SEPARATOR):]
+
+
+def _get_logger() -> commons_logging.BotLogger:
+    return commons_logging.get_logger("ccxt_client_util")

@@ -38,18 +38,17 @@ class TestMEXCAuthenticatedExchange(
     IS_AUTHENTICATED_REQUEST_CHECK_AVAILABLE = True    # set True when is_authenticated_request is implemented
     USE_ORDER_OPERATION_TO_CHECK_API_KEY_RIGHTS = True
     USED_TO_HAVE_UNTRADABLE_SYMBOL = True
+    ALLOW_NO_DEPOSIT_HISTORY = True
 
     async def test_get_portfolio(self):
         await super().test_get_portfolio()
 
-    async def test_get_portfolio_with_market_filter(self):
-        await super().test_get_portfolio_with_market_filter()
-
     async def test_untradable_symbols(self):
+        # seems disabled now (fails with 404)
         await super().test_untradable_symbols()
 
-    async def test_get_max_orders_count(self):
-        await super().test_get_max_orders_count()
+    async def test_get_max_open_orders_count(self):
+        await super().test_get_max_open_orders_count()
 
     async def test_get_account_id(self):
         await super().test_get_account_id()
@@ -72,11 +71,14 @@ class TestMEXCAuthenticatedExchange(
     async def test_get_not_found_order(self):
         await super().test_get_not_found_order()
 
-    async def test_is_valid_account(self):
-        await super().test_is_valid_account()
+    async def test_is_broker_enabled(self):
+        await super().test_is_broker_enabled()
 
     async def test_get_special_orders(self):
         await super().test_get_special_orders()
+
+    async def test_cancel_uncancellable_order(self):
+        await super().test_cancel_uncancellable_order()
 
     async def test_create_and_cancel_limit_orders(self):
         await super().test_create_and_cancel_limit_orders()
@@ -86,6 +88,15 @@ class TestMEXCAuthenticatedExchange(
 
     async def test_get_my_recent_trades(self):
         await super().test_get_my_recent_trades()
+
+    async def test_get_my_recent_trades_exhaust_history(self):
+        await super().test_get_my_recent_trades_exhaust_history()
+
+    async def test_get_deposits(self):
+        await super().test_get_deposits()
+
+    async def test_get_withdrawals(self):
+        await super().test_get_withdrawals()
 
     async def test_get_closed_orders(self):
         await super().test_get_closed_orders()

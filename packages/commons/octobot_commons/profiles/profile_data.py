@@ -1,4 +1,4 @@
-# pylint: disable=C0103,R0902,C0301
+# pylint: disable=C0103,R0902,C0301,C0415,R0401
 #  Drakkar-Software OctoBot-Commons
 #  Copyright (c) Drakkar-Software, All rights reserved.
 #
@@ -18,22 +18,29 @@ import copy
 import dataclasses
 import typing
 
-import octobot_commons.profiles.profile as profile_import
+import octobot_commons.profiles.profile_types.profile as profile_import
 import octobot_commons.dataclasses
 import octobot_commons.constants as constants
 
 
 @dataclasses.dataclass
 class ProfileDetailsData(
-    octobot_commons.dataclasses.FlexibleDataclass,
+    octobot_commons.dataclasses.MinimizableDataclass,
     octobot_commons.dataclasses.UpdatableDataclass,
 ):
     name: str = ""
     id: typing.Union[str, None] = None
+    profile_type: typing.Union[str, None] = None
     bot_id: typing.Union[str, None] = None
     version: typing.Union[str, None] = None
     user_id: typing.Union[str, None] = None
     nested_strategy_config_id: typing.Union[str, None] = None
+
+    def to_dict(self, include_default_values: bool = True) -> dict:
+        profile_details_dict = super().to_dict(include_default_values=include_default_values)
+        if profile_details_dict.get("profile_type") is None:
+            profile_details_dict.pop("profile_type", None)
+        return profile_details_dict
 
 
 @dataclasses.dataclass
@@ -59,6 +66,7 @@ class ExchangeData(
     exchange_id: typing.Union[str, None] = None
     exchange_account_id: typing.Union[str, None] = None
     sandboxed: bool = False
+    url: typing.Union[str, None] = None
 
 
 @dataclasses.dataclass
@@ -154,6 +162,7 @@ class TentaclesData(
 ):
     name: typing.Optional[str] = None
     config: dict = dataclasses.field(default_factory=dict)
+    activated: bool = True
 
 
 @dataclasses.dataclass
@@ -221,19 +230,42 @@ class ProfileData(
             )
 
     @classmethod
-    def from_profile(cls, profile: profile_import.Profile):
+    def exchanges_from_profile_config(cls, profile_config: dict) -> list[ExchangeData]:
+        """
+        Build enabled exchanges from a profile config dict.
+        """
+        exchanges_config = profile_config.get(constants.CONFIG_EXCHANGES, {})
+        enabled_exchanges = []
+        for exchange_name, exchange_details in exchanges_config.items():
+            if not exchange_details.get(constants.CONFIG_ENABLED_OPTION, False):
+                continue
+            enabled_exchanges.append(
+                ExchangeData(
+                    internal_name=exchange_name,
+                    exchange_type=exchange_details.get(
+                        constants.CONFIG_EXCHANGE_TYPE, constants.DEFAULT_EXCHANGE_TYPE
+                    ),
+                )
+            )
+        return enabled_exchanges
+
+    @classmethod
+    def from_profile(cls, profile: "profile_import.Profile"):
         """
         Creates a cls instance from the given profile
         """
         profile_dict = profile.as_dict()
         content = profile_dict[constants.PROFILE_CONFIG]
-        return cls.from_dict(
+        profile_data = cls.from_dict(
             {
                 "profile_details": {
                     "id": profile_dict[constants.CONFIG_PROFILE][constants.CONFIG_ID],
                     "name": profile_dict[constants.CONFIG_PROFILE][
                         constants.CONFIG_NAME
                     ],
+                    "profile_type": profile_dict[constants.CONFIG_PROFILE].get(
+                        constants.CONFIG_TYPE
+                    ),
                 },
                 "crypto_currencies": [
                     {
@@ -275,14 +307,27 @@ class ProfileData(
                 "tentacles": [],
             }
         )
+        profile_data.exchanges = cls.exchanges_from_profile_config(content)
+        return profile_data
 
-    def to_profile(self, to_create_profile_path: str) -> profile_import.Profile:
+    @classmethod
+    def from_filesystem_profile(cls, profile: "profile_import.Profile") -> "ProfileData":
         """
-        Returns a new Profile from self
+        Build a complete ProfileData from a filesystem profile, including tentacles.
         """
-        profile = profile_import.Profile(to_create_profile_path)
-        profile.from_dict(self._to_profile_dict())
-        return profile
+        profile_data = cls.from_profile(profile)
+        profile_data.profile_details.id = profile.profile_id
+        profile_data.profile_details.name = profile.name
+        try:
+            import octobot_tentacles_manager.configuration.profile_tentacles_util as profile_tentacles_util
+        except ImportError:
+            return profile_data
+        tentacles = profile_tentacles_util.collect_tentacles_data_from_filesystem_profile(
+            profile
+        )
+        if tentacles is not None:
+            profile_data.tentacles = tentacles
+        return profile_data
 
     def set_tentacles_config(self, config_by_tentacle: dict):
         """
@@ -292,6 +337,24 @@ class ProfileData(
             TentaclesData(name=tentacle, config=config)
             for tentacle, config in config_by_tentacle.items()
         ]
+
+    def get_config_by_tentacle(self) -> dict[typing.Optional[str], dict]:
+        """
+        Returns a dictionary of tentacle names and their configurations
+        """
+        return {
+            tentacle.name: tentacle.config
+            for tentacle in self.tentacles
+        }
+
+    def get_traded_symbols(self) -> list[str]:
+        """
+        Returns a list of traded symbols
+        """
+        symbols = []
+        for crypto_currency in self.crypto_currencies:
+            symbols.extend(crypto_currency.trading_pairs)
+        return symbols
 
     def _to_profile_dict(self) -> dict:
         return {
@@ -334,5 +397,11 @@ class ProfileData(
                 },
                 constants.CONFIG_DISTRIBUTION: self.distribution,
             },
-            constants.CONFIG_PROFILE: dataclasses.asdict(self.profile_details),
+            constants.CONFIG_PROFILE: self._profile_config_dict(),
         }
+
+    def _profile_config_dict(self) -> dict:
+        profile_config = dataclasses.asdict(self.profile_details)
+        if self.profile_details.profile_type:
+            profile_config[constants.CONFIG_TYPE] = self.profile_details.profile_type
+        return profile_config
