@@ -21,9 +21,6 @@ import octobot.constants as constants
 import octobot.updater.updater as updater_module
 
 # All test coroutines will be treated as marked.
-pytestmark = pytest.mark.asyncio
-
-
 class _TestUpdater(updater_module.Updater):
     def __init__(self, latest_version):
         super().__init__()
@@ -34,10 +31,12 @@ class _TestUpdater(updater_module.Updater):
 
 
 class TestShouldBeUpdated:
+    @pytest.mark.asyncio
     async def test_does_not_update_when_latest_equals_current_version(self):
         updater = _TestUpdater(constants.VERSION)
         assert not await updater.should_be_updated()
 
+    @pytest.mark.asyncio
     async def test_updates_when_latest_is_newer_than_current_version(self):
         current_version = packaging_version.parse(constants.VERSION)
         newer_version = f"{current_version.major + 1}.0.0"
@@ -45,10 +44,12 @@ class TestShouldBeUpdated:
         assert await updater.should_be_updated()
 
 
+@pytest.mark.asyncio
 async def test_create_updater_from_api():
     updater = octobot_api.get_updater()
 
 
+@pytest.mark.asyncio
 async def test_should_update_on_updater_from_api():
     updater = octobot_api.get_updater()
     assert not (await updater.should_be_updated())

@@ -50,28 +50,29 @@ class FailingAction(AbstractAction):
 
 
 # All test coroutines will be treated as marked.
-pytestmark = pytest.mark.asyncio
-
-
 class TestAbstractAction:
+    @pytest.mark.asyncio
     async def test_call_process_returns_true_when_process_succeeds(self):
         action = ConcreteAction()
         exec_details = ExecutionDetails(100.0, "Test", None)
         result = await action.call_process(exec_details)
         assert result is True
 
+    @pytest.mark.asyncio
     async def test_call_process_returns_false_when_process_fails(self):
         action = FailingAction()
         exec_details = ExecutionDetails(100.0, "Test", None)
         result = await action.call_process(exec_details)
         assert result is False
 
+    @pytest.mark.asyncio
     async def test_call_process_updates_last_execution_details_on_success(self):
         action = ConcreteAction()
         exec_details = ExecutionDetails(100.0, "Test", None)
         await action.call_process(exec_details)
         assert action.last_execution_details.timestamp > 0
 
+    @pytest.mark.asyncio
     async def test_call_process_does_not_update_last_execution_details_on_failure(self):
         action = FailingAction()
         initial_timestamp = action.last_execution_details.timestamp

@@ -22,13 +22,15 @@ import pytest
 import octobot_commons.asyncio_tools as asyncio_tools
 
 # All test coroutines will be treated as marked.
-pytestmark = pytest.mark.asyncio
+
 
 
 class TestIsOnAsyncLoop:
+    @pytest.mark.asyncio
     async def test_returns_true_when_running_on_given_loop(self):
         assert asyncio_tools.is_on_async_loop(asyncio.get_running_loop())
 
+    @pytest.mark.asyncio
     async def test_returns_false_from_thread_without_loop(self):
         bot_loop = asyncio.get_running_loop()
         thread_result = {}
@@ -42,11 +44,13 @@ class TestIsOnAsyncLoop:
         assert thread_result["is_on_loop"] is False
 
 
+@pytest.mark.asyncio
 async def test_without_error_container():
     # will not propagate exception
     asyncio.get_event_loop().call_soon(_exception_raiser)
 
 
+@pytest.mark.asyncio
 async def test_with_error_container():
     error_container = asyncio_tools.ErrorContainer()
     error_container.print_received_exceptions = False
@@ -58,6 +62,7 @@ async def test_with_error_container():
         await asyncio.create_task(error_container.check())
 
 
+@pytest.mark.asyncio
 async def test_with_error_container_2_exceptions():
     error_container = asyncio_tools.ErrorContainer()
     error_container.print_received_exceptions = False
@@ -70,78 +75,80 @@ async def test_with_error_container_2_exceptions():
         await asyncio.create_task(error_container.check())
 
 
+@pytest.mark.asyncio
 async def test_gather_waiting_for_all_before_raising():
     # Test successful case: all coroutines complete successfully
     async def success_coro_1():
         await asyncio.sleep(0.01)
         return 1
-    
+
     async def success_coro_2():
         await asyncio.sleep(0.01)
         return 2
-    
+
     results = await asyncio_tools.gather_waiting_for_all_before_raising(
         success_coro_1(), success_coro_2()
     )
     assert results == [1, 2]
-    
+
     # Test failure case: one coroutine raises an exception
     # All coroutines should complete before the exception is raised
     completion_order = []
-    
+
     async def failing_coro():
         await asyncio.sleep(0.02)
         completion_order.append("failing")
         raise ValueError("Test error")
-    
+
     async def slow_success_coro():
         await asyncio.sleep(0.1)
         completion_order.append("slow_success")
         return "success"
-    
+
     async def fast_success_coro():
         await asyncio.sleep(0.01)
         completion_order.append("fast_success")
         return "fast"
-    
+
     with pytest.raises(ValueError, match="Test error"):
         await asyncio_tools.gather_waiting_for_all_before_raising(
             failing_coro(), slow_success_coro(), fast_success_coro()
         )
-    
+
     # Verify all coroutines completed before exception was raised
     assert len(completion_order) == 3
     assert "fast_success" in completion_order
     assert "failing" in completion_order
     assert "slow_success" in completion_order
-    
+
     # Test multiple exceptions: should raise the first one encountered
     completion_order.clear()
-    
+
     async def failing_coro_1():
         await asyncio.sleep(0.02)
         completion_order.append("failing_1")
         raise ValueError("First error")
-    
+
     async def failing_coro_2():
         await asyncio.sleep(0.1)
         completion_order.append("failing_2")
         raise RuntimeError("Second error")
-    
+
     async def success_coro():
         await asyncio.sleep(0.01)
         completion_order.append("success")
         return "ok"
-    
+
     with pytest.raises(ValueError, match="First error"):
         await asyncio_tools.gather_waiting_for_all_before_raising(
             failing_coro_1(), failing_coro_2(), success_coro()
         )
-    
+
     # Verify all coroutines completed
     assert len(completion_order) == 3
 
 
+@pytest.mark.asyncio
 async def test_RLock_valid_setup():
     lock_1 = asyncio_tools.RLock()
     lock_2 = asyncio_tools.RLock()
@@ -172,6 +179,7 @@ async def test_RLock_valid_setup():
     assert all((passed_a, passed_b, passed_c, passed_d, passed_e))
 
 
+@pytest.mark.asyncio
 async def test_RLock_multiple_tasks():
     lock = asyncio_tools.RLock()
     started = {
@@ -246,6 +254,7 @@ async def test_RLock_multiple_tasks():
     assert all(v is True for v in released.values())
 
 
+@pytest.mark.asyncio
 async def test_RLock_error_setup_1():
     lock = asyncio_tools.RLock()
 
@@ -265,6 +274,7 @@ async def test_RLock_error_setup_1():
     assert all((passed_a, passed_b))
 
 
+@pytest.mark.asyncio
 async def test_RLock_error_setup_2():
     lock = asyncio_tools.RLock()
     lock._depth = 1
@@ -275,6 +285,7 @@ async def test_RLock_error_setup_2():
             pass
 
 
+@pytest.mark.asyncio
 async def test_logged_waiter_cancels_task_on_quick_exit():
     mock_self = mock.Mock()
     mock_self.logger = mock.Mock()
@@ -285,6 +296,7 @@ async def test_logged_waiter_cancels_task_on_quick_exit():
     mock_self.logger.info.assert_not_called()
 
 
+@pytest.mark.asyncio
 async def test_logged_waiter_logs_when_body_runs_long():
     mock_self = mock.Mock()
     mock_self.logger = mock.Mock()
@@ -298,6 +310,7 @@ async def test_logged_waiter_logs_when_body_runs_long():
     assert "is still processing" in call_args
 
 
+@pytest.mark.asyncio
 async def test_logged_waiter_cancels_on_exception():
     mock_self = mock.Mock()
     mock_self.logger = mock.Mock()
@@ -309,6 +322,7 @@ async def test_logged_waiter_cancels_on_exception():
     mock_self.logger.info.assert_not_called()
 
 
+@pytest.mark.asyncio
 async def test_logged_waiter_uses_custom_sleep_time():
     mock_self = mock.Mock()
     mock_self.logger = mock.Mock()

@@ -138,8 +138,6 @@ class CommunitySupabaseClient(supabase_client.AuthenticatedAsyncSupabaseClient):
         storage: configuration_storage.ASyncConfigurationStorage,
         options: supabase.AClientOptions = None,
     ):
-        # the timeout param logs a deprecation warning however default value still sets it
-        # wait for a fix in supabase. maybe set timeout in a AsyncClient instead
         options = options or supabase.AClientOptions(
             storage=storage,
             postgrest_client_timeout=self.REQUEST_TIMEOUT
@@ -887,9 +885,9 @@ class CommunitySupabaseClient(supabase_client.AuthenticatedAsyncSupabaseClient):
         ], exchange_tentacles_data
 
     async def fetch_exchanges(
-        self, 
+        self,
         exchange_ids: typing.Optional[list] = None,
-        internal_names: typing.Optional[list] = None, 
+        internal_names: typing.Optional[list] = None,
         availabilities: typing.Optional[list[enums.ExchangeAvailabilities]] = None
     ) -> list:
         # WARNING: setting internal_names can result in duplicate (futures and spot) exchanges
@@ -923,8 +921,8 @@ class CommunitySupabaseClient(supabase_client.AuthenticatedAsyncSupabaseClient):
             f"  {enums.ExchangeKeys.ID.value}, "
             f"  {enums.ExchangeKeys.INTERNAL_NAME.value}, "
             f"  {enums.ExchangeKeys.URL.value}, "
-            f"  {enums.ExchangeKeys.AVAILABILITY.value}"           
-            f")" 
+            f"  {enums.ExchangeKeys.AVAILABILITY.value}"
+            f")"
         ).eq(
             "id", exchange_account_id
         )
@@ -932,7 +930,7 @@ class CommunitySupabaseClient(supabase_client.AuthenticatedAsyncSupabaseClient):
         if len(exchange_accounts) != 1:
             raise errors.InvalidBotConfigError(f"Exchange account with id: {exchange_account_id} and associated exchange not found")
         return (
-            exchange_accounts[0]["exchange_id"], 
+            exchange_accounts[0]["exchange_id"],
             exchange_accounts[0]["current_exchange_credentials_id"],
             exchange_accounts[0]["exchange"]
         )

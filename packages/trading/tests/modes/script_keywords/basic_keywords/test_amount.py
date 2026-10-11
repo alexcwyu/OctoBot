@@ -30,9 +30,10 @@ from tests import event_loop
 from tests.modes.script_keywords import null_context
 
 # All test coroutines will be treated as marked.
-pytestmark = pytest.mark.asyncio
 
 
+
+@pytest.mark.asyncio
 async def test_get_amount_from_input_amount(null_context):
     null_context.exchange_manager = mock.Mock(
         exchange_personal_data=mock.Mock(
@@ -244,6 +245,7 @@ async def test_get_amount_from_input_amount(null_context):
 
 
 class TestGetAmountFromInputAmountTickerWise:
+    @pytest.mark.asyncio
     async def test_traded_symbols_percent_uses_qualified_symbol_legs(self, null_context):
         ticker_wise_symbol = "BTC@BTC/USDT@ETH"
         null_context.exchange_manager = mock.Mock(
@@ -289,6 +291,7 @@ class TestGetAmountFromInputAmountTickerWise:
         assert result == decimal.Decimal("0.0008")
 
 
+@pytest.mark.asyncio
 async def test_get_amount_from_input_amount_for_position(null_context):
     null_context.exchange_manager = mock.Mock(
         exchange_personal_data=mock.Mock(
@@ -334,6 +337,7 @@ TICKER_WISE_SYMBOL = "BTC@BTC/USDT@ETH"
 
 
 class TestTotalAccountBalanceNetworkQualified:
+    @pytest.mark.asyncio
     @pytest.mark.asyncio
     async def test_reference_market_matches_qualified_quote(self):
         context = mock.Mock()

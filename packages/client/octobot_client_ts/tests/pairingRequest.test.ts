@@ -1,5 +1,28 @@
-import { describe, it, expect } from 'vitest'
+import { describe, it, expect, vi } from 'vitest'
+import * as identities from '@drakkar.software/starfish-identities'
+import * as spaces from '@drakkar.software/starfish-spaces'
 import { createPairingRequest, parsePairingRequest } from '../src/identity/pairingRequest.js'
+
+const identityFixture = vi.hoisted(() => ({
+  device: null as identities.GeneratedDeviceKeys | null,
+  kemSig: null as ReturnType<typeof spaces.signKemSig> | null,
+}))
+vi.mock('@drakkar.software/starfish-identities', async (importOriginal) => {
+  const actual = await importOriginal<typeof identities>()
+  return {
+    ...actual,
+    generateDeviceKeys: () => identityFixture.device ?? actual.generateDeviceKeys(),
+  }
+})
+
+vi.mock('@drakkar.software/starfish-spaces', async (importOriginal) => {
+  const actual = await importOriginal<typeof spaces>()
+  return {
+    ...actual,
+    signKemSig: (opts: Parameters<typeof spaces.signKemSig>[0]) =>
+      identityFixture.kemSig ?? actual.signKemSig(opts),
+  }
+})
 
 const RENDEZVOUS = { baseUrl: 'https://sync.example.test/sync', namespace: 'dk' }
 const ORIGIN = 'https://third-party.example'
@@ -39,21 +62,32 @@ describe('createPairingRequest / parsePairingRequest', () => {
     const counts = new Map<string, number>()
     for (const ch of ALPHABET) counts.set(ch, 0)
 
-    const SAMPLES = 4000 // 4000 codes * 8 chars = 32000 draws, ~1000 per symbol expected
-    for (let i = 0; i < SAMPLES; i++) {
-      const { code } = await createPairingRequest({ origin: ORIGIN, rendezvous: RENDEZVOUS })
-      for (const ch of code) counts.set(ch, (counts.get(ch) ?? 0) + 1)
-    }
+    // Key generation is independent of rejection sampling. Keep a real device
+    // identity and its fixed KEM certificate for this distribution fixture. Every
+    // code and code-bound proof remains fresh; other cases exercise fresh keys.
+    const device = identities.generateDeviceKeys()
+    identityFixture.device = device
+    identityFixture.kemSig = spaces.signKemSig({ kemPub: device.kemPub, edPriv: device.edPriv })
+    try {
+      const SAMPLES = 4000 // 4000 codes * 8 chars = 32000 draws, ~1000 per symbol expected
+      for (let i = 0; i < SAMPLES; i++) {
+        const { code } = await createPairingRequest({ origin: ORIGIN, rendezvous: RENDEZVOUS })
+        for (const ch of code) counts.set(ch, (counts.get(ch) ?? 0) + 1)
+      }
 
-    const total = SAMPLES * 8
-    const expected = total / ALPHABET.length
-    // A biased-by-12.5% symbol would sit ~1.125x expected; a generous 40%
-    // tolerance band comfortably separates "uniform, just noisy" from "the
-    // old bias is back" without making this test flaky under normal
-    // sampling variance.
-    for (const [ch, count] of counts) {
-      expect(count, `symbol "${ch}" frequency ${count}, expected ~${expected}`).toBeGreaterThan(expected * 0.6)
-      expect(count, `symbol "${ch}" frequency ${count}, expected ~${expected}`).toBeLessThan(expected * 1.4)
+      const total = SAMPLES * 8
+      const expected = total / ALPHABET.length
+      // A biased-by-12.5% symbol would sit ~1.125x expected; a generous 40%
+      // tolerance band comfortably separates "uniform, just noisy" from "the
+      // old bias is back" without making this test flaky under normal
+      // sampling variance.
+      for (const [ch, count] of counts) {
+        expect(count, `symbol "${ch}" frequency ${count}, expected ~${expected}`).toBeGreaterThan(expected * 0.6)
+        expect(count, `symbol "${ch}" frequency ${count}, expected ~${expected}`).toBeLessThan(expected * 1.4)
+      }
+    } finally {
+      identityFixture.device = null
+      identityFixture.kemSig = null
     }
   })
 

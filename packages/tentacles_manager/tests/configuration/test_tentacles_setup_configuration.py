@@ -29,9 +29,10 @@ import octobot_commons.user_root_folder_provider as user_root_folder_provider
 import octobot_tentacles_manager.constants as constants
 
 # All test coroutines will be treated as marked.
-pytestmark = pytest.mark.asyncio
 
 
+
+@pytest.mark.asyncio
 async def test__set_activation_using_default_config():
     _cleanup()
     async with aiohttp.ClientSession() as session:

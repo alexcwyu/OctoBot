@@ -25,7 +25,7 @@ import pytest
 from tests.exchanges import exchange_manager, DEFAULT_EXCHANGE_NAME, MockedRestExchange
 
 # All test coroutines will be treated as marked.
-pytestmark = pytest.mark.asyncio
+
 
 
 @pytest.fixture
@@ -33,6 +33,7 @@ def default_rest_exchange(exchange_manager):
     return MockedRestExchange(exchange_manager.config, exchange_manager, None)
 
 
+@pytest.mark.asyncio
 async def test_start_request_data_and_stop(default_rest_exchange):
     await default_rest_exchange.initialize()
     symbol = "BTC/USDT"
@@ -60,6 +61,7 @@ async def test_start_request_data_and_stop(default_rest_exchange):
 
 class TestDefaultRestExchangeEnsureApiKeyPermissions:
 
+    @pytest.mark.asyncio
     async def test_ignored_when_permissions_fetch_is_not_supported(self, default_rest_exchange):
         with mock.patch.object(
             default_rest_exchange,
@@ -70,6 +72,7 @@ class TestDefaultRestExchangeEnsureApiKeyPermissions:
 
         get_permissions_mock.assert_awaited_once_with(test_param=True)
 
+    @pytest.mark.asyncio
     async def test_accepts_spot_permissions_without_withdrawals(self, default_rest_exchange):
         with mock.patch.object(
             default_rest_exchange,
@@ -81,6 +84,7 @@ class TestDefaultRestExchangeEnsureApiKeyPermissions:
         ):
             assert await default_rest_exchange.ensure_api_key_permissions() is None
 
+    @pytest.mark.asyncio
     async def test_accepts_futures_permissions_without_withdrawals(self, default_rest_exchange):
         default_rest_exchange.exchange_manager.is_spot_only = False
         default_rest_exchange.exchange_manager.is_future = True
@@ -95,6 +99,7 @@ class TestDefaultRestExchangeEnsureApiKeyPermissions:
         ):
             assert await default_rest_exchange.ensure_api_key_permissions() is None
 
+    @pytest.mark.asyncio
     async def test_rejects_empty_permissions(self, default_rest_exchange):
         with mock.patch.object(
             default_rest_exchange,
@@ -104,6 +109,7 @@ class TestDefaultRestExchangeEnsureApiKeyPermissions:
             with pytest.raises(errors.InvalidAPIKeyPermissionsError, match="No permissions found"):
                 await default_rest_exchange.ensure_api_key_permissions()
 
+    @pytest.mark.asyncio
     async def test_rejects_permissions_without_reading(self, default_rest_exchange):
         with mock.patch.object(
             default_rest_exchange,
@@ -113,6 +119,7 @@ class TestDefaultRestExchangeEnsureApiKeyPermissions:
             with pytest.raises(errors.InvalidAPIKeyPermissionsError, match="READING permission is required"):
                 await default_rest_exchange.ensure_api_key_permissions()
 
+    @pytest.mark.asyncio
     async def test_rejects_spot_only_exchange_without_spot_trading(self, default_rest_exchange):
         with mock.patch.object(
             default_rest_exchange,
@@ -122,6 +129,7 @@ class TestDefaultRestExchangeEnsureApiKeyPermissions:
             with pytest.raises(errors.InvalidAPIKeyPermissionsError, match="SPOT_TRADING permission is required"):
                 await default_rest_exchange.ensure_api_key_permissions()
 
+    @pytest.mark.asyncio
     async def test_rejects_future_exchange_without_futures_trading(self, default_rest_exchange):
         default_rest_exchange.exchange_manager.is_spot_only = False
         default_rest_exchange.exchange_manager.is_future = True
@@ -134,6 +142,7 @@ class TestDefaultRestExchangeEnsureApiKeyPermissions:
             with pytest.raises(errors.InvalidAPIKeyPermissionsError, match="FUTURES_TRADING permission is required"):
                 await default_rest_exchange.ensure_api_key_permissions()
 
+    @pytest.mark.asyncio
     async def test_rejects_withdrawals_when_funds_transfer_is_disabled(self, default_rest_exchange):
         with (
             mock.patch.object(constants, "ALLOW_FUNDS_TRANSFER", False),
@@ -150,6 +159,7 @@ class TestDefaultRestExchangeEnsureApiKeyPermissions:
             with pytest.raises(errors.InvalidAPIKeyPermissionsError, match="WITHDRAWALS permission found"):
                 await default_rest_exchange.ensure_api_key_permissions()
 
+    @pytest.mark.asyncio
     async def test_accepts_withdrawals_when_funds_transfer_is_enabled(self, default_rest_exchange):
         with (
             mock.patch.object(constants, "ALLOW_FUNDS_TRANSFER", True),
@@ -168,6 +178,7 @@ class TestDefaultRestExchangeEnsureApiKeyPermissions:
 
 class TestDefaultRestExchangeLazyMarketLoading:
 
+    @pytest.mark.asyncio
     async def test_ensure_lazy_market_loaded_calls_load_markets_for_symbols(self, default_rest_exchange):
         symbol = "BTC/ETH"
         default_rest_exchange.connector.client.markets = {}
@@ -183,6 +194,7 @@ class TestDefaultRestExchangeLazyMarketLoading:
 
         load_markets_for_symbols_mock.assert_awaited_once_with([symbol])
 
+    @pytest.mark.asyncio
     async def test_ensure_lazy_market_loaded_skips_when_symbol_already_loaded(self, default_rest_exchange):
         symbol = "BTC/ETH"
         default_rest_exchange.connector.client.markets = {symbol: {"symbol": symbol}}
@@ -198,6 +210,7 @@ class TestDefaultRestExchangeLazyMarketLoading:
 
         load_markets_for_symbols_mock.assert_not_awaited()
 
+    @pytest.mark.asyncio
     async def test_ensure_lazy_market_loaded_noop_when_lazy_load_disabled(self, default_rest_exchange):
         symbol = "BTC/ETH"
         default_rest_exchange.connector.client.markets = {}
@@ -213,6 +226,7 @@ class TestDefaultRestExchangeLazyMarketLoading:
 
         load_markets_for_symbols_mock.assert_not_awaited()
 
+    @pytest.mark.asyncio
     async def test_get_market_status_including_lazy_load_ensures_before_get_market_status(self, default_rest_exchange):
         symbol = "BTC/ETH"
         market_status = {"symbol": symbol, "limits": {}}

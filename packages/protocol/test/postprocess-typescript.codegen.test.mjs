@@ -21,9 +21,9 @@ test("real codegen output narrows MarketMakingConfiguration.configuration_type",
   assert.doesNotMatch(src, /'configuration_type'\s*:\s*ActionConfigurationType\b/);
 });
 
-test("real codegen output narrows DCAConfiguration.configuration_type", { skip: reason }, () => {
-  const src = read("DCAConfiguration.ts");
-  assert.match(src, /'configuration_type':\s*'dca'\s*;/);
+test("real codegen output narrows TradingTentaclesConfiguration.configuration_type", { skip: reason }, () => {
+  const src = read("TradingTentaclesConfiguration.ts");
+  assert.match(src, /'configuration_type':\s*'trading_tentacles'\s*;/);
 });
 
 test("real codegen output narrows CreateAutomationConfiguration.action_type", { skip: reason }, () => {
@@ -31,14 +31,14 @@ test("real codegen output narrows CreateAutomationConfiguration.action_type", { 
   assert.match(src, /'action_type':\s*'automation_create'\s*;/);
 });
 
-test("real codegen output narrows RSIMomentumEvaluatorConfiguration.configuration_type", { skip: reason }, () => {
-  const src = read("RSIMomentumEvaluatorConfiguration.ts");
-  assert.match(src, /'configuration_type':\s*'RSIMomentumEvaluator'\s*;/);
+test("real codegen output narrows SignalBotConfiguration.configuration_type", { skip: reason }, () => {
+  const src = read("SignalBotConfiguration.ts");
+  assert.match(src, /'configuration_type':\s*'signal_bot'\s*;/);
 });
 
 test("real codegen output keeps ActionConfigurationType as full union", { skip: reason }, () => {
   const src = read("ActionConfigurationType.ts");
-  assert.match(src, /'market_making'.*'dca'.*'index'.*'grid'.*'copy'.*'generic_process'.*'generic_workflow'/s);
+  assert.match(src, /'market_making'.*'trading_tentacles'.*'copy'.*'generic_process'.*'generic_workflow'.*'signal_bot'/s);
 });
 
 test("real codegen output keeps UserActionType as full union", { skip: reason }, () => {

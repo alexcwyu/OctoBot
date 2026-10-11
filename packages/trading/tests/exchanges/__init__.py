@@ -44,7 +44,7 @@ from octobot_trading.enums import FeePropertyColumns, ExchangeConstantsMarketPro
 
 import tests.exchanges.connectors.ccxt.mock_exchanges_data as mock_exchanges_data
 
-pytestmark = pytest.mark.asyncio
+
 
 TESTS_FOLDER = "tests"
 TESTS_STATIC_FOLDER = os.path.join(TESTS_FOLDER, "static")
@@ -429,4 +429,3 @@ def register_market_status_mocks(exchange_name):
         ccxt_clients_cache.apply_exchange_markets_cache(client_key, cached_client)
     # save cached_client cache in cached exchange
     ccxt_clients_cache.set_cached_shared_markets_exchange(client_key, cached_client)
-

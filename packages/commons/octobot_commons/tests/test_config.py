@@ -20,6 +20,7 @@ import octobot_commons.constants as constants
 import octobot_commons.enums as enums
 
 TEST_FOLDER = "tests"
+_PACKAGE_TEST_FOLDER = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", "tests"))
 STATIC_FOLDER = "static"
 TEST_CONFIG_FOLDER = f"{TEST_FOLDER}/static"
 
@@ -29,7 +30,7 @@ def get_test_config(test_folder=TEST_FOLDER):
     Return test default config
     :return: test default config
     """
-    return os.path.join(test_folder, STATIC_FOLDER, constants.CONFIG_FILE)
+    return os.path.join(_resolve_test_folder(test_folder), STATIC_FOLDER, constants.CONFIG_FILE)
 
 
 def get_test_profile(test_folder=TEST_FOLDER):
@@ -37,6 +38,16 @@ def get_test_profile(test_folder=TEST_FOLDER):
     Return test default config
     :return: test default config
     """
+    return _resolve_test_folder(test_folder)
+
+
+def _resolve_test_folder(test_folder):
+    # Package suites provide their own exchange/profile fixture config. Packages
+    # without one can use Commons' canonical fixture regardless of their cwd.
+    if test_folder == TEST_FOLDER and not os.path.isfile(
+        os.path.join(test_folder, STATIC_FOLDER, constants.CONFIG_FILE)
+    ):
+        return _PACKAGE_TEST_FOLDER
     return test_folder
 
 

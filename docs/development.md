@@ -1,3 +1,9 @@
+---
+title: Development
+description: Reproducible uv development workflow.
+sidebar_position: 901
+---
+
 # OctoBot Development Guide
 
 ## Development Setup
@@ -5,7 +11,7 @@
 ### Prerequisites
 
 - Python 3.13+
-- `uv` (recommended) or `pip`
+- `uv` 0.13.0 or newer
 - Git
 
 ### Installation
@@ -16,10 +22,7 @@ git clone https://github.com/Drakkar-Software/OctoBot.git
 cd OctoBot
 
 # Install with uv (recommended)
-uv sync --active --all-groups
-
-# Or install with pip
-pip install -e ".[full]"
+uv sync --all-extras --dev --python 3.14.8
 
 # Install default tentacles
 python start.py tentacles --install --all
@@ -104,13 +107,13 @@ OctoBot/
     limits.py                    # Config limit enforcement
     disclaimer.py                # Terms of service text
     databases_util.py            # Database helper utilities
-    
+
     api/                         # Public API modules
       __init__.py
       backtesting.py             # Backtesting API
       strategy_optimizer.py      # Optimizer API
       updater.py                 # Update API
-    
+
     automation/                  # Automation framework
       automation.py              # Automation engine
       bases/
@@ -120,16 +123,16 @@ OctoBot/
         abstract_action.py       # Action base
         abstract_channel_based_trigger_event.py  # Channel trigger
         execution_details.py     # Execution context
-    
+
     backtesting/                 # Backtesting engine
       octobot_backtesting.py     # Core backtesting orchestrator
       independent_backtesting.py # Standalone backtesting
       abstract_backtesting_test.py  # Test base class
       minimal_data_importer.py   # Minimal data import
-    
+
     channels/                    # Channel definitions
       octobot_channel.py         # OctoBotChannel, Producer, Consumer
-    
+
     community/                   # Community integration
       authentication.py          # Supabase auth with JWT
       community_manager.py       # Metrics and bot registration
@@ -144,23 +147,23 @@ OctoBot/
       wallet_backend/            # Wallet operations
       history_backend/           # Clickhouse/Iceberg backends
       models/                    # Data models
-    
+
     config/                      # Default configuration files
       default_config.json
       config_schema.json
       profile_schema.json
       logging_config.ini
-    
+
     producers/                   # OctoBotChannel producers
       exchange_producer.py       # Exchange lifecycle
       evaluator_producer.py      # Evaluator matrix setup
       interface_producer.py      # Interface/notifier creation
       service_feed_producer.py   # Service feed management
-    
+
     storage/                     # Data storage
       trading_metadata.py        # Run metadata storage
       db_databases_pruning.py    # Database size management
-    
+
     strategy_optimizer/          # Strategy optimization
       strategy_optimizer.py      # Brute-force optimizer
       strategy_design_optimizer.py     # Genetic algorithm optimizer
@@ -172,9 +175,9 @@ OctoBot/
       optimizer_filter.py        # Result filters
       optimizer_constraint.py    # Optimization constraints
       optimizer_settings.py      # Optimizer configuration
-    
+
     updater/                     # Bot update mechanisms
-  
+
   tests/                         # Test suite
   additional_tests/              # Extended tests
   docker/                        # Docker configuration
@@ -225,7 +228,7 @@ import octobot_commons.enums as enums
 class MyCustomEvaluator(evaluators.TAEvaluator):
     """
     Custom Technical Analysis Evaluator
-    
+
     Evaluates price action using a custom indicator.
     Output: value in [-1, +1] range written to the evaluator matrix.
     """
@@ -270,7 +273,7 @@ class MyCustomEvaluator(evaluators.TAEvaluator):
         else:
             # Calculate your custom indicator
             indicator_value = self._calculate_indicator(close_prices)
-            
+
             # Map to [-1, +1] range
             if indicator_value > self.threshold:
                 self.eval_note = min(1.0, indicator_value)  # Buy signal
@@ -406,10 +409,10 @@ class MyTradingMode(trading_modes.AbstractTradingMode):
         """Called when strategy evaluation updates."""
         # Read the strategy signal
         signal = self.get_signal(matrix_id, **kwargs)
-        
+
         if abs(signal) < self.buy_threshold:
             return  # Signal too weak
-        
+
         if signal > 0:
             # Buy signal
             await self.create_buy_order(signal, **kwargs)
@@ -506,7 +509,7 @@ class TestMyEvaluator:
         # Mock the required dependencies
         evaluator.get_symbol_candles = MagicMock()
         evaluator.evaluation_completed = AsyncMock()
-        
+
         await evaluator.ohlcv_callback(
             exchange="binance",
             exchange_id="test-id",
@@ -516,7 +519,7 @@ class TestMyEvaluator:
             candle={},
             init_call=False,
         )
-        
+
         evaluator.evaluation_completed.assert_called_once()
 ```
 
@@ -591,7 +594,7 @@ Profile configuration (`user/profiles/<name>/profile.json`) controls tentacle ac
 
 OctoBot depends on several companion packages. Install with the full extra:
 ```bash
-pip install -e ".[full]"
+uv sync --all-extras
 ```
 
 ### 2. Tentacles not found or `No tentacle to install`
@@ -696,3 +699,43 @@ Profiles must match the schema defined in `src/octobot/config/profile_schema.jso
 - [Architecture](architecture.md) — System design and components
 - [Workflow](workflow.md) — Event flows and processing pipelines
 - [State Management](state-management.md) — State lifecycle and data models
+
+## uv maintenance workflow (2026-10-12)
+
+Selected complete environment: Python 3.14.8; build backend `hatchling.build`. The workspace uses uv 0.13.0. Python 3.15 was attempted before any fallback; the actual failure and selected runtime are recorded in [validation](validation.md).
+
+```sh
+export UV_PYTHON_PREFERENCE=only-managed
+uv python install 3.14.8
+uv lock --upgrade
+uv sync --all-extras --python 3.14.8
+uv build --python 3.14.8
+uv run --frozen --all-extras python -m compileall -q src/octobot
+uv run --frozen --all-extras python -m pytest tests
+```
+
+Provision generated plugins before core/plugin tests: `ALLOW_UNSIGNED_TENTACLES=true uv run OctoBot tentacles -d packages/tentacles -p any_platform.zip`, then `ALLOW_UNSIGNED_TENTACLES=true uv run OctoBot tentacles --install --location output/any_platform.zip --all`. Run each packages/* test suite from its package directory with the root environment, as required by AGENTS.md. Run the extended linter against origin/master. Do not edit or commit generated root tentacles files.
+
+Keep source resources inside their package and preserve the repository's existing src layout. Rebuild after source/native/asset changes. Use the locked environment for final verification. Commands above are the standard workflow, not a promise that every existing suite currently passes; consult validation for exact outcomes and unresolved compatibility issues.
+
+## Exchange source provenance
+
+The published `octobot-ccxt` 0.0.6 lacks the CoinRabbit connector required by the current host's existing functional tests. The uv source uses the [official MIT-licensed fork](https://github.com/Drakkar-Software/ccxt/tree/791e42d60faaa27306405919c27918dc056466f7), commit `791e42d60faaa27306405919c27918dc056466f7`, version 4.5.68. Its complete exchange implementation is built through the upstream backend; no connector is fabricated in the tests. The transitive `multidict` override selects its current fixed release instead of the fork's older exact pin.
+
+## JavaScript packages
+
+Use the committed npm lockfiles with Node 26 and npm 11. The embedded Node interface uses TypeScript 7.0.2, Vite 8.3.4, Vitest 5.0.3 and TanStack Table 9.2.8. Its tables declare their filtering, sorting, visibility and sizing features through the [current Table 9 API](https://tanstack.com/table/latest/docs/framework/react/guide/migrating). TypeScript path aliases use explicit relative targets after removal of `baseUrl`.
+
+```sh
+npm --prefix packages/tentacles/Services/Interfaces/node_web_interface ci
+npm --prefix packages/tentacles/Services/Interfaces/node_web_interface run build
+npm --prefix packages/tentacles/Services/Interfaces/node_web_interface test -- --run
+npm --prefix packages/client/octobot_client_ts ci
+npm --prefix packages/client/octobot_client_ts run build
+npm --prefix packages/client/octobot_client_ts test
+npm --prefix packages/protocol ci
+npm --prefix packages/protocol run test:postprocess
+npm --prefix packages/protocol run test:postprocess:codegen
+```
+
+The pairing-code distribution fixture still samples 4,000 freshly generated random codes and signs each code. It reuses a real identity and its fixed KEM certificate for that statistical case, avoiding thousands of unrelated expensive key generations while preserving the sample size, frequency assertions and existing five-second timeout. Other identity, signature and pairing tests continue to generate their own keys.

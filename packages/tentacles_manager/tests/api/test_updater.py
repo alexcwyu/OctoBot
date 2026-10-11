@@ -24,15 +24,17 @@ from octobot_tentacles_manager.managers.tentacles_setup_manager import Tentacles
 from octobot_tentacles_manager.models.tentacle_factory import TentacleFactory
 
 # All test coroutines will be treated as marked.
-pytestmark = pytest.mark.asyncio
 
 
+
+@pytest.mark.asyncio
 async def test_update_all_tentacles():
     async with aiohttp.ClientSession() as session:
         assert await update_all_tentacles(_tentacles_local_path(), aiohttp_session=session) == 0
     _cleanup()
 
 
+@pytest.mark.asyncio
 async def test_update_one_tentacle_with_requirement():
     async with aiohttp.ClientSession() as session:
         assert await install_tentacles(["reddit_service_feed"], _tentacles_local_path(),

@@ -31,7 +31,7 @@ from tests.exchanges import backtesting_trader, backtesting_config, backtesting_
     DEFAULT_BACKTESTING_MARKET, fake_backtesting, MockedRestExchange
 
 # All test coroutines will be treated as marked.
-pytestmark = pytest.mark.asyncio
+
 
 
 def _get_start_index_for_timeframe(nb_candles, min_limit, timeframe_multiplier):
@@ -46,33 +46,39 @@ def _assert_fee(fee, currency, price, rate, fee_type):
     assert fee[FeePropertyColumns.IS_FROM_EXCHANGE.value] == False
 
 
+@pytest.mark.asyncio
 async def test_is_authenticated(backtesting_trader):
     _, exchange_manager, trader_inst = backtesting_trader
     assert not exchange_manager.exchange.authenticated()
 
 
+@pytest.mark.asyncio
 async def test_get_uniform_timestamp(backtesting_trader):
     _, exchange_manager, trader_inst = backtesting_trader
     assert exchange_manager.exchange.get_uniform_timestamp(1e8) == 1e5
 
 
+@pytest.mark.asyncio
 async def test_get_max_handled_pair_with_time_frame(backtesting_trader):
     _, exchange_manager, _ = backtesting_trader
     assert exchange_manager.exchange.get_max_handled_pair_with_time_frame() == \
            constants.INFINITE_MAX_HANDLED_PAIRS_WITH_TIMEFRAME
 
 
+@pytest.mark.asyncio
 async def test_get_split_pair_from_exchange(backtesting_trader):
     _, exchange_manager, trader_inst = backtesting_trader
     assert exchange_manager.exchange.get_split_pair_from_exchange(DEFAULT_BACKTESTING_SYMBOL) == \
            DEFAULT_BACKTESTING_SPLIT_SYMBOL
 
 
+@pytest.mark.asyncio
 async def test_get_pair_cryptocurrency(backtesting_trader):
     _, exchange_manager, trader_inst = backtesting_trader
     return exchange_manager.exchange.get_pair_cryptocurrency(DEFAULT_BACKTESTING_SYMBOL) == DEFAULT_BACKTESTING_CURRENCY
 
 
+@pytest.mark.asyncio
 async def test_get_trade_fee(backtesting_trader):
     _, exchange_manager, trader_inst = backtesting_trader
 
@@ -94,6 +100,7 @@ async def test_get_trade_fee(backtesting_trader):
                 ExchangeConstantsMarketPropertyColumns.TAKER.value)
 
 
+@pytest.mark.asyncio
 async def test_stop(backtesting_trader):
     _, exchange_manager, trader_inst = backtesting_trader
     await exchange_manager.exchange.stop()
@@ -102,6 +109,7 @@ async def test_stop(backtesting_trader):
     assert not exchange_manager.exchange.exchange_importers
 
 
+@pytest.mark.asyncio
 async def test_init_exchange_tentacle(backtesting_trader):
     _, exchange_manager, trader_inst = backtesting_trader
 
@@ -174,6 +182,7 @@ class TestExchangeSimulatorConnectorNetworkQualified:
         assert connector.get_split_pair_from_exchange(TICKER_WISE_SYMBOL) == ("BTC@BTC", "USDT@ETH")
 
 
+@pytest.mark.asyncio
 async def test_get_trade_fee_uses_qualified_legs_on_ticker_wise_symbol(backtesting_trader):
     _, exchange_manager, _trader = backtesting_trader
     exchange_manager.config[commons_constants.CONFIG_SIMULATOR][commons_constants.CONFIG_SIMULATOR_FEES] = {

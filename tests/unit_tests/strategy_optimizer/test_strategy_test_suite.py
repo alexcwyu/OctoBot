@@ -22,9 +22,6 @@ import pytest
 import octobot.strategy_optimizer as strategy_optimizer
 
 # All test coroutines will be treated as marked.
-pytestmark = pytest.mark.asyncio
-
-
 class StrategyTestSuiteMock(strategy_optimizer.StrategyTestSuite, mock.Mock):
     def __init__(self, *args, **kwargs):
         super(strategy_optimizer.StrategyTestSuite, self).__init__(*args, **kwargs)
@@ -40,6 +37,7 @@ class StrategyTestSuiteMock(strategy_optimizer.StrategyTestSuite, mock.Mock):
         self.test_up_then_down.__name__ = "test_up_then_down"
 
 
+@pytest.mark.asyncio
 async def test_run_test_suite():
     test_suite = StrategyTestSuiteMock()
     tester_mock = mock.Mock()

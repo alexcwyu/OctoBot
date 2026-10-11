@@ -33,7 +33,7 @@ import tests.test_utils.random_numbers as random_numbers
 
 
 # All test coroutines will be treated as marked.
-pytestmark = pytest.mark.asyncio
+
 
 
 
@@ -44,12 +44,14 @@ def swap_strategy():
     )
 
 
+@pytest.mark.asyncio
 async def test_is_priority_order(swap_strategy):
     assert swap_strategy.swap_timeout == 123
     with pytest.raises(NotImplementedError):
         swap_strategy.is_priority_order(None)
 
 
+@pytest.mark.asyncio
 async def test_apply_inactive_orders(swap_strategy, simulated_trader):
     _, exchange_manager, trader_instance = simulated_trader
     oco_group = personal_data.OneCancelsTheOtherOrderGroup(
@@ -77,35 +79,35 @@ async def test_apply_inactive_orders(swap_strategy, simulated_trader):
         stop_loss.trigger_above = False
         stop_loss.order_id = "stop_loss_id"
         stop_loss.get_filling_price = mock.Mock(return_value=decimal.Decimal("100"))
-        
+
         sell_limit = created_order(personal_data.SellLimitOrder, enums.TraderOrderType.SELL_LIMIT,
                                    trader_instance, side=enums.TradeOrderSide.SELL)
         sell_limit.trigger_above = True
         sell_limit.order_id = "sell_limit_id"
         sell_limit.get_filling_price = mock.Mock(return_value=decimal.Decimal("200"))
-        
+
         buy_limit = created_order(personal_data.SellLimitOrder, enums.TraderOrderType.BUY_LIMIT,
                                    trader_instance, side=enums.TradeOrderSide.SELL)
         buy_limit.trigger_above = False
         buy_limit.order_id = "buy_limit_id"
         buy_limit.get_filling_price = mock.Mock(return_value=decimal.Decimal("300"))
-        
+
         # Test: trigger_above_by_order_id overrides order's trigger_above
         trigger_above_by_order_id = {
             "stop_loss_id": True,  # Override False to True
             "sell_limit_id": False,  # Override True to False
             # buy_limit_id not in dict, should use its own trigger_above (False)
         }
-        await swap_strategy.apply_inactive_orders([stop_loss, sell_limit, buy_limit], 
+        await swap_strategy.apply_inactive_orders([stop_loss, sell_limit, buy_limit],
                                                    trigger_above_by_order_id=trigger_above_by_order_id)
-        
+
         # Verify priority order (stop_loss) gets active_trigger with overridden trigger_above=True
         assert update_mock.call_count == 1
         update_call_kwargs = update_mock.call_args[1]
         assert "active_trigger" in update_call_kwargs
         active_trigger = update_call_kwargs["active_trigger"]
         assert active_trigger.trigger_above is True  # Overridden from False to True
-        
+
         # Verify non-priority orders (sell_limit, buy_limit) get set_as_inactive with correct trigger_above
         assert set_as_inactive_mock.call_count == 2
         assert set_as_inactive_mock.call_args_list[0][0][0].trigger_above is False # sell_limit order's trigger_above is overridden from True to False
@@ -122,28 +124,29 @@ async def test_apply_inactive_orders(swap_strategy, simulated_trader):
         stop_loss.trigger_above = True
         stop_loss.order_id = "stop_loss_id"
         stop_loss.get_filling_price = mock.Mock(return_value=decimal.Decimal("100"))
-        
+
         sell_limit = created_order(personal_data.SellLimitOrder, enums.TraderOrderType.SELL_LIMIT,
                                    trader_instance, side=enums.TradeOrderSide.SELL)
         sell_limit.trigger_above = False
         sell_limit.order_id = "sell_limit_id"
         sell_limit.get_filling_price = mock.Mock(return_value=decimal.Decimal("200"))
-        
-        await swap_strategy.apply_inactive_orders([stop_loss, sell_limit], 
+
+        await swap_strategy.apply_inactive_orders([stop_loss, sell_limit],
                                                    trigger_above_by_order_id=None)
-        
+
         # Verify priority order uses its own trigger_above=True
         assert update_mock.call_count == 1
         update_call_kwargs = update_mock.call_args[1]
         active_trigger = update_call_kwargs["active_trigger"]
         assert active_trigger.trigger_above is True  # Uses order's own value
-        
+
         # Verify non-priority order uses its own trigger_above=False
         assert set_as_inactive_mock.call_count == 1
         assert sell_limit.trigger_above is False  # Uses order's own value
 
 
 
+@pytest.mark.asyncio
 async def test_execute_no_reverse(swap_strategy, simulated_trader):
     _, exchange_manager, trader_instance = simulated_trader
     trader_instance.allow_artificial_orders = False
@@ -230,6 +233,7 @@ async def test_execute_no_reverse(swap_strategy, simulated_trader):
             assert exchange_manager.exchange_personal_data.orders_manager.get_open_orders() == []
 
 
+@pytest.mark.asyncio
 async def test_execute_with_reverse(swap_strategy, simulated_trader):
     _, exchange_manager, trader_instance = simulated_trader
     trader_instance.allow_artificial_orders = False
@@ -320,6 +324,7 @@ async def test_execute_with_reverse(swap_strategy, simulated_trader):
             assert len(exchange_manager.exchange_personal_data.orders_manager.get_open_orders()) == 2
 
 
+@pytest.mark.asyncio
 async def test_on_order_update(swap_strategy):
     # Setup
     order = mock.Mock()

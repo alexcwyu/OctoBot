@@ -21,6 +21,14 @@ import pytest
 import octobot.task_manager as task_manager_module
 
 
+def _raise_stop_timeout(coroutine, loop):
+    for task in coroutine.cr_frame.f_locals["tasks"]:
+        if asyncio.iscoroutine(task):
+            task.close()
+    coroutine.close()
+    raise asyncio.TimeoutError
+
+
 class TestStopTasksForceExit:
     def test_force_timeout_calls_os_exit(self):
         octobot_mock = mock.Mock()
@@ -29,9 +37,9 @@ class TestStopTasksForceExit:
         task_manager.async_loop = mock.Mock()
 
         with mock.patch("octobot_commons.asyncio_tools.run_coroutine_in_asyncio_loop") as run_coroutine_mock:
-            run_coroutine_mock.side_effect = asyncio.TimeoutError
+            run_coroutine_mock.side_effect = _raise_stop_timeout
             with mock.patch("os._exit") as os_exit_mock:
-                with mock.patch("asyncio.run_coroutine_threadsafe"):
+                with mock.patch("asyncio.run_coroutine_threadsafe", side_effect=lambda coro, loop: coro.close()):
                     task_manager.stop_tasks(force=True)
                 os_exit_mock.assert_called_once_with(1)
 
@@ -42,7 +50,7 @@ class TestStopTasksForceExit:
         task_manager.async_loop = mock.Mock()
 
         with mock.patch("octobot_commons.asyncio_tools.run_coroutine_in_asyncio_loop") as run_coroutine_mock:
-            run_coroutine_mock.side_effect = asyncio.TimeoutError
+            run_coroutine_mock.side_effect = _raise_stop_timeout
             with mock.patch("os._exit") as os_exit_mock:
                 with pytest.raises(SystemExit) as exit_info:
                     task_manager.stop_tasks(force=False)
@@ -65,7 +73,7 @@ class TestStopTasksCommunityBotStats:
         with mock.patch(
             "octobot_commons.asyncio_tools.run_coroutine_in_asyncio_loop",
             side_effect=lambda coroutine, loop: asyncio.run(run_passed_coroutine(coroutine)),
-        ), mock.patch("asyncio.run_coroutine_threadsafe"):
+        ), mock.patch("asyncio.run_coroutine_threadsafe", side_effect=lambda coro, loop: coro.close()):
             task_manager.stop_tasks(stop_octobot=False)
 
         octobot_mock.community_bot_stats.stop_task.assert_called_once()

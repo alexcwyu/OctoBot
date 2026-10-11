@@ -41,3 +41,19 @@ def allow_unsigned_test_tentacles(request):
     else:
         with mock.patch.object(constants, "ALLOW_UNSIGNED_TENTACLES", True):
             yield
+
+
+@pytest.fixture(autouse=True)
+def isolate_imported_tentacles():
+    """Filesystem installation tests must not reuse deleted plugin modules."""
+    import importlib
+    import sys
+    for name in list(sys.modules):
+        if name == "tentacles" or name.startswith("tentacles."):
+            sys.modules.pop(name, None)
+    importlib.invalidate_caches()
+    yield
+    for name in list(sys.modules):
+        if name == "tentacles" or name.startswith("tentacles."):
+            sys.modules.pop(name, None)
+    importlib.invalidate_caches()

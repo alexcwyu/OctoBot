@@ -71,7 +71,7 @@ filterwarnings = ["error"]
 - `requires-python = ">=3.13"` in pyproject.toml
 
 ### 6. Known Issues
-- **octobot-tulipy** (v0.4.10): Transitive dependency via `octobot-evaluators` that fails to compile its Cython extensions on Python 3.13. `uv sync` will fail until upstream releases a 3.13-compatible version. Workaround: `uv pip install -e . --no-deps` then install compatible deps manually, or wait for upstream fix.
+- **octobot-tulipy** (v0.4.10): Transitive dependency via `octobot-evaluators` that fails to compile its Cython extensions on Python 3.13. `uv sync` will fail until upstream releases a 3.13-compatible version. Workaround: `uv sync` with the current Tulipy prerelease recorded in pyproject.toml; see validation.md for current runtime support.
 
 ## After Upstream Sync Checklist
 

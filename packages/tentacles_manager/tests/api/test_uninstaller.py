@@ -25,9 +25,10 @@ from octobot_tentacles_manager.managers.tentacles_setup_manager import Tentacles
 import tests
 
 # All test coroutines will be treated as marked.
-pytestmark = pytest.mark.asyncio
 
 
+
+@pytest.mark.asyncio
 async def test_uninstall_all_tentacles():
     async with aiohttp.ClientSession() as session:
         assert await install_all_tentacles(_tentacles_local_path(), aiohttp_session=session) == 0
@@ -39,6 +40,7 @@ async def test_uninstall_all_tentacles():
     _cleanup()
 
 
+@pytest.mark.asyncio
 async def test_uninstall_one_tentacle():
     async with aiohttp.ClientSession() as session:
         assert await install_tentacles(["reddit_service"], _tentacles_local_path(), aiohttp_session=session) == 0

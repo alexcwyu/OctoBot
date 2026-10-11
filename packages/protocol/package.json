@@ -21,6 +21,6 @@
     "generate:all": "npm run generate:python && npm run generate:typescript"
   },
   "devDependencies": {
-    "@openapitools/openapi-generator-cli": "2.32.0"
+    "@openapitools/openapi-generator-cli": "2.41.0"
   }
 }

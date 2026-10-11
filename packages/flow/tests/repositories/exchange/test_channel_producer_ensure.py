@@ -7,10 +7,11 @@ import octobot_trading.personal_data as trading_personal_data
 
 import octobot_flow.repositories.exchange.channel_producer_ensure as channel_producer_ensure_module
 
-pytestmark = pytest.mark.asyncio
+
 
 
 class TestEnsureTemporaryChannelProducer:
+    @pytest.mark.asyncio
     async def test_creates_channels_and_producer_when_no_channels(self):
         exchange_manager = mock.Mock()
         with (
@@ -46,6 +47,7 @@ class TestEnsureTemporaryChannelProducer:
             start_producers=False,
         )
 
+    @pytest.mark.asyncio
     async def test_no_op_when_producer_already_registered(self):
         exchange_manager = mock.Mock()
         with (
@@ -77,6 +79,7 @@ class TestEnsureTemporaryChannelProducer:
         create_exchange_channels_mock.assert_not_called()
         create_producers_mock.assert_not_called()
 
+    @pytest.mark.asyncio
     async def test_registers_producer_only_when_channels_exist(self):
         exchange_manager = mock.Mock()
         with (
@@ -112,6 +115,7 @@ class TestEnsureTemporaryChannelProducer:
             start_producers=False,
         )
 
+    @pytest.mark.asyncio
     async def test_create_all_channels_if_missing_false_only_adds_producer_when_channels_exist(self):
         exchange_manager = mock.Mock()
         with (
@@ -150,6 +154,7 @@ class TestEnsureTemporaryChannelProducer:
 
 
 class TestChannelHasProducer:
+    @pytest.mark.asyncio
     async def test_returns_false_when_channel_missing(self):
         exchange_manager = mock.Mock()
         exchange_manager.id = "missing-channel-exchange"

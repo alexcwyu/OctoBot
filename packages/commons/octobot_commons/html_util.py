@@ -40,6 +40,8 @@ def summarize_page_content(
         raise TypeError(
             f"html_content must be str, got {type(html_content).__name__}"
         )
+    if not isinstance(html_content, str):
+        raise TypeError("html_content must be a string")
     parser = _SummarizerHTMLParser(max_element_text_size)
     parser.feed(html_content)
     return parser.summary

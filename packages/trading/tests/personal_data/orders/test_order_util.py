@@ -34,7 +34,8 @@ from tests.exchanges.traders import future_trader_simulator_with_default_linear,
     future_trader_simulator_with_default_inverse, DEFAULT_FUTURE_SYMBOL, DEFAULT_FUTURE_FUNDING_RATE, trader_simulator
 
 
-def test_get_min_max_amounts():
+@pytest.mark.asyncio
+async def test_get_min_max_amounts():
     # normal values
     symbol_market = {
         enums.ExchangeConstantsMarketStatusColumns.LIMITS.value: {
@@ -102,7 +103,8 @@ def test_get_min_max_amounts():
     assert max_price == "xyz"
 
 
-def test_get_fees_for_currency():
+@pytest.mark.asyncio
+async def test_get_fees_for_currency():
     fee1 = {
         enums.FeePropertyColumns.CURRENCY.value: "BTC",
         enums.FeePropertyColumns.COST.value: 1
@@ -122,7 +124,8 @@ def test_get_fees_for_currency():
     assert personal_data.get_fees_for_currency(None, "BTC") == 0
 
 
-def test_get_max_order_quantity_for_price_long_linear(future_trader_simulator_with_default_linear):
+@pytest.mark.asyncio
+async def test_get_max_order_quantity_for_price_long_linear(future_trader_simulator_with_default_linear):
     # values also tested with bybit fees
     config, exchange_manager_inst, trader_inst, default_contract = future_trader_simulator_with_default_linear
     set_future_exchange_fees(exchange_manager_inst.exchange.connector, default_contract.pair)
@@ -175,7 +178,8 @@ def test_get_max_order_quantity_for_price_long_linear(future_trader_simulator_wi
     ) == decimal.Decimal('21.17409981559794389578089799')
 
 
-def test_get_max_order_quantity_for_price_short_linear(future_trader_simulator_with_default_linear):
+@pytest.mark.asyncio
+async def test_get_max_order_quantity_for_price_short_linear(future_trader_simulator_with_default_linear):
     # values also tested with bybit fees
     config, exchange_manager_inst, trader_inst, default_contract = future_trader_simulator_with_default_linear
     set_future_exchange_fees(exchange_manager_inst.exchange.connector, default_contract.pair)
@@ -221,7 +225,8 @@ def test_get_max_order_quantity_for_price_short_linear(future_trader_simulator_w
     ) == decimal.Decimal('24.92011767413470486406436055')
 
 
-def test_get_max_order_quantity_for_price_long_inverse(future_trader_simulator_with_default_inverse):
+@pytest.mark.asyncio
+async def test_get_max_order_quantity_for_price_long_inverse(future_trader_simulator_with_default_inverse):
     # values also tested with bybit fees
     config, exchange_manager_inst, trader_inst, default_contract = future_trader_simulator_with_default_inverse
     set_future_exchange_fees(exchange_manager_inst.exchange.connector, default_contract.pair)
@@ -265,7 +270,8 @@ def test_get_max_order_quantity_for_price_long_inverse(future_trader_simulator_w
     ) == decimal.Decimal('3332099.222510181414291003332')
 
 
-def test_get_max_order_quantity_for_price_short_inverse(future_trader_simulator_with_default_inverse):
+@pytest.mark.asyncio
+async def test_get_max_order_quantity_for_price_short_inverse(future_trader_simulator_with_default_inverse):
     # values also tested with bybit fees
     config, exchange_manager_inst, trader_inst, default_contract = future_trader_simulator_with_default_inverse
     set_future_exchange_fees(exchange_manager_inst.exchange.connector, default_contract.pair)
@@ -302,6 +308,7 @@ def test_get_max_order_quantity_for_price_short_inverse(future_trader_simulator_
     ) == decimal.Decimal('3334568.358651352352723230826')
 
 
+@pytest.mark.asyncio
 @pytest.mark.asyncio
 async def test_get_futures_max_order_size(future_trader_simulator_with_default_linear):
     # values also tested with bybit fees
@@ -403,6 +410,7 @@ async def test_get_futures_max_order_size(future_trader_simulator_with_default_l
 
 
 @pytest.mark.asyncio
+@pytest.mark.asyncio
 async def test_create_as_chained_order_regular_order(trader_simulator):
     config, exchange_manager_inst, trader_inst = trader_simulator
 
@@ -433,6 +441,7 @@ async def test_create_as_chained_order_regular_order(trader_simulator):
            == base_order.creation_time
 
 
+@pytest.mark.asyncio
 @pytest.mark.asyncio
 async def test_create_as_chained_order_inactive_order(trader_simulator):
     config, exchange_manager_inst, trader_inst = trader_simulator
@@ -475,6 +484,7 @@ async def test_create_as_chained_order_inactive_order(trader_simulator):
 
 
 @pytest.mark.asyncio
+@pytest.mark.asyncio
 async def test_create_as_chained_order_bundled_order_no_open_order(trader_simulator):
     config, exchange_manager_inst, trader_inst = trader_simulator
 
@@ -505,6 +515,7 @@ async def test_create_as_chained_order_bundled_order_no_open_order(trader_simula
     assert base_order.is_initialized is False
 
 
+@pytest.mark.asyncio
 @pytest.mark.asyncio
 async def test_create_as_chained_order_bundled_order_with_open_orders(trader_simulator):
     config, exchange_manager_inst, trader_inst = trader_simulator
@@ -561,6 +572,7 @@ async def test_create_as_chained_order_bundled_order_with_open_orders(trader_sim
 
 
 @pytest.mark.asyncio
+@pytest.mark.asyncio
 async def test_create_as_active_order_using_strategy_if_any(trader_simulator):
     config, exchange_manager_inst, trader_inst = trader_simulator
     inactive_order = personal_data.SellLimitOrder(trader_inst)
@@ -583,6 +595,7 @@ async def test_create_as_active_order_using_strategy_if_any(trader_simulator):
         execute_mock.assert_called_once_with(inactive_order, "callback", 123)
 
 
+@pytest.mark.asyncio
 @pytest.mark.asyncio
 async def test_create_as_active_order_on_exchange_with_sub_calls(trader_simulator):
     config, exchange_manager_inst, trader_inst = trader_simulator
@@ -623,6 +636,7 @@ async def test_create_as_active_order_on_exchange_with_sub_calls(trader_simulato
 
 
 @pytest.mark.asyncio
+@pytest.mark.asyncio
 async def test_update_order_as_inactive_on_exchange_with_sub_calls(trader_simulator):
     config, exchange_manager_inst, trader_inst = trader_simulator
     trader_inst.enable_inactive_orders = True
@@ -659,6 +673,7 @@ async def test_update_order_as_inactive_on_exchange_with_sub_calls(trader_simula
 
 
 @pytest.mark.asyncio
+@pytest.mark.asyncio
 async def test_ensure_orders_relevancy_without_positions(trader_simulator):
     config, exchange_manager_inst, trader_inst = trader_simulator
     order_mock = Mock(exchange_manager=exchange_manager_inst, symbol="BTC/USD")
@@ -669,6 +684,7 @@ async def test_ensure_orders_relevancy_without_positions(trader_simulator):
     # nothing happened
 
 
+@pytest.mark.asyncio
 @pytest.mark.asyncio
 async def test_ensure_orders_relevancy_with_positions(future_trader_simulator_with_default_linear):
     config, exchange_manager_inst, trader_inst, default_contract = future_trader_simulator_with_default_linear
@@ -709,6 +725,7 @@ async def test_ensure_orders_relevancy_with_positions(future_trader_simulator_wi
 
 
 @pytest.mark.asyncio
+@pytest.mark.asyncio
 async def test_get_order_size_portfolio_percent(trader_simulator):
     config, exchange_manager_inst, trader_inst = trader_simulator
     api.force_set_mark_price(exchange_manager_inst, "BTC/UDST", 1000)
@@ -743,7 +760,8 @@ async def test_get_order_size_portfolio_percent(trader_simulator):
     ) == decimal.Decimal("10")
 
 
-def test_get_valid_split_orders():
+@pytest.mark.asyncio
+async def test_get_valid_split_orders():
     # example SOL/BTC values from 12/09/2023
     symbol_market = {
         enums.ExchangeConstantsMarketStatusColumns.LIMITS.value: {
@@ -808,7 +826,8 @@ def test_get_valid_split_orders():
     ) == ([decimal.Decimal('0.14985')], [decimal.Decimal('0.0006963')])
 
 
-def test_get_valid_split_orders_with_amount_ratio_per_order():
+@pytest.mark.asyncio
+async def test_get_valid_split_orders_with_amount_ratio_per_order():
     # example SOL/BTC values from 12/09/2023
     symbol_market = {
         enums.ExchangeConstantsMarketStatusColumns.LIMITS.value: {
@@ -921,7 +940,8 @@ def test_get_valid_split_orders_with_amount_ratio_per_order():
     ) == ([decimal.Decimal('0.14985')], [decimal.Decimal('0.0006963')])
 
 
-def test_get_split_orders_count_and_increment():
+@pytest.mark.asyncio
+async def test_get_split_orders_count_and_increment():
     # example SOL/BTC values from 12/09/2023
     symbol_market = {
         enums.ExchangeConstantsMarketStatusColumns.LIMITS.value: {
@@ -985,7 +1005,8 @@ def test_get_split_orders_count_and_increment():
     ) == (0, decimal.Decimal('0'))
 
 
-def test_ensure_orders_limit():
+@pytest.mark.asyncio
+async def test_ensure_orders_limit():
     symbol = "BTC/USDT"
     exchange_manager = mock.Mock(
         exchange = mock.Mock(
@@ -1039,7 +1060,7 @@ def test_ensure_orders_limit():
 
 
 class TestCreateAndRegisterChainedOrderOnBaseOrder:
-    pytestmark = pytest.mark.asyncio
+
 
     _PRICE = decimal.Decimal("100")
     _ORDER_TYPE = enums.TraderOrderType.SELL_LIMIT
@@ -1103,6 +1124,7 @@ class TestCreateAndRegisterChainedOrderOnBaseOrder:
             pytest.param(False, True, False, False, True, id="disables_fees_on_chain_order_when_constant_disabled"),
         ],
     )
+    @pytest.mark.asyncio
     async def test_update_with_triggering_order_fees_constant_gate(
         self,
         constant_enabled,

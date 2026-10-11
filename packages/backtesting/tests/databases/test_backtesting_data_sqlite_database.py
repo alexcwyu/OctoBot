@@ -13,7 +13,7 @@ import octobot_backtesting.databases as backtesting_databases
 
 import tests.database_test_util as database_test_util
 
-pytestmark = pytest.mark.asyncio
+
 
 DATA_FILE1 = "ExchangeHistoryDataCollector_1589740606.4862757.data"
 DATA_FILE2 = "second_ExchangeHistoryDataCollector_1589740606.4862757.data"
@@ -57,6 +57,7 @@ async def get_temp_empty_database():
             os.remove(database_name)
 
 
+@pytest.mark.asyncio
 async def test_invalid_file():
     with tempfile.NamedTemporaryFile(delete=False, suffix=".db") as temp_file:
         file_name = temp_file.name
@@ -71,6 +72,7 @@ async def test_invalid_file():
         os.remove(file_name)
 
 
+@pytest.mark.asyncio
 async def test_select():
     async with get_database() as database:
         with pytest.raises(errors.DatabaseNotFoundError):
@@ -95,6 +97,7 @@ async def test_select():
         assert len(ohlcv) == 0
 
 
+@pytest.mark.asyncio
 async def test_select_max():
     async with get_database() as database:
         assert await database.select_max(OHLCV, ["timestamp"]) == [(1590883200,)]
@@ -103,6 +106,7 @@ async def test_select_max():
             [(1589742000, "ETH/BTC")]
 
 
+@pytest.mark.asyncio
 async def test_select_min():
     async with get_database() as database:
         assert await database.select_min(OHLCV, ["timestamp"]) == [(1500249600,)]
@@ -111,6 +115,7 @@ async def test_select_min():
             [(1587945600, "ETH/BTC")]
 
 
+@pytest.mark.asyncio
 async def test_select_count():
     async with get_database() as database:
         assert await database.select_count(OHLCV, ["*"]) == [(6531,)]
@@ -118,6 +123,7 @@ async def test_select_count():
         assert await database.select_count(OHLCV, ["*"], time_frame="1M") == [(35,)]
 
 
+@pytest.mark.asyncio
 async def test_select_from_timestamp():
     async with get_database() as database:
         operations = [enums.DataBaseOperations.INF_EQUALS.value]
@@ -146,6 +152,7 @@ async def test_select_from_timestamp():
         assert len(candles) == 0
 
 
+@pytest.mark.asyncio
 async def test_gather_concurrent_select():
     async with get_database() as database:
         timestamps_1h = [ohlcv[0] for ohlcv in await database.select(OHLCV, time_frame="1h")]
@@ -155,6 +162,7 @@ async def test_gather_concurrent_select():
         await asyncio.gather(*coros)
 
 
+@pytest.mark.asyncio
 async def test_create_tasks_concurrent_selects():
     async with get_database() as database:
         timestamps_1h = [ohlcv[0] for ohlcv in await database.select(OHLCV, time_frame="1h")]
@@ -188,6 +196,7 @@ async def test_create_tasks_concurrent_selects():
         assert failed_calls == []
 
 
+@pytest.mark.asyncio
 async def test_stop_while_concurrent_select():
     async with get_database() as database:
         timestamps = [ohlcv[0] for ohlcv in await database.select(OHLCV, time_frame="1h")]
@@ -201,6 +210,7 @@ async def test_stop_while_concurrent_select():
         await asyncio_tools.wait_asyncio_next_cycle()
 
 
+@pytest.mark.asyncio
 async def test_double_database():
     async with get_database() as database1, get_database(DATA_FILE2) as database2:
         timestamps1 = [ohlcv[0] for ohlcv in await database1.select(OHLCV, time_frame="1h")]
@@ -209,6 +219,7 @@ async def test_double_database():
         await asyncio.gather(*[_check_select_result(database2, timestamp) for timestamp in timestamps2])
 
 
+@pytest.mark.asyncio
 async def test_double_database_stop_while_concurrent_select():
     async with get_database() as database1, get_database(DATA_FILE2) as database2:
         timestamps1 = [ohlcv[0] for ohlcv in await database1.select(OHLCV, time_frame="1h")]
@@ -230,12 +241,14 @@ async def test_double_database_stop_while_concurrent_select():
         await asyncio_tools.wait_asyncio_next_cycle()
 
 
+@pytest.mark.asyncio
 async def test_insert():
     async with get_temp_empty_database() as temp_empty_database:
         await temp_empty_database.insert(OHLCV, symbol="xyz", timestamp=1, price=1, date="01")
         assert await temp_empty_database.select(OHLCV) == [(1, 'xyz', '1', '01')]
 
 
+@pytest.mark.asyncio
 async def test_insert_all():
     async with get_temp_empty_database() as temp_empty_database:
         await temp_empty_database.insert_all(
@@ -249,6 +262,7 @@ async def test_insert_all():
         assert await temp_empty_database.select(OHLCV, date="05") == [(2, 'abc', '10', '05')]
 
 
+@pytest.mark.asyncio
 async def test_delete():
     async with get_temp_empty_database() as temp_empty_database:
         await temp_empty_database.insert_all(
@@ -279,6 +293,7 @@ async def test_delete():
         assert await temp_empty_database.select(OHLCV) == []
 
 
+@pytest.mark.asyncio
 async def test_create_index():
     async with get_temp_empty_database() as temp_empty_database:
         await temp_empty_database.insert(OHLCV, 1, symbol="xyz", price="1", date="01")

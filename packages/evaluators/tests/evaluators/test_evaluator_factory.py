@@ -26,7 +26,7 @@ from octobot_evaluators.evaluators.evaluator_factory import _extract_traded_pair
 
 from tests import event_loop, matrix_id, install_tentacles, evaluators_and_matrix_channels
 
-pytestmark = pytest.mark.asyncio
+
 
 exchange_name = "TEST_EXCHANGE_NAME"
 bot_id = "TEST_BOT_ID"
@@ -46,6 +46,7 @@ for name, symbol_list in symbols_by_crypto_currencies.items():
 
 
 @pytest.mark.usefixtures("event_loop", "install_tentacles")
+@pytest.mark.asyncio
 async def test_create_all_type_evaluators(evaluators_and_matrix_channels):
     tentacles_setup_config = tentacles_api.get_tentacles_setup_config()
     with mock.patch.object(evaluator_factory, "_start_evaluators", mock.AsyncMock()) as _start_evaluators_mock:
@@ -62,6 +63,7 @@ async def test_create_all_type_evaluators(evaluators_and_matrix_channels):
 
 
 @pytest.mark.usefixtures("event_loop", "install_tentacles")
+@pytest.mark.asyncio
 async def test_create_strategy_evaluators(evaluators_and_matrix_channels):
     import tentacles
     await _test_evaluators_creation(evaluators.StrategyEvaluator, evaluators_and_matrix_channels, [
@@ -72,6 +74,7 @@ async def test_create_strategy_evaluators(evaluators_and_matrix_channels):
 
 
 @pytest.mark.usefixtures("event_loop", "install_tentacles")
+@pytest.mark.asyncio
 async def test_create_ta_evaluators(evaluators_and_matrix_channels):
     import tentacles
     await _test_evaluators_creation(evaluators.TAEvaluator, evaluators_and_matrix_channels, [
@@ -82,6 +85,7 @@ async def test_create_ta_evaluators(evaluators_and_matrix_channels):
 
 
 @pytest.mark.usefixtures("event_loop", "install_tentacles")
+@pytest.mark.asyncio
 async def test_create_social_evaluators(evaluators_and_matrix_channels):
     import tentacles
     await _test_evaluators_creation(evaluators.SocialEvaluator, evaluators_and_matrix_channels, [
@@ -90,6 +94,7 @@ async def test_create_social_evaluators(evaluators_and_matrix_channels):
 
 
 @pytest.mark.usefixtures("event_loop", "install_tentacles")
+@pytest.mark.asyncio
 async def test_create_rt_evaluators(evaluators_and_matrix_channels):
     import tentacles
     await _test_evaluators_creation(evaluators.RealTimeEvaluator, evaluators_and_matrix_channels, [
@@ -120,6 +125,7 @@ async def _test_evaluators_creation(evaluator_parent_class, fixture_matrix_id, e
         assert evaluator.__class__ in expected_evaluators
 
 
+@pytest.mark.asyncio
 async def test_start_evaluators():
     eval_mock = mock.Mock()
     eval_mock.start_evaluator = mock.AsyncMock()
@@ -130,6 +136,7 @@ async def test_start_evaluators():
         eval_mock.start_evaluator.assert_called_once_with("bot_id")
 
 
+@pytest.mark.asyncio
 async def test_prioritized_evaluators():
     eval_mock_1 = mock.Mock()
     eval_mock_1.get_evaluator_priority = mock.Mock(return_value=constants.DEFAULT_EVALUATOR_PRIORITY)
@@ -152,6 +159,7 @@ async def test_prioritized_evaluators():
         "tentacles_setup_config") == [eval_mock_2, eval_mock_1, eval_mock_3]
 
 
+@pytest.mark.asyncio
 async def test_extract_traded_pairs():
     exchange_name = "binance"
     matrix_id = "id"
@@ -238,6 +246,7 @@ async def test_extract_traded_pairs():
     }
 
 
+@pytest.mark.asyncio
 async def test_filter_pairs():
     exchange_api = ExchangeAPIMock()
     exchange_manager = None
@@ -275,6 +284,7 @@ class ExchangeAPIMock:
 
 @pytest.mark.usefixtures("event_loop", "install_tentacles")
 class TestCreateDslEvaluator:
+    @pytest.mark.asyncio
     async def test_returns_enabled_instance_without_tentacles_setup_config(
         self, evaluators_and_matrix_channels
     ):

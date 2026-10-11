@@ -2,6 +2,7 @@
 Pytest configuration for OctoBot tests.
 Sets up correct paths for test module imports.
 """
+import asyncio
 import os
 import sys
 import pytest
@@ -30,27 +31,39 @@ from test_utils.journal_test_support import disabled_node_journal_environment
 def pytest_configure(config):
     """Change working directory to OctoBot root before any tests run."""
     os.chdir(OCTOBOT_ROOT)
-    
-    # Set up tentacles path - check if tentacles exists as symlink or directory
-    tentacles_link = os.path.join(OCTOBOT_ROOT, "tentacles")
-    
-    # Try to create symlink if tentacles doesn't exist but packages/tentacles does
-    if not os.path.exists(tentacles_link) and os.path.exists(PACKAGES_TENTACLES_ROOT):
-        try:
-            os.symlink(PACKAGES_TENTACLES_ROOT, tentacles_link)
-        except OSError:
-            pass  # May fail in sandbox
-    
-    # Patch tentacles manager constants to use packages/tentacles path
-    try:
-        import octobot_tentacles_manager.constants as tm_constants
-        if os.path.exists(PACKAGES_TENTACLES_ROOT):
-            tm_constants.TENTACLES_PATH = PACKAGES_TENTACLES_ROOT
-    except ImportError:
-        pass
+
+    # Use the manager-installed namespace. The source archive is not importable
+    # until its generated package initializers have been installed.
+    import octobot_tentacles_manager.constants as tm_constants
+    tm_constants.TENTACLES_PATH = os.path.join(OCTOBOT_ROOT, "tentacles")
 
 
 @pytest.fixture(autouse=True)
 def disable_node_journal():
     with disabled_node_journal_environment():
         yield
+
+
+@pytest.fixture(autouse=True)
+def close_test_event_loops(monkeypatch):
+    """Close loops allocated by test startup paths before fixture mocks are removed."""
+    loops = []
+    original_new_loop = asyncio.events.new_event_loop
+
+    def new_owned_loop():
+        loop = original_new_loop()
+        loops.append(loop)
+        return loop
+
+    monkeypatch.setattr(asyncio, "new_event_loop", new_owned_loop)
+    monkeypatch.setattr(asyncio.events, "new_event_loop", new_owned_loop)
+    yield
+    for loop in reversed(loops):
+        if not loop.is_closed() and not loop.is_running():
+            tasks = asyncio.all_tasks(loop)
+            for task in tasks:
+                task.cancel()
+            if tasks:
+                loop.run_until_complete(asyncio.gather(*tasks, return_exceptions=True))
+            loop.run_until_complete(loop.shutdown_asyncgens())
+            loop.close()

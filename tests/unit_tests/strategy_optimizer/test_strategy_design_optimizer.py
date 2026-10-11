@@ -36,9 +36,7 @@ import tentacles.Trading.Mode as Mode
 from tests.unit_tests.strategy_optimizer import optimizer_inputs, MOCKED_OPTIMIZER_CONFIG, EXPECTED_RUNS_FROM_MOCK
 
 # All test coroutines will be treated as marked.
-pytestmark = pytest.mark.asyncio
-
-
+@pytest.mark.asyncio
 async def test_generate_and_save_strategy_optimizer_runs(optimizer_inputs):
     tentacles_setup_config, trading_mode = optimizer_inputs
     optimizer_settings = bot_module_api.create_strategy_optimizer_settings({
@@ -60,6 +58,7 @@ async def test_generate_and_save_strategy_optimizer_runs(optimizer_inputs):
         _save_run_schedule_mock.assert_awaited_once_with(EXPECTED_RUNS_FROM_MOCK)
 
 
+@pytest.mark.asyncio
 async def test_resume_unknown_mode(optimizer_inputs):
     tentacles_setup_config, trading_mode = optimizer_inputs
     optimizer_settings = bot_module_api.create_strategy_optimizer_settings({
@@ -80,6 +79,7 @@ async def test_resume_unknown_mode(optimizer_inputs):
         _get_total_nb_runs_mock.assert_awaited_once_with(optimizer_settings.optimizer_ids)
 
 
+@pytest.mark.asyncio
 async def test_resume_normal_mode(optimizer_inputs):
     tentacles_setup_config, trading_mode = optimizer_inputs
     optimizer_settings = bot_module_api.create_strategy_optimizer_settings({
@@ -107,4 +107,3 @@ async def test_resume_normal_mode(optimizer_inputs):
         assert await optimizer.resume(optimizer_settings) is True
         _get_total_nb_runs_mock.assert_called_once_with(optimizer_settings.optimizer_ids)
         multi_processed_optimize_mock.assert_awaited_once_with(optimizer_settings)
-

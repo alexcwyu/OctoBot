@@ -19,7 +19,7 @@ import mock
 import octobot_node.scheduler as scheduler_module
 
 
-pytestmark = pytest.mark.asyncio
+
 
 
 @pytest.fixture(autouse=True)
@@ -29,6 +29,7 @@ def reset_scheduler_shutdown_guard():
 
 
 class TestShutdownSchedulerAndTradingSignalChannel:
+    @pytest.mark.asyncio
     async def test_second_call_is_no_op_after_shutdown(self):
         with mock.patch.object(scheduler_module.SCHEDULER, "is_initialized", return_value=True):
             with mock.patch.object(scheduler_module.SCHEDULER, "stop") as stop_mock:
@@ -36,12 +37,14 @@ class TestShutdownSchedulerAndTradingSignalChannel:
                 await scheduler_module.shutdown_scheduler_and_trading_signal_channel()
         stop_mock.assert_called_once()
 
+    @pytest.mark.asyncio
     async def test_skips_when_scheduler_not_initialized(self):
         with mock.patch.object(scheduler_module.SCHEDULER, "is_initialized", return_value=False):
             with mock.patch.object(scheduler_module.SCHEDULER, "stop") as stop_mock:
                 await scheduler_module.shutdown_scheduler_and_trading_signal_channel()
         stop_mock.assert_not_called()
 
+    @pytest.mark.asyncio
     async def test_initialize_scheduler_resets_shutdown_guard(self):
         init_call_order: list[str] = []
 

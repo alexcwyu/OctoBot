@@ -41,7 +41,7 @@ def _load_copy_tests_python_helpers():
 
 copy_tests_python_helpers = _load_copy_tests_python_helpers()
 
-pytestmark = pytest.mark.asyncio
+
 
 _BTC_USDT = "BTC/USDT"
 _ETH_USDT = "ETH/USDT"
@@ -64,6 +64,7 @@ def _copied_reference_account(
 
 
 @pytest.mark.parametrize("backtesting_config", ["USDT"], indirect=True)
+@pytest.mark.asyncio
 async def test_rebalance_plan_and_execution_70_30_to_50_50_btc_usdt_optimized_path(backtesting_trader):
     _config, exchange_manager, _trader = backtesting_trader
     copy_tests_python_helpers.ensure_traded_symbol_pairs(exchange_manager, (_BTC_USDT,))
@@ -133,6 +134,7 @@ async def test_rebalance_plan_and_execution_70_30_to_50_50_btc_usdt_optimized_pa
 
 
 @pytest.mark.parametrize("backtesting_config", ["USDT"], indirect=True)
+@pytest.mark.asyncio
 async def test_rebalance_plan_and_execution_20_80_to_50_50_btc_usdt_optimized_path(backtesting_trader):
     _config, exchange_manager, _trader = backtesting_trader
     copy_tests_python_helpers.ensure_traded_symbol_pairs(exchange_manager, (_BTC_USDT,))
@@ -201,6 +203,7 @@ async def test_rebalance_plan_and_execution_20_80_to_50_50_btc_usdt_optimized_pa
 
 
 @pytest.mark.parametrize("backtesting_config", ["USDT"], indirect=True)
+@pytest.mark.asyncio
 async def test_rebalance_plan_and_execution_two_asset_dust_falls_back_to_full_sell_and_buy(backtesting_trader):
     _config, exchange_manager, _trader = backtesting_trader
     copy_tests_python_helpers.ensure_traded_symbol_pairs(exchange_manager, (_BTC_USDT,))
@@ -252,6 +255,7 @@ async def test_rebalance_plan_and_execution_two_asset_dust_falls_back_to_full_se
 
 
 @pytest.mark.parametrize("backtesting_config", ["USDT"], indirect=True)
+@pytest.mark.asyncio
 async def test_rebalance_plan_and_execution_80_btc_20_eth_to_50_btc_50_ada(backtesting_trader):
     _config, exchange_manager, _trader = backtesting_trader
     copy_tests_python_helpers.ensure_traded_symbol_pairs(
@@ -327,6 +331,7 @@ async def test_rebalance_plan_and_execution_80_btc_20_eth_to_50_btc_50_ada(backt
 
 
 @pytest.mark.parametrize("backtesting_config", ["USDT"], indirect=True)
+@pytest.mark.asyncio
 async def test_rebalance_plan_and_execution_100_usdt_to_50_btc_50_eth(backtesting_trader):
     _config, exchange_manager, _trader = backtesting_trader
     copy_tests_python_helpers.ensure_traded_symbol_pairs(

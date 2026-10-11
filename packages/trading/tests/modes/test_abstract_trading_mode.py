@@ -35,7 +35,7 @@ from tests.personal_data.orders import buy_limit_order
 
 
 # All test coroutines will be treated as marked.
-pytestmark = pytest.mark.asyncio
+
 
 
 @pytest.fixture
@@ -43,6 +43,7 @@ def trading_mode(simulated_trader):
     return _get_trading_mode(simulated_trader)
 
 
+@pytest.mark.asyncio
 async def test_remote_signal_publisher(trading_mode):
     with mock.patch.object(trading_mode, "should_emit_trading_signal", mock.Mock(return_value=False)) \
          as should_emit_trading_signal_mock:
@@ -66,6 +67,7 @@ async def test_remote_signal_publisher(trading_mode):
             assert builder.strategy == trading_mode.get_name()
 
 
+@pytest.mark.asyncio
 async def test_create_order(trading_mode, buy_limit_order):
     octobot_trading.api.force_set_mark_price(trading_mode.exchange_manager, "BTC/USDT", 1000)
     buy_limit_order.origin_quantity = decimal.Decimal("0.1")
@@ -137,6 +139,7 @@ async def test_create_order(trading_mode, buy_limit_order):
             emit_signal_bundle_mock.assert_called_once()
 
 
+@pytest.mark.asyncio
 async def test_cancel_order(trading_mode, buy_limit_order):
     buy_limit_order.symbol = "BTC/USDT"
     trading_mode.exchange_manager.trader = mock.Mock(cancel_order=mock.AsyncMock(return_value=True))
@@ -200,6 +203,7 @@ async def test_cancel_order(trading_mode, buy_limit_order):
         emit_signal_bundle_mock.assert_not_called()
 
 
+@pytest.mark.asyncio
 async def test_edit_order(trading_mode, buy_limit_order):
     buy_limit_order.symbol = "BTC/USDT"
     trading_mode.exchange_manager.trader = mock.Mock(edit_order=mock.AsyncMock(return_value=True))
@@ -263,6 +267,7 @@ async def test_edit_order(trading_mode, buy_limit_order):
         emit_signal_bundle_mock.assert_not_called()
 
 
+@pytest.mark.asyncio
 async def test_optimize_initial_portfolio_single_call(trading_mode):
     mode_1 = trading_mode
     mode_2 = _get_other_trading_mode(mode_1)
@@ -315,4 +320,3 @@ def _get_ready_producer(trading_mode):
     )
     producer.force_is_ready_to_trade()
     return producer
-

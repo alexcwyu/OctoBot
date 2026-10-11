@@ -27,7 +27,7 @@ import octobot_trading.constants as trading_constants
 import octobot_commons.symbols as commons_symbols
 import octobot_trading.exchanges.config.exchange_config_data as exchange_config_module
 
-pytestmark = pytest.mark.asyncio
+
 
 
 class TestExchangeConfig:
@@ -43,6 +43,7 @@ class TestExchangeConfig:
         await exchange_manager.initialize(exchange_config_by_exchange=None)
         return config, exchange_manager
 
+    @pytest.mark.asyncio
     async def test_traded_pairs(self):
         config = load_test_config()
         config[CONFIG_CRYPTO_CURRENCIES] = {
@@ -72,6 +73,7 @@ class TestExchangeConfig:
         finally:
             await exchange_manager.stop()
 
+    @pytest.mark.asyncio
     async def test_traded_pairs_with_wildcard(self):
         config = load_test_config()
         config[CONFIG_CRYPTO_CURRENCIES] = {
@@ -107,6 +109,7 @@ class TestExchangeConfig:
         finally:
             await exchange_manager.stop()
 
+    @pytest.mark.asyncio
     async def test_traded_pairs_with_invalid_wildcard(self):
         config = load_test_config()
 
@@ -136,6 +139,7 @@ class TestExchangeConfig:
         finally:
             await exchange_manager.stop()
 
+    @pytest.mark.asyncio
     async def test_traded_pairs_with_add(self):
         config = load_test_config()
         config[CONFIG_CRYPTO_CURRENCIES] = {
@@ -175,6 +179,7 @@ class TestExchangeConfig:
         finally:
             await exchange_manager.stop()
 
+    @pytest.mark.asyncio
     async def test_traded_pairs_with_redundancy(self):
         config = load_test_config()
         config[CONFIG_CRYPTO_CURRENCIES] = {
@@ -225,6 +230,7 @@ class TestExchangeConfig:
         (False, [], ["BTC/USDT"], [TimeFrames.ONE_MINUTE]),
         (True, [], ["BTC/USDT"], [TimeFrames.ONE_MINUTE]),
     ])
+    @pytest.mark.asyncio
     async def test_update_traded_symbol_pairs(self, watch_only, added_pairs, removed_pairs, added_time_frames):
         expected_watch_only_modified_channels = [trading_constants.TICKER_CHANNEL]
         expected_traded_modified_channels = [
@@ -248,7 +254,7 @@ class TestExchangeConfig:
             assert TimeFrames.ONE_MINUTE in initial_available_time_frames # 1m is already in available time frames
             assert TimeFrames.THREE_MINUTES not in initial_available_time_frames # 3m is NOT in available time frames
             new_added_time_frames = [tf for tf in added_time_frames if tf not in initial_available_time_frames]
-            
+
             # Pre-populate lists for removal tests
             if removed_pairs:
                 for pair in removed_pairs:
@@ -285,7 +291,7 @@ class TestExchangeConfig:
                     added_time_frames=added_time_frames,
                     watch_only=watch_only,
                 )
-                
+
                 # Verify _is_valid_symbol was called for all pairs
                 assert is_valid_mock.call_count == len(added_pairs) + len(removed_pairs)
                 assert time_frame_exists_mock.call_count == len(new_added_time_frames)
@@ -303,7 +309,7 @@ class TestExchangeConfig:
                         [pair for pair in added_pairs if pair not in exchange_manager.exchange_config.traded_symbol_pairs],
                         False
                     )
-            
+
             if watch_only:
                 # watched pairs should not have any additional time frames, even if provided
                 assert exchange_manager.exchange_config.additional_time_frames == [TimeFrames.ONE_YEAR]
@@ -367,7 +373,8 @@ class TestExchangeConfig:
             cancel_ccxt_throttle_task()
         finally:
             await exchange_manager.stop()
-        
+
+    @pytest.mark.asyncio
     async def test_update_traded_symbol_pairs_no_available_time_frames(self):
         config = load_test_config()
         config[CONFIG_CRYPTO_CURRENCIES] = {

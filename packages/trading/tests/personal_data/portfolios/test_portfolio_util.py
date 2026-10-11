@@ -481,7 +481,7 @@ async def test_get_portfolio_filled_orders_deltas_with_unknown_filled_or_cancell
         # 3 orders (those are buy orders that should not be counted as filled because their quote asset is not in portfolio delta => delta come from other orders)
         unknown_filled_or_cancelled_orders = [
             _order("SOL/USDT", 0.06, 100, "buy"),
-            _order("DOT/USDT", 0.1, 500, "buy"), 
+            _order("DOT/USDT", 0.1, 500, "buy"),
             _order("PLOP/USDT", 0.01, 50, "buy"),
         ]
         resolved_delta = await personal_data.get_portfolio_filled_orders_deltas(
@@ -797,7 +797,7 @@ async def test_get_portfolio_filled_orders_deltas_with_lots_of_unknown_filled_or
             assert len(shuffled_unknown_filled_or_cancelled_orders) == total_orders_count
             resolved_delta = await personal_data.get_portfolio_filled_orders_deltas(
                 pre_trade_content, post_trade_content, [], shuffled_unknown_filled_or_cancelled_orders, {}, False, None
-            ) 
+            )
             assert len(shuffled_unknown_filled_or_cancelled_orders) == total_orders_count # ensure shuffled_unknown_filled_or_cancelled_orders is not touched
             assert resolved_delta.explained_orders_deltas == _content(filled_deltas)   # all orders found in deltas
             assert resolved_delta.unexplained_orders_deltas == {}   # no unexplained orders
@@ -1025,7 +1025,7 @@ async def test_get_portfolio_filled_orders_deltas_with_inferrence_thread_timeout
 
         with (
             mock.patch.object(asyncio, "to_thread", mock.AsyncMock(wraps=asyncio.to_thread)) as to_thread_mock,
-            mock.patch.object(random, "shuffle", mock.AsyncMock(wraps=random.shuffle)) as shuffle_mock
+            mock.patch.object(random, "shuffle", mock.Mock(wraps=random.shuffle)) as shuffle_mock
         ):
             # 1. NOT randomize secondary checks, timeout is too short: don't start thread
             task = asyncio.create_task(_async_get_portfolio_filled_orders_deltas(False, 0.0001))
@@ -1103,7 +1103,7 @@ async def test_get_portfolio_filled_orders_deltas_with_filled_orders_and_unknown
     post_trade_content = _content({"BTC": 0.2, "USDT": 500, "ETH": 8})
     error_log = mock.Mock()
     with mock.patch.object(octobot_commons.logging, "get_logger", mock.Mock(return_value=mock.Mock(error=error_log))):
-        
+
         # 1. filled_orders explain part of delta, unknown orders explain the rest
         filled_orders = [
             _order("BTC/USDT", 0.06, 100, "buy"),
@@ -1121,7 +1121,7 @@ async def test_get_portfolio_filled_orders_deltas_with_filled_orders_and_unknown
         error_log.assert_not_called()
 
         # 2. filled_orders explain part, unknown orders are cancelled (wrong symbol)
-        filled_orders = [   
+        filled_orders = [
             _order("BTC/USDT", 0.06, 100, "buy"),
             _order("BTC/USDT", 0.04, 400, "buy"),
         ]
@@ -1295,7 +1295,7 @@ async def test_get_portfolio_filled_orders_deltas_with_filled_orders_and_unknown
             pre_trade_content, post_trade_content, filled_orders, unknown_filled_or_cancelled_orders, {}, False, None
         )
         assert resolved_delta == _resolved(
-            explained_orders_deltas=_content({"BTC": 0.05999, "USDT": -700}),   # all deltas explained, others are ignored because missing from portfolio delta. 
+            explained_orders_deltas=_content({"BTC": 0.05999, "USDT": -700}),   # all deltas explained, others are ignored because missing from portfolio delta.
             # Note: fees are not taken into account here as portfolio delta is too large to infer fees and we don't want to rely on estimated fees.
             unexplained_orders_deltas=_content({"ETH": 1, "SOL": 10}),   # ETH & SOL delta are not explained
             inferred_filled_orders=unknown_filled_or_cancelled_orders,  # all filled
@@ -1688,7 +1688,7 @@ async def test_get_portfolio_filled_orders_deltas_with_partially_filled_orders()
         )
         error_log.assert_not_called()
 
-        # with exchange fetched fees 
+        # with exchange fetched fees
         pre_trade_content = _content({"BTC": 0.1, "USDT": 600.2})
         post_trade_content = _content({"BTC": 0.2, "USDT": 50.2})    # paid 50 USDT in fees
 
@@ -1705,7 +1705,7 @@ async def test_get_portfolio_filled_orders_deltas_with_partially_filled_orders()
         )
         error_log.assert_not_called()
 
-        # with unknown orders. Note: unknown orders can't be partially filled (or they would have been fetched). 
+        # with unknown orders. Note: unknown orders can't be partially filled (or they would have been fetched).
         # So unknown orders with partially filled amount can't have newly filled amount, or they will be considered as fully filled from their trade (and created with the filled quantity).
         filled_orders = [
             _order("BTC/USDT", 0.2, 1000, "buy", {"USDT": 0.1}, is_exchange_fetched_fee=True, filled_quantity=0.11),
@@ -1783,10 +1783,10 @@ async def test_get_portfolio_filled_orders_deltas_with_partially_filled_orders_a
         )
         error_log.assert_not_called()
 
-        # with exchange fetched fees 
+        # with exchange fetched fees
         pre_trade_content = _content({"BTC": 0.1, "USDT": 600.2})
         post_trade_content = _content({"BTC": 0.2, "USDT": 50.2})    # paid 50 USDT in fees
-        
+
         filled_orders = [
             _order("BTC/USDT", 0.12, 200, "buy", {"USDT": 25}, is_exchange_fetched_fee=True, filled_quantity=0.07, exchange_order_id="order_1"),   # 0.06 newly filled (0.01 was already)
             _order("BTC/USDT", 0.1, 900, "buy", {"USDT": 25}, is_exchange_fetched_fee=True, filled_quantity=0.07, exchange_order_id="order_2"),   # 0.05 newly filled (0.02 was already)
@@ -1800,7 +1800,7 @@ async def test_get_portfolio_filled_orders_deltas_with_partially_filled_orders_a
         )
         error_log.assert_not_called()
 
-        # with unknown orders. Note: unknown orders can't be partially filled (or they would have been fetched). 
+        # with unknown orders. Note: unknown orders can't be partially filled (or they would have been fetched).
         # So unknown orders with partially filled amount can't have newly filled amount, or they will be considered as fully filled from their trade (and created with the filled quantity).
         filled_orders = [
             _order("BTC/USDT", 0.2, 1000, "buy", {"USDT": 0.1}, is_exchange_fetched_fee=True, filled_quantity=0.12, exchange_order_id="order_2"),   # 0.1 newly filled (0.02 was already)

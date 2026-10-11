@@ -29,9 +29,10 @@ from octobot_tentacles_manager.api import create_tentacles_package
 from tests.api import install_tentacles, TENTACLE_PACKAGE  # pants: no-infer-dep
 
 # All test coroutines will be treated as marked.
-pytestmark = pytest.mark.asyncio
 
 
+
+@pytest.mark.asyncio
 async def test_tentacle_bundle_exporter_for_each_tentacle(install_tentacles):
     # Export each tentacle in a bundle
     for tentacle in util.load_tentacle_with_metadata(constants.TENTACLES_PATH):
@@ -56,6 +57,7 @@ async def test_tentacle_bundle_exporter_for_each_tentacle(install_tentacles):
     assert "mixed_strategies_evaluator" not in output_files
 
 
+@pytest.mark.asyncio
 async def test_tentacle_bundle_exporter_for_an_unique_bundle_containing_all_tentacles(install_tentacles):
     # Export all tentacles and generate a bundle containing all
     tentacle_package = models.TentaclePackage()
@@ -92,6 +94,7 @@ async def test_tentacle_bundle_exporter_for_an_unique_bundle_containing_all_tent
         assert "forum_evaluator@1.2.0" in metadata_content[constants.ARTIFACT_METADATA_TENTACLES]
 
 
+@pytest.mark.asyncio
 async def test_tentacle_bundle_exporter_with_specified_output_dir(install_tentacles):
     specified_output_dir = "out/dir/test"
     # Export each tentacle in a bundle in a specified output dir
@@ -117,6 +120,7 @@ async def test_tentacle_bundle_exporter_with_specified_output_dir(install_tentac
     shutil.rmtree(specified_output_dir)
 
 
+@pytest.mark.asyncio
 async def test_tentacle_bundle_exporter_with_metadata_injection(install_tentacles):
     assert await create_tentacles_package(package_name=TENTACLE_PACKAGE,
                                           output_dir=constants.CURRENT_DIR_PATH,
@@ -136,29 +140,30 @@ async def test_tentacle_bundle_exporter_with_metadata_injection(install_tentacle
 
 
 
+@pytest.mark.asyncio
 async def test_metadata_build_and_include_parsing():
     temp_dir = tempfile.mkdtemp()
-    
+
     try:
         # ===== Test 1: Tentacle WITHOUT build and include =====
         evaluator_dir = os.path.join(temp_dir, constants.TENTACLES_EVALUATOR_PATH)
         simple_path = os.path.join(evaluator_dir, "SimpleTentacle")
         os.makedirs(simple_path)
-        
+
         simple_metadata = {
             "version": "1.0.0",
             "origin_package": "Test-Package",
             "tentacles": ["SimpleTentacle"],
             "tentacles-requirements": []
         }
-        
+
         with open(os.path.join(simple_path, "metadata.json"), "w") as f:
             json.dump(simple_metadata, f)
         with open(os.path.join(simple_path, "__init__.py"), "w") as f:
             f.write("# Simple tentacle\n")
         with open(os.path.join(simple_path, "simple.py"), "w") as f:
             f.write("class SimpleTentacle:\n    pass\n")
-        
+
         simple_tentacle = models.Tentacle(
             tentacle_root_path=temp_dir,
             name="SimpleTentacle",
@@ -166,11 +171,11 @@ async def test_metadata_build_and_include_parsing():
         )
         simple_tentacle.tentacle_module_path = simple_path
         simple_tentacle.sync_initialize()
-        
+
         # Verify build_command and include_patterns are None
         assert simple_tentacle.build_command is None, "build_command should be None when not in metadata"
         assert simple_tentacle.include_patterns is None, "include_patterns should be None when not in metadata"
-        
+
         # Export and verify all files are included (no filtering)
         exporter = exporters.TentacleExporter(
             artifact=simple_tentacle,
@@ -180,25 +185,25 @@ async def test_metadata_build_and_include_parsing():
         )
         result = await exporter.export()
         assert result == 0, "Export should succeed"
-        
+
         export_path = simple_tentacle.output_path
         exported_files = []
         for root, dirs, files in os.walk(export_path):
             for file in files:
                 rel_path = os.path.relpath(os.path.join(root, file), export_path)
                 exported_files.append(rel_path)
-        
+
         assert "metadata.json" in exported_files
         assert "__init__.py" in exported_files
         assert "simple.py" in exported_files, "All files should be included when no include patterns"
-        
+
         # ===== Test 2: Tentacle WITH build and include =====
         advanced_path = os.path.join(evaluator_dir, "AdvancedTentacle")
         os.makedirs(advanced_path)
-        
+
         build_commands = ["npm install", "npm run build"]
         include_patterns = ["dist/**/*", "*.js", "README.md"]
-        
+
         advanced_metadata = {
             "version": "2.0.0",
             "origin_package": "Test-Package",
@@ -207,12 +212,12 @@ async def test_metadata_build_and_include_parsing():
             "build": build_commands,
             "include": include_patterns
         }
-        
+
         with open(os.path.join(advanced_path, "metadata.json"), "w") as f:
             json.dump(advanced_metadata, f)
         with open(os.path.join(advanced_path, "__init__.py"), "w") as f:
             f.write("# Advanced tentacle\n")
-        
+
         advanced_tentacle = models.Tentacle(
             tentacle_root_path=temp_dir,
             name="AdvancedTentacle",
@@ -220,11 +225,11 @@ async def test_metadata_build_and_include_parsing():
         )
         advanced_tentacle.tentacle_module_path = advanced_path
         advanced_tentacle.sync_initialize()
-        
+
         # Verify build_command and include_patterns were properly parsed
         assert advanced_tentacle.build_command == build_commands, "build_command should match metadata"
         assert advanced_tentacle.include_patterns == include_patterns, "include_patterns should match metadata"
-        
+
     finally:
         shutil.rmtree(temp_dir, ignore_errors=True)
         if os.path.exists(constants.DEFAULT_EXPORT_DIR):
@@ -290,6 +295,7 @@ def setup_package_with_build_and_include_tentacle():
         shutil.rmtree(constants.TENTACLES_PACKAGE_CREATOR_TEMP_FOLDER, ignore_errors=True)
 
 
+@pytest.mark.asyncio
 async def test_package_exporter_build_command_execution(setup_package_with_build_and_include_tentacle):
     tentacles_dir, output_dir, node_tentacle_path, simple_tentacle_path = \
         setup_package_with_build_and_include_tentacle
@@ -314,6 +320,7 @@ async def test_package_exporter_build_command_execution(setup_package_with_build
         assert "built content" in f.read()
 
 
+@pytest.mark.asyncio
 async def test_package_exporter_include_filtering(setup_package_with_build_and_include_tentacle):
     tentacles_dir, output_dir, node_tentacle_path, simple_tentacle_path = \
         setup_package_with_build_and_include_tentacle
@@ -356,6 +363,7 @@ async def test_package_exporter_include_filtering(setup_package_with_build_and_i
     assert not any("node_modules" in f for f in exported_files), "node_modules/ should NOT be included"
 
 
+@pytest.mark.asyncio
 async def test_package_exporter_no_include_keeps_all(setup_package_with_build_and_include_tentacle):
     tentacles_dir, output_dir, node_tentacle_path, simple_tentacle_path = \
         setup_package_with_build_and_include_tentacle
@@ -404,25 +412,29 @@ def _make_build_tentacle(name, requirements=None, build_command=None):
     return tentacle
 
 
-def test_sort_by_build_requirements_empty():
+@pytest.mark.asyncio
+async def test_sort_by_build_requirements_empty():
     result = exporters.TentaclePackageExporter._sort_by_build_requirements([])
     assert result == []
 
 
-def test_sort_by_build_requirements_single():
+@pytest.mark.asyncio
+async def test_sort_by_build_requirements_single():
     a = _make_build_tentacle("A")
     result = exporters.TentaclePackageExporter._sort_by_build_requirements([a])
     assert [t.name for t in result] == ["A"]
 
 
-def test_sort_by_build_requirements_no_deps():
+@pytest.mark.asyncio
+async def test_sort_by_build_requirements_no_deps():
     a = _make_build_tentacle("A")
     b = _make_build_tentacle("B")
     result = exporters.TentaclePackageExporter._sort_by_build_requirements([a, b])
     assert [t.name for t in result] == ["A", "B"]
 
 
-def test_sort_by_build_requirements_dependency_correct_order():
+@pytest.mark.asyncio
+async def test_sort_by_build_requirements_dependency_correct_order():
     # B depends on A — both have build commands, A already first: order preserved
     a = _make_build_tentacle("A")
     b = _make_build_tentacle("B", requirements=["A"])
@@ -430,7 +442,8 @@ def test_sort_by_build_requirements_dependency_correct_order():
     assert [t.name for t in result] == ["A", "B"]
 
 
-def test_sort_by_build_requirements_dependency_wrong_order():
+@pytest.mark.asyncio
+async def test_sort_by_build_requirements_dependency_wrong_order():
     # B depends on A — B comes first in input, must be moved after A
     a = _make_build_tentacle("A")
     b = _make_build_tentacle("B", requirements=["A"])
@@ -438,7 +451,8 @@ def test_sort_by_build_requirements_dependency_wrong_order():
     assert [t.name for t in result] == ["A", "B"]
 
 
-def test_sort_by_build_requirements_dep_without_build_is_ignored():
+@pytest.mark.asyncio
+async def test_sort_by_build_requirements_dep_without_build_is_ignored():
     # B requires C, but C has no build command — C not in the input list, dependency ignored
     b = _make_build_tentacle("B", requirements=["C"])
     a = _make_build_tentacle("A")
@@ -447,7 +461,8 @@ def test_sort_by_build_requirements_dep_without_build_is_ignored():
     assert [t.name for t in result] == ["B", "A"]
 
 
-def test_sort_by_build_requirements_chain():
+@pytest.mark.asyncio
+async def test_sort_by_build_requirements_chain():
     # C depends on B, B depends on A: must produce A, B, C
     a = _make_build_tentacle("A")
     b = _make_build_tentacle("B", requirements=["A"])
@@ -457,7 +472,8 @@ def test_sort_by_build_requirements_chain():
     assert [t.name for t in result] == ["A", "B", "C"]
 
 
-def test_sort_by_build_requirements_circular_does_not_hang():
+@pytest.mark.asyncio
+async def test_sort_by_build_requirements_circular_does_not_hang():
     # A requires B, B requires A: circular — must not infinite-loop, returns all tentacles
     a = _make_build_tentacle("A", requirements=["B"])
     b = _make_build_tentacle("B", requirements=["A"])
@@ -466,16 +482,17 @@ def test_sort_by_build_requirements_circular_does_not_hang():
     assert {t.name for t in result} == {"A", "B"}
 
 
+@pytest.mark.asyncio
 async def test_wildcard_patterns():
     """Test edge cases with various wildcard patterns like *.py and **/*.js"""
     temp_dir = tempfile.mkdtemp()
-    
+
     try:
         # Create tentacle with wildcard patterns
         evaluator_dir = os.path.join(temp_dir, constants.TENTACLES_EVALUATOR_PATH)
         tentacle_path = os.path.join(evaluator_dir, "WildcardTentacle")
         os.makedirs(tentacle_path)
-        
+
         # Create metadata with wildcard patterns
         metadata = {
             "version": "1.0.0",
@@ -484,28 +501,28 @@ async def test_wildcard_patterns():
             "tentacles-requirements": [],
             "include": ["*.py", "config/*.json", "**/*.md"]  # Various patterns
         }
-        
+
         with open(os.path.join(tentacle_path, "metadata.json"), "w") as f:
             json.dump(metadata, f)
         with open(os.path.join(tentacle_path, "__init__.py"), "w") as f:
             f.write("# init\n")
-        
+
         # Top-level .py files (should match *.py)
         with open(os.path.join(tentacle_path, "main.py"), "w") as f:
             f.write("# main\n")
-        
+
         # config/*.json (should match config/*.json)
         config_dir = os.path.join(tentacle_path, "config")
         os.makedirs(config_dir)
         with open(os.path.join(config_dir, "settings.json"), "w") as f:
             f.write("{}\n")
-        
+
         # Nested .md files (should match **/*.md)
         docs_dir = os.path.join(tentacle_path, "docs", "api")
         os.makedirs(docs_dir)
         with open(os.path.join(docs_dir, "README.md"), "w") as f:
             f.write("# Docs\n")
-        
+
         # Files that should NOT match
         with open(os.path.join(tentacle_path, "data.txt"), "w") as f:
             f.write("data\n")
@@ -513,7 +530,7 @@ async def test_wildcard_patterns():
         os.makedirs(sub_dir)
         with open(os.path.join(sub_dir, "helper.py"), "w") as f:  # *.py only matches top-level
             f.write("# helper\n")
-        
+
         # Export using TentacleExporter
         tentacle = models.Tentacle(
             tentacle_root_path=temp_dir,
@@ -522,7 +539,7 @@ async def test_wildcard_patterns():
         )
         tentacle.tentacle_module_path = tentacle_path
         tentacle.sync_initialize()
-        
+
         exporter = exporters.TentacleExporter(
             artifact=tentacle,
             tentacles_folder=temp_dir,
@@ -531,7 +548,7 @@ async def test_wildcard_patterns():
         )
         result = await exporter.export()
         assert result == 0
-        
+
         # Collect exported files
         export_path = tentacle.output_path
         exported_files = []
@@ -539,20 +556,19 @@ async def test_wildcard_patterns():
             for file in files:
                 rel_path = os.path.relpath(os.path.join(root, file), export_path)
                 exported_files.append(rel_path.replace(os.sep, '/'))
-        
+
         # Verify matches
         assert "metadata.json" in exported_files  # Always included
         assert "__init__.py" in exported_files  # Always included
         assert "main.py" in exported_files, "*.py should match top-level .py files"
         assert "config/settings.json" in exported_files, "config/*.json should match"
         assert "docs/api/README.md" in exported_files, "**/*.md should match nested .md files"
-        
+
         # Verify non-matches
         assert "data.txt" not in exported_files, "data.txt should not match any pattern"
         assert "utils/helper.py" not in exported_files, "*.py should not match nested .py files"
-        
+
     finally:
         shutil.rmtree(temp_dir, ignore_errors=True)
         if os.path.exists(constants.DEFAULT_EXPORT_DIR):
             shutil.rmtree(constants.DEFAULT_EXPORT_DIR, ignore_errors=True)
-

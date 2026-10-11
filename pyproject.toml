@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "octobot"
-version = "2.0.14"
+version = "3.0.0b3"
 description = "Cryptocurrencies alert / trading bot"
 readme = "README.md"
 requires-python = ">=3.13"
@@ -23,57 +23,67 @@ classifiers = [
     "Operating System :: OS Independent",
 ]
 dependencies = [
-    # Drakkar-Software requirements
-    "OctoBot-Commons==1.9.86",
-    "OctoBot-Trading==2.4.231",
-    "OctoBot-Evaluators==1.9.7",
-    "OctoBot-Tentacles-Manager==2.9.18",
-    "OctoBot-Services==1.6.26",
-    "OctoBot-Backtesting==1.9.7",
-    "Async-Channel==2.2.1",
-    "trading-backend==1.2.42",
-
-    # Core dependencies
-    "colorlog==6.8.0",
-    "requests==2.32.5",
-    "urllib3",  # required by requests, used in imports: make sure it's always available
-    "packaging==25.0",
-    "python-dotenv==1.1.1",
-    "setuptools==79.0.1",  # warning: setuptools>=80 breaks easy_install, need to find an alternative not to break installs
-
-    # Community
-    "websockets==15.0.1",  # used by supabase, a recent version is required
-    "gmqtt==0.7.0",
-    "pgpy==0.6.0",
-    "clickhouse-connect==0.8.18",
-    "pyiceberg==0.10.0",
-    "pydantic<2.12",  # required for pyiceberg 0.10.0
-    "pyarrow==21.0.0",
-
-    # Error tracking
-    "sentry-sdk==2.35.0",  # always make sure sentry_aiohttp_transport.py keep working
-
-    # Supabase - ensure supabase_backend_tests keep passing when updating any of those
-    "supabase==2.18.1",  # Supabase client
-    "supabase-auth",  # Supabase authenticated API (required by supabase and enforced to allow direct import)
-    "postgrest",  # Supabase posgres calls (required by supabase and enforced to allow direct import)
-
-    # Async HTTP requests
-    "aiohttp==3.12.15",
-    "aiodns==3.1.1",  # used by aiohttp
-
-    # used by ccxt for protobuf "websockets" such as mexc
-    # lock protobuf to avoid using .rc versions
-    "protobuf==5.29.5",
+    "requests",
+    "urllib3",
+    "packaging",
+    "python-dotenv",
+    "setuptools",
+    "jinja2",
+    "PyYAML",
+    "aioboto3",
+    "cachetools",
+    "standard-imghdr",
+    "pgpy",
+    "sentry-sdk",
+    "supabase",
+    "supabase_auth",
+    "postgrest",
+    "websockets",
+    "aiohttp",
+    "aiofiles",
+    "aiodns",
+    "numpy",
+    "cryptography",
+    "sortedcontainers",
+    "pydantic",
+    "typing_extensions",
+    "OctoBot-Tulipy>=0.4.11b13",
+    "fastapi",
+    "uvicorn",
+    "starlette",
+    "passlib[bcrypt]",
+    "dbos",
+    "starfish-sdk>=3.0.0a72",
+    "starfish-server>=3.0.0a72",
+    "pydantic-settings",
+    "starfish-identities>=3.0.0a72",
+    "starfish-protocol>=3.0.0a72",
+    "starfish-keyring>=3.0.0a72",
+    "starfish-spaces>=3.0.0a72",
+    "starfish-sharing>=3.0.0a72",
+    "python-multipart",
+    "web3",
+    "octobot-ccxt",
 ]
 
 [dependency-groups]
 dev = [
-    "pytest>=9.0",
+    "pytest",
+    "httpx2",
+    "pytest-asyncio",
+    "pytest-cov",
+    "pytest-timeout",
+    "pytest-xdist",
+    "mock",
+    "ruff",
 ]
 
 [tool.uv]
 default-groups = ["dev"]
+override-dependencies = ["multidict>=6.9.1"]
+
+[tool.uv.sources]
+octobot-ccxt = { url = "https://github.com/Drakkar-Software/ccxt/archive/791e42d60faaa27306405919c27918dc056466f7.tar.gz" }
 
 [project.urls]
 Homepage = "https://github.com/Drakkar-Software/OctoBot"
@@ -82,30 +92,49 @@ Repository = "https://github.com/Drakkar-Software/OctoBot"
 "Bug Tracker" = "https://github.com/Drakkar-Software/OctoBot/issues"
 
 [project.scripts]
+OctoBot = "octobot.cli:main"
 octobot = "octobot.cli:main"
 
 [tool.hatch.build.targets.wheel]
-packages = ["src/octobot"]
+packages = [
+    "src/octobot",
+    "packages/backtesting/octobot_backtesting",
+    "packages/commons/octobot_commons",
+    "packages/agents/octobot_agents",
+    "packages/protocol/octobot_protocol_ts",
+    "packages/protocol/octobot_protocol",
+    "packages/evaluators/octobot_evaluators",
+    "packages/tentacles_manager/octobot_tentacles_manager",
+    "packages/copy/octobot_copy",
+    "packages/copy/octobot_copy_ts",
+    "packages/node/octobot_node",
+    "packages/sync/octobot_sync",
+    "packages/async_channel/async_channel",
+    "packages/trading/octobot_trading",
+    "packages/client/octobot_client_ts",
+    "packages/services/octobot_services",
+    "packages/flow/octobot_flow",
+]
 include = ["src/start.py"]
+dev-mode-dirs = ["src", "packages/backtesting", "packages/commons", "packages/agents", "packages/protocol", "packages/evaluators", "packages/tentacles_manager", "packages/copy", "packages/binary", "packages/node", "packages/sync", "packages/async_channel", "packages/trading", "packages/client", "packages/services", "packages/flow"]
 
 [tool.hatch.build.targets.sdist]
 include = [
-    "src/octobot/**",
-    "src/start.py",
-    "README.md",
-    "LICENSE",
+    "/src",
+    "/packages",
+    "/README.md",
+    "/LICENSE",
 ]
 exclude = [
+    "**/node_modules/**",
+    "**/__pycache__/**",
+    "**/*.pyc",
+    "**/.pytest_cache/**",
     "tests/**",
     "additional_tests/**",
     "docker/**",
 ]
 
-[tool.hatch.build]
-include = [
-    "src/octobot/config/*",
-    "src/octobot/strategy_optimizer/optimizer_data_files/*",
-]
 
 [tool.ruff]
 line-length = 88
@@ -128,9 +157,50 @@ typeCheckingMode = "basic"
 
 [tool.pytest.ini_options]
 minversion = "9.0"
-addopts = ["-ra", "-q", "--strict-markers", "--import-mode=importlib"]
+addopts = ["-ra", "-q", "--strict-markers"]
 testpaths = ["tests"]
 pythonpath = ["src"]
 xfail_strict = true
 filterwarnings = ["error"]
 
+
+[project.optional-dependencies]
+full = [
+    "colorlog",
+    "gmqtt",
+    "pgpy",
+    "clickhouse-connect",
+    "pydantic",
+    "protobuf",
+    "jsonschema",
+    "psutil",
+    "certifi",
+    "tinydb",
+    "aiosqlite",
+    "flask",
+    "flask-cors",
+    "flask-login",
+    "flask-wtf",
+    "asgiref",
+    "cython",
+    "jinja2",
+    "pyyaml",
+    "aioboto3",
+    "starfish-replica[space]>=3.0.0a72",
+    "starfish-server",
+    "cachetools",
+    "web3",
+    "asyncpraw",
+    "python-telegram-bot",
+    "simplifiedpytrends",
+    "pyngrok",
+    "werkzeug",
+    "WTForms",
+    "Flask-WTF",
+    "uvicorn",
+    "starlette",
+    "openai",
+    "mcp>=1.30,<2",
+    "coingecko-openapi-client",
+    "vaderSentiment",
+]

@@ -29,7 +29,7 @@ from tests.exchanges import (
     fake_backtesting,
 )
 
-pytestmark = pytest.mark.asyncio
+
 
 
 def _uninitialized_exchange_manager():
@@ -72,6 +72,7 @@ class TestDefaultEnvVarConfig:
         assert config.ws_socks_proxy == "socks5://ws-socks:1081"
         assert config.use_authenticated_exchange_requests_only_proxy is True
 
+    @pytest.mark.asyncio
     async def test_with_exchange_manager_calls_initialize(self, backtesting_exchange_manager):
         with mock.patch.object(
             exchange_proxy_config.ExchangeProxyConfig,
@@ -83,6 +84,7 @@ class TestDefaultEnvVarConfig:
 
 
 class TestInitialize:
+    @pytest.mark.asyncio
     async def test_static_rest_proxy_logs_enabled(self, backtesting_exchange_manager):
         config = exchange_proxy_config.ExchangeProxyConfig(
             http_proxy="http://127.0.0.1:9090",
@@ -93,6 +95,7 @@ class TestInitialize:
             config.initialize(backtesting_exchange_manager)
         mock_logger.info.assert_any_call(f"Enabled [{DEFAULT_EXCHANGE_NAME}] proxy")
 
+    @pytest.mark.asyncio
     async def test_websocket_proxy_logs_enabled(self, backtesting_exchange_manager):
         config = exchange_proxy_config.ExchangeProxyConfig(
             wss_proxy="wss://127.0.0.1:9443",
@@ -123,6 +126,7 @@ class TestInitialize:
             config.initialize(uninitialized_manager)
         mock_logger.info.assert_any_call(f"Enabled [{DEFAULT_EXCHANGE_NAME}] websocket proxy")
 
+    @pytest.mark.asyncio
     async def test_authenticated_only_http_replaces_with_callback(self, backtesting_exchange_manager):
         proxy_url = "http://auth-proxy:8080"
         config = exchange_proxy_config.ExchangeProxyConfig(
@@ -150,6 +154,7 @@ class TestInitialize:
             assert resolved_proxy == proxy_url
             assert get_last_proxied_request_url() == "https://api.example/private"
 
+    @pytest.mark.asyncio
     async def test_authenticated_only_https_used_when_no_http(self, backtesting_exchange_manager):
         proxy_url = "https://auth-https:8443"
         config = exchange_proxy_config.ExchangeProxyConfig(
@@ -168,6 +173,7 @@ class TestInitialize:
             assert https_proxy_callback is not None
             assert https_proxy_callback("https://public", "GET", {}, None) is None
 
+    @pytest.mark.asyncio
     async def test_authenticated_only_socks_used_when_no_http_nor_https(self, backtesting_exchange_manager):
         proxy_url = "socks5://127.0.0.1:1080"
         config = exchange_proxy_config.ExchangeProxyConfig(
@@ -187,6 +193,7 @@ class TestInitialize:
 
 
 class TestCreateCallback:
+    @pytest.mark.asyncio
     async def test_not_implemented_falls_back_to_static_proxy(self, backtesting_exchange_manager):
         proxy_url = "http://fallback-proxy:8080"
         config = exchange_proxy_config.ExchangeProxyConfig(
@@ -205,6 +212,7 @@ class TestCreateCallback:
             assert http_proxy_callback("https://any", "GET", {}, None) == proxy_url
             mock_logger.warning.assert_called()
 
+    @pytest.mark.asyncio
     async def test_when_exchange_stopped_returns_none(self, backtesting_exchange_manager):
         backtesting_exchange_manager.exchange = None
         proxy_url = "http://stopped-proxy:8080"

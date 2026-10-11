@@ -29,7 +29,7 @@ import octobot_trading.storage.orders_storage as orders_storage
 
 from tests.exchanges import simulated_exchange_manager, simulated_trader
 
-pytestmark = pytest.mark.asyncio
+
 
 
 DEFAULT_SYMBOL = "BTC/USDT"
@@ -168,6 +168,7 @@ def _set_storage_origin_string_numerics(storage_order_document):
         origin[enums.ExchangeConstantsOrderColumns.FEE.value][enums.FeePropertyColumns.COST.value] = "0.1"
 
 
+@pytest.mark.asyncio
 async def test_get_order(order_and_exchange_managers):
     orders_manager, exchange_manager = order_and_exchange_managers
     await reset_orders_manager(orders_manager)
@@ -175,6 +176,7 @@ async def test_get_order(order_and_exchange_managers):
     assert order.order_id == "2"
 
 
+@pytest.mark.asyncio
 async def test_get_all_orders(order_and_exchange_managers):
     orders_manager, exchange_manager = order_and_exchange_managers
     await reset_orders_manager(orders_manager)
@@ -242,6 +244,7 @@ async def test_get_all_orders(order_and_exchange_managers):
     # assert tagged_order[0].order_id == "4"
 
 
+@pytest.mark.asyncio
 async def test_get_pending_cancel_orders(order_and_exchange_managers):
     orders_manager, exchange_manager = order_and_exchange_managers
     await reset_orders_manager(
@@ -276,6 +279,7 @@ async def test_get_pending_cancel_orders(order_and_exchange_managers):
     assert orders[0] is selectable_order
 
 
+@pytest.mark.asyncio
 async def test_get_closed_orders(order_and_exchange_managers):
     orders_manager, exchange_manager = order_and_exchange_managers
     await reset_orders_manager(
@@ -309,6 +313,7 @@ async def test_get_closed_orders(order_and_exchange_managers):
     assert orders[0] is selectable_order
 
 
+@pytest.mark.asyncio
 async def test_get_open_orders(order_and_exchange_managers):
     orders_manager, exchange_manager = order_and_exchange_managers
     await reset_orders_manager(orders_manager, enums.OrderStatus.OPEN.value)
@@ -376,6 +381,7 @@ async def test_get_open_orders(order_and_exchange_managers):
     # assert tagged_order[0].order_id == "4"
 
 
+@pytest.mark.asyncio
 async def test_get_orders_to_cancel_from_policies(order_and_exchange_managers):
     orders_manager, exchange_manager = order_and_exchange_managers
     await reset_orders_manager(orders_manager, enums.OrderStatus.OPEN.value)
@@ -421,11 +427,13 @@ class TestOrdersManagerInitializeFromExchangeData:
         await orders_manager.initialize_impl()
         await orders_manager.initialize_from_exchange_data(exchange_data)
 
+    @pytest.mark.asyncio
     async def test_does_nothing_when_no_open_orders(self, order_and_exchange_managers):
         orders_manager, _exchange_manager = order_and_exchange_managers
         await self._initialize_from_exchange_data(orders_manager, _build_exchange_data([]))
         assert len(orders_manager.orders) == 0
 
+    @pytest.mark.asyncio
     async def test_adds_simple_exchange_orders(self, order_and_exchange_managers):
         orders_manager, _exchange_manager = order_and_exchange_managers
         open_orders = [
@@ -439,6 +447,7 @@ class TestOrdersManagerInitializeFromExchangeData:
         assert orders_manager.get_order("3").symbol == DEFAULT_SYMBOL
         assert orders_manager.get_order("4").symbol == DEFAULT_SYMBOL
 
+    @pytest.mark.asyncio
     async def test_restores_storage_orders(self, order_and_exchange_managers):
         orders_manager, exchange_manager = order_and_exchange_managers
         storage_tag = "storage-tag-test"
@@ -457,6 +466,7 @@ class TestOrdersManagerInitializeFromExchangeData:
         assert restored_order.tag == storage_tag
         assert restored_order.symbol == DEFAULT_SYMBOL
 
+    @pytest.mark.asyncio
     async def test_restores_storage_order_groups(self, order_and_exchange_managers):
         orders_manager, exchange_manager = order_and_exchange_managers
         group = orders_manager.create_group(
@@ -487,6 +497,7 @@ class TestOrdersManagerInitializeFromExchangeData:
         assert orders_manager.order_groups["plop2"].name == "plop2"
         assert orders_manager.order_groups["plop2"].orders_manager is orders_manager
 
+    @pytest.mark.asyncio
     async def test_handles_mixed_order_types(self, order_and_exchange_managers):
         orders_manager, exchange_manager = order_and_exchange_managers
         raw_order = _get_raw_order(RAW_ORDERS[1])
@@ -506,6 +517,7 @@ class TestOrdersManagerInitializeFromExchangeData:
         assert orders_manager.get_order("2").symbol == DEFAULT_SYMBOL
         assert orders_manager.get_order(storage_order_id).tag == "mixed-storage-tag"
 
+    @pytest.mark.asyncio
     async def test_does_not_modify_exchange_data(self, order_and_exchange_managers):
         orders_manager, exchange_manager = order_and_exchange_managers
         storage_order_document = _build_storage_open_order_document(

@@ -1,3 +1,4 @@
+from starfish_server.storage.base import AbstractObjectStore
 #  This file is part of OctoBot Sync (https://github.com/Drakkar-Software/OctoBot)
 #  Copyright (c) 2025 Drakkar-Software, All rights reserved.
 #
@@ -45,7 +46,7 @@ import octobot_sync.constants as constants
 import octobot_sync.artifacts as artifacts
 
 
-class MemoryObjectStore:
+class MemoryObjectStore(AbstractObjectStore):
     """Minimal in-memory AbstractObjectStore (every method takes *, context=None)."""
 
     def __init__(self) -> None:

@@ -105,6 +105,11 @@ def _start_octobot_cli_args(**overrides):
     return argparse.Namespace(**cli_args)
 
 
+def _run_test_coroutine(coro):
+    with octobot_cli.asyncio.Runner() as runner:
+        return runner.run(coro)
+
+
 class TestUpdateConfigWithArgs:
     def test_requires_activated_profile_for_backtesting_flags(self, deferred_profile_config):
         config = deferred_profile_config
@@ -187,7 +192,7 @@ class TestStartOctobot:
                 mock.patch.object(
                     octobot_cli.asyncio,
                     "run",
-                    lambda coro: octobot_cli.asyncio.get_event_loop_policy().new_event_loop().run_until_complete(coro),
+                    _run_test_coroutine,
                 ), \
                 mock.patch.object(octobot_cli, "_configure_profile_sync_user", track("sync_user")), \
                 mock.patch.object(
@@ -559,7 +564,7 @@ class TestDefaultCliMode:
             (
                 octobot_cli.asyncio,
                 "run",
-                lambda coro: octobot_cli.asyncio.get_event_loop_policy().new_event_loop().run_until_complete(coro),
+                _run_test_coroutine,
             ),
             (octobot_cli, "_configure_profile_sync_user", mock.Mock()),
             (octobot_cli, "_activate_saved_profile_after_sync", mock.Mock()),

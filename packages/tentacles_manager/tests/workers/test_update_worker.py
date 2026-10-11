@@ -34,9 +34,10 @@ from octobot_tentacles_manager.util.tentacle_fetching import fetch_and_extract_t
 from tests import event_loop, clean, TEMP_DIR, OTHER_PROFILE
 
 # All test coroutines will be treated as marked.
-pytestmark = pytest.mark.asyncio
 
 
+
+@pytest.mark.asyncio
 async def test_update_two_tentacles(clean):
     _enable_loggers()
     await fetch_and_extract_tentacles(TEMP_DIR, path.join("tests", "static", "tentacles.zip"), None)
@@ -98,6 +99,7 @@ async def test_update_two_tentacles(clean):
     assert ta_tentacle_data.version == "1.2.0"
 
 
+@pytest.mark.asyncio
 async def test_update_all_tentacles(clean):
     _enable_loggers()
     await fetch_and_extract_tentacles(TEMP_DIR, path.join("tests", "static", "tentacles.zip"), None)

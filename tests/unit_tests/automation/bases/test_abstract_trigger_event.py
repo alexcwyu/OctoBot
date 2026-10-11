@@ -46,9 +46,6 @@ class ConcreteTriggerEvent(AbstractTriggerEvent):
 
 
 # All test coroutines will be treated as marked.
-pytestmark = pytest.mark.asyncio
-
-
 class TestAbstractTriggerEvent:
     def test_init(self):
         trigger = ConcreteTriggerEvent()
@@ -56,11 +53,13 @@ class TestAbstractTriggerEvent:
         assert trigger.trigger_only_once is False
         assert trigger.max_trigger_frequency == 0
 
+    @pytest.mark.asyncio
     async def test_stop_sets_should_stop(self):
         trigger = ConcreteTriggerEvent()
         await trigger.stop()
         assert trigger.should_stop is True
 
+    @pytest.mark.asyncio
     async def test_next_execution_yields_execution_details(self):
         trigger = ConcreteTriggerEvent()
         trigger.set_events([None, None])  # Two events to emit
@@ -81,6 +80,7 @@ class TestAbstractTriggerEvent:
         assert gathered[0].timestamp > 0
         assert gathered[1].timestamp > 0
 
+    @pytest.mark.asyncio
     async def test_next_execution_respects_trigger_only_once(self):
         trigger = ConcreteTriggerEvent()
         trigger.trigger_only_once = True
@@ -97,6 +97,7 @@ class TestAbstractTriggerEvent:
 
         assert len(gathered) == 1
 
+    @pytest.mark.asyncio
     async def test_next_execution_respects_should_stop(self):
         trigger = ConcreteTriggerEvent()
         trigger.set_events([None, None, None])

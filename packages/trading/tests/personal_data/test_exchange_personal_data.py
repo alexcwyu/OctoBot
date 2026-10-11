@@ -27,9 +27,10 @@ import octobot_trading.personal_data as personal_data
 from tests.exchanges import backtesting_trader, backtesting_config, backtesting_exchange_manager, fake_backtesting
 from tests import event_loop
 
-pytestmark = pytest.mark.asyncio
 
 
+
+@pytest.mark.asyncio
 async def test_handle_portfolio_and_position_update_from_order(backtesting_trader):
     config, exchange_manager, trader = backtesting_trader
     exchange_personal_data = exchange_manager.exchange_personal_data
@@ -38,16 +39,16 @@ async def test_handle_portfolio_and_position_update_from_order(backtesting_trade
     trader.simulate = False
     order = personal_data.BuyMarketOrder(trader)
     order.update("BTC/USDT", quantity=decimal.Decimal(10), price=decimal.Decimal(100))
-    
+
     # Create a local implementation of PortfolioUpdateEvent for testing
     class TestPortfolioUpdateEvent(personal_data.PortfolioUpdateEvent):
         def __init__(self, is_resolved_value: bool = False):
             super().__init__()
             self._is_resolved_value = is_resolved_value
-        
+
         def is_resolved(self, updated_portfolio):
             return self._is_resolved_value
-    
+
     with patch.object(portfolio_manager, 'handle_balance_update_from_order',
                       new=AsyncMock(return_value=(True, None))) as handle_balance_update_from_order_mock, \
          patch.object(exchange_personal_data, 'handle_portfolio_update_notification',
@@ -58,7 +59,7 @@ async def test_handle_portfolio_and_position_update_from_order(backtesting_trade
                       new=AsyncMock(return_value=True)) as handle_position_update_from_order_mock, \
          patch.object(exchange_personal_data.positions_manager, 'get_order_position',
                       new=Mock(return_value=None)) as get_order_position_mock:
-        
+
         # Test basic case - no event returned, not futures
         exchange_manager.is_future = False
         result = await exchange_personal_data.handle_portfolio_and_position_update_from_order(
@@ -69,11 +70,11 @@ async def test_handle_portfolio_and_position_update_from_order(backtesting_trade
         handle_portfolio_update_notification_mock.assert_called_once()
         handle_position_update_from_order_mock.assert_not_called()
         handle_position_instance_update_mock.assert_not_called()
-        
+
         # Reset mocks
         handle_balance_update_from_order_mock.reset_mock()
         handle_portfolio_update_notification_mock.reset_mock()
-        
+
         # Test with should_notify=False
         result = await exchange_personal_data.handle_portfolio_and_position_update_from_order(
             order, require_exchange_update=True, expect_filled_order_update=False, should_notify=False
@@ -81,10 +82,10 @@ async def test_handle_portfolio_and_position_update_from_order(backtesting_trade
         assert result is True
         handle_balance_update_from_order_mock.assert_called_once_with(order, True, False)
         handle_portfolio_update_notification_mock.assert_not_called()
-        
+
         # Reset mocks
         handle_balance_update_from_order_mock.reset_mock()
-        
+
         # Test with event that is already set (should not wait)
         event_set = TestPortfolioUpdateEvent(is_resolved_value=True)
         event_set.set()
@@ -98,21 +99,21 @@ async def test_handle_portfolio_and_position_update_from_order(backtesting_trade
             assert event_set.is_set()
             # Verify that wait_for was not called since the event is already set
             wait_for_mock.assert_not_called()
-        
+
         # Reset mocks
         handle_balance_update_from_order_mock.reset_mock()
-        
+
         # Test with event that needs to wait (expect_filled_order_update=True, event not set)
         event_not_set = TestPortfolioUpdateEvent(is_resolved_value=False)
         handle_balance_update_from_order_mock.return_value = (True, event_not_set)
-        
+
         # Set the event in a background task to simulate it being resolved
         async def set_event_after_delay():
             await asyncio.sleep(0.01)
             event_not_set.set()
-        
+
         asyncio.create_task(set_event_after_delay())
-        
+
         with patch.object(asyncio, 'wait_for', wraps=asyncio.wait_for) as wait_for_mock:
             result = await exchange_personal_data.handle_portfolio_and_position_update_from_order(
                 order, require_exchange_update=True, expect_filled_order_update=True, should_notify=False
@@ -125,10 +126,10 @@ async def test_handle_portfolio_and_position_update_from_order(backtesting_trade
             call_args = wait_for_mock.call_args
             # First argument should be event.wait() coroutine, second should be timeout
             assert call_args.kwargs['timeout'] == constants.EXPECTED_PORTFOLIO_UPDATE_TIMEOUT
-        
+
         # Reset mocks
         handle_balance_update_from_order_mock.reset_mock()
-        
+
         # Test with futures exchange
         exchange_manager.is_future = True
         mock_position = Mock()
@@ -143,14 +144,14 @@ async def test_handle_portfolio_and_position_update_from_order(backtesting_trade
         handle_portfolio_update_notification_mock.assert_called_once()
         get_order_position_mock.assert_called_once_with(order)
         handle_position_instance_update_mock.assert_called_once_with(mock_position, should_notify=True)
-        
+
         # Reset mocks
         handle_balance_update_from_order_mock.reset_mock()
         handle_position_update_from_order_mock.reset_mock()
         handle_portfolio_update_notification_mock.reset_mock()
         handle_position_instance_update_mock.reset_mock()
         get_order_position_mock.reset_mock()
-        
+
         # Test with futures when position update returns False
         handle_position_update_from_order_mock.return_value = False
         result = await exchange_personal_data.handle_portfolio_and_position_update_from_order(
@@ -159,12 +160,12 @@ async def test_handle_portfolio_and_position_update_from_order(backtesting_trade
         assert result is False  # changed should be False because position update returned False
         handle_balance_update_from_order_mock.assert_called_once_with(order, True, False)
         handle_position_update_from_order_mock.assert_called_once_with(order, True)
-        
+
         # Reset mocks and restore is_future
         exchange_manager.is_future = False
         handle_balance_update_from_order_mock.reset_mock()
         handle_position_update_from_order_mock.reset_mock()
-        
+
         # Test AttributeError exception handling
         handle_balance_update_from_order_mock.side_effect = AttributeError("Test error")
         result = await exchange_personal_data.handle_portfolio_and_position_update_from_order(
@@ -173,6 +174,7 @@ async def test_handle_portfolio_and_position_update_from_order(backtesting_trade
         assert result is False
 
 
+@pytest.mark.asyncio
 async def test_handle_portfolio_update_from_withdrawal(backtesting_trader):
     config, exchange_manager, trader = backtesting_trader
     exchange_personal_data = exchange_manager.exchange_personal_data
@@ -190,25 +192,25 @@ async def test_handle_portfolio_update_from_withdrawal(backtesting_trader):
         enums.ExchangeConstantsTransactionColumns.STATUS.value: enums.BlockchainTransactionStatus.SUCCESS.value,
         enums.ExchangeConstantsTransactionColumns.FEE.value: {"USDT": decimal.Decimal("0.1")}
     }
-    
+
     # Create a local implementation of PortfolioUpdateEvent for testing
     class TestPortfolioUpdateEvent(personal_data.PortfolioUpdateEvent):
         def __init__(self, is_resolved_value: bool = False):
             super().__init__()
             self._is_resolved_value = is_resolved_value
-        
+
         def is_resolved(self, updated_portfolio):
             return self._is_resolved_value
-    
+
     import octobot_trading.personal_data.transactions.transaction_factory as transaction_factory
-    
+
     with patch.object(portfolio_manager, 'handle_balance_update_from_withdrawal',
                       new=AsyncMock(return_value=(True, None))) as handle_balance_update_from_withdrawal_mock, \
          patch.object(exchange_personal_data, 'handle_portfolio_update_notification',
                       new=AsyncMock()) as handle_portfolio_update_notification_mock, \
          patch.object(transaction_factory, 'create_blockchain_transaction',
                       new=Mock()) as create_blockchain_transaction_mock:
-        
+
         # Test basic case - no event returned
         result = await exchange_personal_data.handle_portfolio_update_from_withdrawal(
             transaction, expect_withdrawal_update=False, should_notify=True
@@ -231,12 +233,12 @@ async def test_handle_portfolio_update_from_withdrawal(backtesting_trader):
             'transaction_fee': transaction[enums.ExchangeConstantsTransactionColumns.FEE.value],
         }
         handle_portfolio_update_notification_mock.assert_called_once()
-        
+
         # Reset mocks
         handle_balance_update_from_withdrawal_mock.reset_mock()
         create_blockchain_transaction_mock.reset_mock()
         handle_portfolio_update_notification_mock.reset_mock()
-        
+
         # Test with should_notify=False
         result = await exchange_personal_data.handle_portfolio_update_from_withdrawal(
             transaction, expect_withdrawal_update=False, should_notify=False
@@ -245,11 +247,11 @@ async def test_handle_portfolio_update_from_withdrawal(backtesting_trader):
         handle_balance_update_from_withdrawal_mock.assert_called_once_with(transaction, False)
         create_blockchain_transaction_mock.assert_called_once()
         handle_portfolio_update_notification_mock.assert_not_called()
-        
+
         # Reset mocks
         handle_balance_update_from_withdrawal_mock.reset_mock()
         create_blockchain_transaction_mock.reset_mock()
-        
+
         # Test with event that is already set (should not wait)
         event_set = TestPortfolioUpdateEvent(is_resolved_value=True)
         event_set.set()
@@ -264,22 +266,22 @@ async def test_handle_portfolio_update_from_withdrawal(backtesting_trader):
             # Verify that wait_for was not called since the event is already set
             wait_for_mock.assert_not_called()
             create_blockchain_transaction_mock.assert_called_once()
-        
+
         # Reset mocks
         handle_balance_update_from_withdrawal_mock.reset_mock()
         create_blockchain_transaction_mock.reset_mock()
-        
+
         # Test with event that needs to wait (expect_withdrawal_update=True, event not set)
         event_not_set = TestPortfolioUpdateEvent(is_resolved_value=False)
         handle_balance_update_from_withdrawal_mock.return_value = (True, event_not_set)
-        
+
         # Set the event in a background task to simulate it being resolved
         async def set_event_after_delay():
             await asyncio.sleep(0.01)
             event_not_set.set()
-        
+
         asyncio.create_task(set_event_after_delay())
-        
+
         with patch.object(asyncio, 'wait_for', wraps=asyncio.wait_for) as wait_for_mock:
             result = await exchange_personal_data.handle_portfolio_update_from_withdrawal(
                 transaction, expect_withdrawal_update=True, should_notify=False
@@ -293,11 +295,11 @@ async def test_handle_portfolio_update_from_withdrawal(backtesting_trader):
             # Verify timeout parameter
             assert call_args.kwargs['timeout'] == constants.EXPECTED_PORTFOLIO_UPDATE_TIMEOUT
             create_blockchain_transaction_mock.assert_called_once()
-        
+
         # Reset mocks
         handle_balance_update_from_withdrawal_mock.reset_mock()
         create_blockchain_transaction_mock.reset_mock()
-        
+
         # Test when handle_balance_update_from_withdrawal returns False
         handle_balance_update_from_withdrawal_mock.return_value = (False, None)
         result = await exchange_personal_data.handle_portfolio_update_from_withdrawal(
@@ -308,6 +310,7 @@ async def test_handle_portfolio_update_from_withdrawal(backtesting_trader):
         create_blockchain_transaction_mock.assert_called_once()  # Still creates transaction even if changed=False
 
 
+@pytest.mark.asyncio
 async def test_handle_portfolio_update(backtesting_trader):
     config, exchange_manager, trader = backtesting_trader
     exchange_personal_data = exchange_manager.exchange_personal_data
@@ -323,14 +326,14 @@ async def test_handle_portfolio_update(backtesting_trader):
             "total": decimal.Decimal("1000")
         }
     }
-    
+
     portfolio_history_update_mock = mock.AsyncMock()
     # Create a mock async context manager
     @contextlib.asynccontextmanager
     async def mock_portfolio_history_update():
         await portfolio_history_update_mock()
         yield
-    
+
     with patch.object(portfolio_manager, 'handle_balance_update',
                       new=Mock(return_value=True)) as handle_balance_update_mock, \
          patch.object(exchange_personal_data, 'resolve_pending_portfolio_update_events',
@@ -339,7 +342,7 @@ async def test_handle_portfolio_update(backtesting_trader):
                       new=AsyncMock()) as handle_portfolio_update_notification_mock, \
          patch.object(portfolio_manager, 'portfolio_history_update',
                       new=mock_portfolio_history_update):
-        
+
         # Test basic case with should_notify=True
         result = await exchange_personal_data.handle_portfolio_update(balance, should_notify=True, is_diff_update=False)
         assert result is True
@@ -347,13 +350,13 @@ async def test_handle_portfolio_update(backtesting_trader):
         resolve_pending_portfolio_update_events_mock.assert_called_once()
         handle_portfolio_update_notification_mock.assert_called_once_with(balance)
         portfolio_history_update_mock.assert_called_once()
-        
+
         # Reset mocks
         handle_balance_update_mock.reset_mock()
         resolve_pending_portfolio_update_events_mock.reset_mock()
         handle_portfolio_update_notification_mock.reset_mock()
         portfolio_history_update_mock.reset_mock()
-        
+
         # Test with should_notify=False
         result = await exchange_personal_data.handle_portfolio_update(balance, should_notify=False, is_diff_update=False)
         assert result is True
@@ -361,24 +364,24 @@ async def test_handle_portfolio_update(backtesting_trader):
         resolve_pending_portfolio_update_events_mock.assert_called_once()
         handle_portfolio_update_notification_mock.assert_not_called()
         portfolio_history_update_mock.assert_called_once()
-        
+
         # Reset mocks
         handle_balance_update_mock.reset_mock()
         resolve_pending_portfolio_update_events_mock.reset_mock()
         portfolio_history_update_mock.reset_mock()
-        
+
         # Test with is_diff_update=True
         result = await exchange_personal_data.handle_portfolio_update(balance, should_notify=False, is_diff_update=True)
         assert result is True
         handle_balance_update_mock.assert_called_once_with(balance, is_diff_update=True)
         resolve_pending_portfolio_update_events_mock.assert_called_once()
         portfolio_history_update_mock.assert_called_once()
-        
+
         # Reset mocks
         handle_balance_update_mock.reset_mock()
         resolve_pending_portfolio_update_events_mock.reset_mock()
         portfolio_history_update_mock.reset_mock()
-        
+
         # Test when handle_balance_update returns False
         handle_balance_update_mock.return_value = False
         result = await exchange_personal_data.handle_portfolio_update(balance, should_notify=False, is_diff_update=False)
@@ -386,12 +389,12 @@ async def test_handle_portfolio_update(backtesting_trader):
         handle_balance_update_mock.assert_called_once_with(balance, is_diff_update=False)
         resolve_pending_portfolio_update_events_mock.assert_called_once()
         portfolio_history_update_mock.assert_called_once()
-        
+
         # Reset mocks
         handle_balance_update_mock.reset_mock()
         resolve_pending_portfolio_update_events_mock.reset_mock()
         portfolio_history_update_mock.reset_mock()
-        
+
         # Test AttributeError exception handling
         handle_balance_update_mock.side_effect = AttributeError("Test error")
         result = await exchange_personal_data.handle_portfolio_update(balance, should_notify=False, is_diff_update=False)

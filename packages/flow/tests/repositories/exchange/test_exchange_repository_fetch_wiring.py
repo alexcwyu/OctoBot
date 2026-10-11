@@ -10,7 +10,7 @@ import octobot_flow.repositories.exchange.portfolio_repository as portfolio_repo
 import octobot_flow.repositories.exchange.tickers_repository as tickers_repository_module
 import octobot_flow.repositories.exchange.trades_repository as trades_repository_module
 
-pytestmark = pytest.mark.asyncio
+
 
 
 def _fetched_exchange_data():
@@ -18,6 +18,7 @@ def _fetched_exchange_data():
 
 
 class TestFetchWiringDependencyShapedManager:
+    @pytest.mark.asyncio
     async def test_fetch_methods_no_op_ensure_when_producer_already_present(self):
         exchange_manager = mock.Mock()
         exchange_manager.id = "exchange-manager-1"
@@ -110,6 +111,7 @@ class TestFetchWiringDependencyShapedManager:
 
 
 class TestFetchWiringDagShapedManager:
+    @pytest.mark.asyncio
     async def test_fetch_trades_registers_producer_when_channels_exist_without_one(self):
         exchange_manager = mock.Mock()
         exchange_manager.id = "exchange-manager-2"
@@ -145,6 +147,7 @@ class TestFetchWiringDagShapedManager:
 
 
 class TestFetchWiringGlobalViewShapedManager:
+    @pytest.mark.asyncio
     async def test_portfolio_and_orders_fetch_create_channels_on_cold_manager(self):
         exchange_manager = mock.Mock()
         exchange_manager.id = "global-view-cold-exchange"

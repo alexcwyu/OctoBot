@@ -23,9 +23,10 @@ import pytest
 from tests.exchanges import exchange_manager
 
 # All test coroutines will be treated as marked.
-pytestmark = pytest.mark.asyncio
 
 
+
+@pytest.mark.asyncio
 async def test_should_ignore_feed(exchange_manager):
     if os.getenv('CYTHON_IGNORE'):
         return
@@ -66,4 +67,3 @@ async def test_should_ignore_feed(exchange_manager):
     assert not abstract_ws_exchange.should_ignore_feed(Feeds.CANDLE)
     assert not abstract_ws_exchange.should_ignore_feed(Feeds.TICKER)
     assert abstract_ws_exchange.should_ignore_feed(Feeds.TRADES)
-

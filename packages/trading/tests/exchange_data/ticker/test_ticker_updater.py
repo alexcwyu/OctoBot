@@ -7,10 +7,11 @@ import asyncio
 
 import octobot_trading.exchange_data.ticker.channel.ticker_updater as ticker_updater_module
 
-pytestmark = pytest.mark.asyncio
+
 
 
 class TestTickerUpdaterFetchAllTickers:
+    @pytest.mark.asyncio
     async def test_returns_only_requested_symbols_when_exchange_fetches_all_tickers(self):
         exchange_manager = mock.Mock()
         exchange_manager.exchange_name = "kraken"
@@ -40,6 +41,7 @@ class TestTickerUpdaterFetchAllTickers:
         }
         updater.set_cache.assert_called_once_with("kraken", mock.ANY, False, all_tickers)
 
+    @pytest.mark.asyncio
     async def test_concurrent_fetch_all_tickers_fetches_missing_symbols_once(self):
         exchange_manager = mock.Mock()
         exchange_manager.exchange_name = "bitmart"

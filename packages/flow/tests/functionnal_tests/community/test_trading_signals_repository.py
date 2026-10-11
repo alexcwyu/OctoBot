@@ -1,3 +1,4 @@
+from starfish_server.storage.base import AbstractObjectStore
 import re
 
 import httpx
@@ -28,7 +29,7 @@ import octobot_flow.errors
 import octobot_flow.repositories.community.trading_signals_repository as trading_signals_repository
 
 
-class _MemoryObjectStore:
+class _MemoryObjectStore(AbstractObjectStore):
     """Minimal in-memory AbstractObjectStore (every method takes *, context=None). Mirrors
     packages/sync/tests/test_integration_artifacts.py's fixture of the same shape."""
 

@@ -1,8 +1,10 @@
 import {
   createColumnHelper,
   flexRender,
-  getCoreRowModel,
-  useReactTable,
+  tableFeatures,
+  columnSizingFeature,
+  columnVisibilityFeature,
+  useTable,
 } from "@tanstack/react-table"
 import { Trash2 } from "lucide-react"
 import { useCallback, useMemo, useRef, useState } from "react"
@@ -246,7 +248,8 @@ function RowParamsCell({
   )
 }
 
-const columnHelper = createColumnHelper<ActionRow>()
+const mappingTableFeatures = tableFeatures({ columnSizingFeature, columnVisibilityFeature })
+const columnHelper = createColumnHelper<typeof mappingTableFeatures, ActionRow>()
 
 export default function ColumnMappingStep({
   headers,
@@ -402,11 +405,12 @@ export default function ColumnMappingStep({
         size: 40,
         maxSize: 40,
       }),
-      columnHelper.accessor("name", {
+      columnHelper.accessor((row): unknown => row.name, {
+        id: "name",
         header: "Name",
         cell: (info) => (
           <Input
-            value={info.getValue()}
+            value={String(info.getValue())}
             onChange={(e) =>
               handleNameChange(info.row.original.rowIndex, e.target.value)
             }
@@ -417,11 +421,12 @@ export default function ColumnMappingStep({
         size: 140,
         maxSize: 140,
       }),
-      columnHelper.accessor("templateId", {
+      columnHelper.accessor((row): unknown => row.templateId, {
+        id: "templateId",
         header: "Action Template",
         cell: (info) => (
           <Select
-            value={info.getValue()}
+            value={String(info.getValue())}
             onValueChange={(val) =>
               handleTemplateChange(info.row.original.rowIndex, val)
             }
@@ -446,10 +451,10 @@ export default function ColumnMappingStep({
     return cols
   }, [handleNameChange, handleTemplateChange])
 
-  const table = useReactTable({
+  const table = useTable({
+    features: mappingTableFeatures,
     data: actionRows,
     columns,
-    getCoreRowModel: getCoreRowModel(),
   })
 
   return (

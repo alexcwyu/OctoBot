@@ -31,9 +31,10 @@ from octobot_tentacles_manager.constants import TENTACLES_PATH, PYTHON_INIT_FILE
     ANY_PLATFORM_FILE_NAME
 
 # All test coroutines will be treated as marked.
-pytestmark = pytest.mark.asyncio
 
 
+
+@pytest.mark.asyncio
 async def test_create_folder_tentacles_package(install_tentacles):
     # set instant_fluctuations_evaluator in dev mode
     tentacle_path = path.join(TENTACLES_PATH, TENTACLES_EVALUATOR_PATH, TENTACLES_EVALUATOR_REALTIME_PATH)
@@ -113,6 +114,7 @@ async def test_create_folder_tentacles_package(install_tentacles):
     assert len(python_files) == 11
 
 
+@pytest.mark.asyncio
 async def test_create_folder_tentacles_package_with_package_selector(install_tentacles):
     tentacle_path = path.join(TENTACLES_PATH, TENTACLES_TRADING_PATH, TENTACLES_TRADING_MODE_PATH)
     with open(path.join(tentacle_path, "daily_trading_mode", TENTACLE_METADATA), "w+") as metadata:
@@ -139,6 +141,7 @@ async def test_create_folder_tentacles_package_with_package_selector(install_ten
     assert len(python_files) == 2
 
 
+@pytest.mark.asyncio
 async def test_create_zipped_tentacles_package(install_tentacles):
     tentacle_package = "tentacle_package.zip"
     assert await create_tentacles_package(tentacle_package, output_dir=".", use_package_as_file_name=True) == 0
@@ -203,6 +206,7 @@ async def _test_create_all_tentacles_bundle_cleaned_not_zipped_but_cythonized(in
                                            "author: DrakkarSoftware\ndescription: ''\nname: generic_exchange_importer\nrepository: Unknown repository location\nshort-name: generic_exchange_importer\ntags: []\ntype: tentacle\nversion: 1.2.0\n")
 
 
+@pytest.mark.asyncio
 async def test_create_all_tentacles_bundle_zipped_not_cleaned_and_zipped(install_tentacles):
     assert await create_all_tentacles_bundle(TEST_EXPORT_DIR,
                                              in_zip=True,
@@ -220,6 +224,7 @@ async def test_create_all_tentacles_bundle_zipped_not_cleaned_and_zipped(install
     assert not os.path.isdir(os.path.join(TEST_EXPORT_DIR, "daily_trading_mode@1.2.0"))
 
 
+@pytest.mark.asyncio
 async def test_create_all_tentacles_bundle_not_zipped_not_cleaned_and_zipped(install_tentacles):
     assert await create_all_tentacles_bundle(TEST_EXPORT_DIR,
                                              in_zip=True,
@@ -237,6 +242,7 @@ async def test_create_all_tentacles_bundle_not_zipped_not_cleaned_and_zipped(ins
     assert os.path.isdir(os.path.join(TEST_EXPORT_DIR, "daily_trading_mode@1.2.0"))
 
 
+@pytest.mark.asyncio
 async def test_create_tentacles_package_in_previous_dir(install_tentacles):
     # with current dir as ouput_dir
     file_path: str = "../test.zip"

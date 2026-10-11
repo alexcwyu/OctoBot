@@ -42,7 +42,7 @@ from tests.exchanges.traders import future_trader, future_trader_simulator_with_
     DEFAULT_FUTURE_SYMBOL_MARGIN_TYPE, DEFAULT_FUTURE_SYMBOL_LEVERAGE
 
 # All test coroutines will be treated as marked.
-pytestmark = pytest.mark.asyncio
+
 
 
 @pytest.fixture
@@ -50,6 +50,7 @@ def ccxt_connector(exchange_manager):
     yield exchange_connectors.CCXTConnector(exchange_manager.config, exchange_manager)
 
 
+@pytest.mark.asyncio
 async def test_initialize_impl_with_none_symbols_and_timeframes(ccxt_connector):
 
     class MockCCXT:
@@ -78,6 +79,7 @@ async def test_initialize_impl_with_none_symbols_and_timeframes(ccxt_connector):
         _ensure_auth_mock.assert_called_once()
 
 
+@pytest.mark.asyncio
 async def test_initialize_impl_with_empty_symbols_and_timeframes(ccxt_connector):
 
     class MockCCXT:
@@ -107,6 +109,7 @@ async def test_initialize_impl_with_empty_symbols_and_timeframes(ccxt_connector)
         _ensure_auth_mock.assert_called_once()
 
 
+@pytest.mark.asyncio
 async def test_initialize_impl(ccxt_connector):
 
     class MockCCXT:
@@ -158,12 +161,14 @@ async def test_initialize_impl(ccxt_connector):
         _ensure_auth_mock.assert_called_once()
 
 
+@pytest.mark.asyncio
 async def test_set_symbol_partial_take_profit_stop_loss(ccxt_connector):
     with pytest.raises(NotImplementedError):
         await ccxt_connector.set_symbol_partial_take_profit_stop_loss("BTC/USDT", False,
                                                                      enums.TakeProfitStopLossMode.PARTIAL)
 
 
+@pytest.mark.asyncio
 async def test_get_ccxt_order_type(ccxt_connector):
     with pytest.raises(RuntimeError):
         ccxt_connector.get_ccxt_order_type(None)
@@ -175,6 +180,7 @@ async def test_get_ccxt_order_type(ccxt_connector):
     assert ccxt_connector.get_ccxt_order_type(enums.TraderOrderType.SELL_MARKET) == enums.TradeOrderType.MARKET.value
 
 
+@pytest.mark.asyncio
 async def test_get_trade_fee(exchange_manager, future_trader_simulator_with_default_linear):
     future_symbol = "BTC/USDT:USDT"
     future_fees_value = 0.0004
@@ -231,6 +237,7 @@ TICKER_WISE_SYMBOL = "BTC@BTC/USDT@ETH"
 
 
 class TestGetTradeFeeNetworkQualified:
+    @pytest.mark.asyncio
     async def test_linear_futures_fee_currency_is_qualified_quote(self, exchange_manager):
         exchange_manager.is_future = True
         connector = exchange_connectors.CCXTConnector(exchange_manager.config, exchange_manager)
@@ -249,6 +256,7 @@ class TestGetTradeFeeNetworkQualified:
         )
         assert fee[enums.FeePropertyColumns.CURRENCY.value] == "USDT@ETH"
 
+    @pytest.mark.asyncio
     async def test_inverse_futures_fee_currency_is_qualified_base(self, exchange_manager):
         exchange_manager.is_future = True
         connector = exchange_connectors.CCXTConnector(exchange_manager.config, exchange_manager)
@@ -268,6 +276,7 @@ class TestGetTradeFeeNetworkQualified:
         assert fee[enums.FeePropertyColumns.CURRENCY.value] == "BTC@BTC"
 
 
+@pytest.mark.asyncio
 async def test_set_first_consecutive_authentication_error_at_if_unset(ccxt_connector):
     assert ccxt_connector.first_consecutive_authentication_error_at is None
     with mock.patch.object(ccxt_connector, 'get_exchange_current_time', return_value=123.456) as get_time_mock:
@@ -283,6 +292,7 @@ async def test_set_first_consecutive_authentication_error_at_if_unset(ccxt_conne
         get_time_mock.assert_not_called()
 
 
+@pytest.mark.asyncio
 async def test_clear_first_consecutive_authentication_error_at(ccxt_connector):
     ccxt_connector.first_consecutive_authentication_error_at = 123.456
     ccxt_connector.clear_first_consecutive_authentication_error_at()
@@ -292,6 +302,7 @@ async def test_clear_first_consecutive_authentication_error_at(ccxt_connector):
     assert ccxt_connector.first_consecutive_authentication_error_at is None
 
 
+@pytest.mark.asyncio
 async def test_error_describer(ccxt_connector):
     with mock.patch.object(
         ccxt_connector, 'clear_first_consecutive_authentication_error_at', new=mock.Mock()
@@ -499,6 +510,7 @@ class _LazyLoadMarketsMockCCXT:
 
 class TestCcxtConnectorLoadMarketsForSymbols:
 
+    @pytest.mark.asyncio
     async def test_persists_markets_cache_after_lazy_symbol_load(self, ccxt_connector):
         symbol = "BTC/ETH"
         with (
@@ -509,6 +521,7 @@ class TestCcxtConnectorLoadMarketsForSymbols:
 
         persist_markets_cache_mock.assert_called_once()
 
+    @pytest.mark.asyncio
     async def test_skips_cache_persist_when_lazy_load_leaves_markets_empty(self, ccxt_connector):
         lazy_client = _LazyLoadMarketsMockCCXT(populate_markets_on_load=False)
         with (
@@ -521,6 +534,7 @@ class TestCcxtConnectorLoadMarketsForSymbols:
             with pytest.raises(KeyError):
                 ccxt_clients_cache.get_exchange_parsed_markets(client_key)
 
+    @pytest.mark.asyncio
     async def test_accumulates_markets_in_cache_across_lazy_loads(self, ccxt_connector):
         symbol_a = "BTC/ETH"
         symbol_b = "ETH/USDT"
@@ -561,6 +575,7 @@ class _TickerMarketsMockCCXT:
 
 class TestCcxtConnectorGetPriceTicker:
 
+    @pytest.mark.asyncio
     async def test_persists_markets_cache_when_ticker_adds_symbol(self, ccxt_connector):
         symbol = "BTC/ETH"
         ticker_client = _TickerMarketsMockCCXT(symbols_to_add_on_fetch=[symbol])
@@ -576,6 +591,7 @@ class TestCcxtConnectorGetPriceTicker:
 
         persist_markets_cache_if_new_symbols_mock.assert_called_once_with(set())
 
+    @pytest.mark.asyncio
     async def test_skips_cache_persist_when_ticker_does_not_add_symbol(self, ccxt_connector):
         symbol = "BTC/ETH"
         ticker_client = _TickerMarketsMockCCXT()
@@ -592,6 +608,7 @@ class TestCcxtConnectorGetPriceTicker:
 
 class TestCcxtConnectorGetAllCurrenciesPriceTicker:
 
+    @pytest.mark.asyncio
     async def test_persists_markets_cache_when_tickers_add_symbols(self, ccxt_connector):
         symbol_a = "BTC/ETH"
         symbol_b = "ETH/USDT"
@@ -608,6 +625,7 @@ class TestCcxtConnectorGetAllCurrenciesPriceTicker:
 
         persist_markets_cache_if_new_symbols_mock.assert_called_once_with(set())
 
+    @pytest.mark.asyncio
     async def test_skips_cache_persist_when_tickers_do_not_add_symbols(self, ccxt_connector):
         symbol_a = "BTC/ETH"
         symbol_b = "ETH/USDT"
@@ -627,6 +645,7 @@ class TestCcxtConnectorGetAllCurrenciesPriceTicker:
 
 
 class TestLoadSymbolMarketsLock:
+    @pytest.mark.asyncio
     async def test_concurrent_load_symbol_markets_fetches_once(self, exchange_manager):
         ccxt_connector = exchange_connectors.CCXTConnector(exchange_manager.config, exchange_manager)
         ccxt_connector.client = mock.Mock()
@@ -692,6 +711,7 @@ class TestEnsureTimeDifferenceSyncedOnCachedMarkets:
 
         ccxt_connector.exchange_manager.exchange.get_option_value = get_option_value
 
+    @pytest.mark.asyncio
     async def test_load_symbol_markets_calls_load_time_difference_on_cache_hit_when_authenticated(
         self, exchange_manager
     ):
@@ -708,6 +728,7 @@ class TestEnsureTimeDifferenceSyncedOnCachedMarkets:
         load_cache_mock.assert_called_once()
         ccxt_connector.client.load_time_difference.assert_called_once()
 
+    @pytest.mark.asyncio
     async def test_load_symbol_markets_uses_cached_time_difference_without_api_call(
         self, exchange_manager
     ):
@@ -729,6 +750,7 @@ class TestEnsureTimeDifferenceSyncedOnCachedMarkets:
         ccxt_connector.client.load_time_difference.assert_not_called()
         assert ccxt_connector.client.options[ccxt_constants.CCXT_TIME_DIFFERENCE] == cached_time_difference
 
+    @pytest.mark.asyncio
     async def test_load_symbol_markets_does_not_crash_when_time_sync_fails(
         self, exchange_manager
     ):
@@ -747,6 +769,7 @@ class TestEnsureTimeDifferenceSyncedOnCachedMarkets:
 
         ccxt_connector.client.load_time_difference.assert_called_once()
 
+    @pytest.mark.asyncio
     async def test_filtered_load_markets_does_not_call_load_time_difference(
         self, exchange_manager
     ):
@@ -760,6 +783,7 @@ class TestEnsureTimeDifferenceSyncedOnCachedMarkets:
 
         ccxt_connector.client.load_time_difference.assert_not_called()
 
+    @pytest.mark.asyncio
     async def test_load_symbol_markets_skips_time_sync_on_cache_hit_when_unauthenticated(
         self, exchange_manager
     ):
@@ -772,6 +796,7 @@ class TestEnsureTimeDifferenceSyncedOnCachedMarkets:
 
         ccxt_connector.client.load_time_difference.assert_not_called()
 
+    @pytest.mark.asyncio
     async def test_load_symbol_markets_syncs_time_before_markets_fetch(
         self, exchange_manager
     ):
@@ -804,6 +829,7 @@ class TestEnsureTimeDifferenceSyncedOnCachedMarkets:
         assert call_order == ["load_time_difference", "load_markets"]
 
 
+@pytest.mark.asyncio
 async def test_get_deposits_raises_not_supported_on_not_implemented(ccxt_connector):
     ccxt_connector.client.has = {"fetchDeposits": True}
     ccxt_connector.adapter.adapt_transactions = mock.Mock(return_value=[])
@@ -812,6 +838,7 @@ async def test_get_deposits_raises_not_supported_on_not_implemented(ccxt_connect
         await ccxt_connector.get_deposits()
 
 
+@pytest.mark.asyncio
 async def test_get_deposits_passes_blockchain_deposit_transaction_type(ccxt_connector):
     ccxt_connector.client.has = {"fetchDeposits": True}
     ccxt_connector.client.fetch_deposits = mock.AsyncMock(return_value=[{"id": "d1"}])
@@ -825,6 +852,7 @@ async def test_get_deposits_passes_blockchain_deposit_transaction_type(ccxt_conn
     )
 
 
+@pytest.mark.asyncio
 async def test_get_withdrawals_raises_not_supported_on_not_implemented(ccxt_connector):
     ccxt_connector.client.has = {"fetchWithdrawals": True}
     ccxt_connector.adapter.adapt_transactions = mock.Mock(return_value=[])
@@ -833,6 +861,7 @@ async def test_get_withdrawals_raises_not_supported_on_not_implemented(ccxt_conn
         await ccxt_connector.get_withdrawals()
 
 
+@pytest.mark.asyncio
 async def test_get_withdrawals_passes_blockchain_withdrawal_transaction_type(ccxt_connector):
     ccxt_connector.client.has = {"fetchWithdrawals": True}
     ccxt_connector.client.fetch_withdrawals = mock.AsyncMock(return_value=[{"id": "w1"}])
@@ -847,6 +876,7 @@ async def test_get_withdrawals_passes_blockchain_withdrawal_transaction_type(ccx
 
 
 class TestGetDepositsCurrenciesParam:
+    @pytest.mark.asyncio
     async def test_currencies_not_passed_to_ccxt_params(self, ccxt_connector):
         ccxt_connector.client.has = {"fetchDeposits": True}
         ccxt_connector.client.fetch_deposits = mock.AsyncMock(return_value=[{"id": "d1"}])
@@ -860,6 +890,7 @@ class TestGetDepositsCurrenciesParam:
 
 
 class TestGetWithdrawalsCurrenciesParam:
+    @pytest.mark.asyncio
     async def test_currencies_not_passed_to_ccxt_params(self, ccxt_connector):
         ccxt_connector.client.has = {"fetchWithdrawals": True}
         ccxt_connector.client.fetch_withdrawals = mock.AsyncMock(return_value=[{"id": "w1"}])
@@ -901,6 +932,7 @@ class TestGetMyRecentTradesOffsetPagination:
         exchange_manager.exchange.get_option_value = get_option_value
         return connector
 
+    @pytest.mark.asyncio
     async def test_paginates_with_offset_param_when_exhaust_history_true(self, exchange_manager):
         connector = self._create_connector(exchange_manager, pagination_offset="ofs")
         first_page = [{"id": str(trade_index)} for trade_index in range(50)]
@@ -914,6 +946,7 @@ class TestGetMyRecentTradesOffsetPagination:
         second_call_kwargs = connector.client.fetch_my_trades.await_args_list[1].kwargs
         assert second_call_kwargs["params"]["ofs"] == 50
 
+    @pytest.mark.asyncio
     async def test_single_fetch_when_page_not_multiple_of_ten(self, exchange_manager):
         connector = self._create_connector(exchange_manager, pagination_offset="ofs")
         connector.client.fetch_my_trades = mock.AsyncMock(
@@ -925,6 +958,7 @@ class TestGetMyRecentTradesOffsetPagination:
         assert len(result) == 9
         connector.client.fetch_my_trades.assert_awaited_once()
 
+    @pytest.mark.asyncio
     async def test_single_fetch_when_offset_option_unset(self, exchange_manager):
         connector = self._create_connector(exchange_manager, pagination_offset=None)
         connector.client.fetch_my_trades = mock.AsyncMock(return_value=[{"id": "1"}] * 50)
@@ -934,6 +968,7 @@ class TestGetMyRecentTradesOffsetPagination:
         assert len(result) == 50
         connector.client.fetch_my_trades.assert_awaited_once()
 
+    @pytest.mark.asyncio
     async def test_single_fetch_when_exhaust_history_false(self, exchange_manager):
         connector = self._create_connector(exchange_manager, pagination_offset="ofs")
         connector.client.fetch_my_trades = mock.AsyncMock(return_value=[{"id": "1"}] * 50)
@@ -943,6 +978,7 @@ class TestGetMyRecentTradesOffsetPagination:
         assert len(result) == 50
         connector.client.fetch_my_trades.assert_awaited_once()
 
+    @pytest.mark.asyncio
     async def test_stops_after_max_pagination_requests(self, exchange_manager, caplog):
         import logging
         caplog.set_level(logging.WARNING)
@@ -988,6 +1024,7 @@ class TestGetMyRecentTradesCcxtPaginate:
         exchange_manager.exchange.get_option_value = get_option_value
         return connector
 
+    @pytest.mark.asyncio
     async def test_paginate_true_when_exhaust_history_and_option_enabled(self, exchange_manager):
         connector = self._create_connector(exchange_manager, use_ccxt_paginate=True)
         connector.client.fetch_my_trades = mock.AsyncMock(return_value=[{"id": "1"}])
@@ -997,6 +1034,7 @@ class TestGetMyRecentTradesCcxtPaginate:
         call_kwargs = connector.client.fetch_my_trades.await_args.kwargs
         assert call_kwargs["params"]["paginate"] is True
 
+    @pytest.mark.asyncio
     async def test_no_paginate_when_exhaust_history_false(self, exchange_manager):
         connector = self._create_connector(exchange_manager, use_ccxt_paginate=True)
         connector.client.fetch_my_trades = mock.AsyncMock(return_value=[{"id": "1"}])
@@ -1006,6 +1044,7 @@ class TestGetMyRecentTradesCcxtPaginate:
         call_kwargs = connector.client.fetch_my_trades.await_args.kwargs
         assert "paginate" not in call_kwargs["params"]
 
+    @pytest.mark.asyncio
     async def test_single_fetch_when_option_disabled(self, exchange_manager):
         connector = self._create_connector(exchange_manager, use_ccxt_paginate=False)
         connector.client.fetch_my_trades = mock.AsyncMock(return_value=[{"id": "1"}] * 50)
@@ -1018,6 +1057,7 @@ class TestGetMyRecentTradesCcxtPaginate:
 
 
 class TestGetMyRecentTradesExhaustPrecedence:
+    @pytest.mark.asyncio
     async def test_offset_pagination_wins_over_ccxt_paginate(self, exchange_manager):
         connector = exchange_connectors.CCXTConnector(exchange_manager.config, exchange_manager)
         connector.client = mock.Mock()
@@ -1066,6 +1106,7 @@ class TestGetClosedOrdersCcxtPaginate:
         exchange_manager.exchange.get_option_value = get_option_value
         return connector
 
+    @pytest.mark.asyncio
     async def test_paginate_true_when_exhaust_history_and_option_enabled(self, exchange_manager):
         connector = self._create_connector(exchange_manager, use_ccxt_paginate=True)
 
@@ -1074,6 +1115,7 @@ class TestGetClosedOrdersCcxtPaginate:
         call_kwargs = connector.client.fetch_closed_orders.await_args.kwargs
         assert call_kwargs["params"]["paginate"] is True
 
+    @pytest.mark.asyncio
     async def test_no_paginate_when_exhaust_history_false(self, exchange_manager):
         connector = self._create_connector(exchange_manager, use_ccxt_paginate=True)
 

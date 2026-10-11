@@ -20,7 +20,7 @@ import pytest
 
 import octobot_commons.monitored_process as monitored_process
 
-pytestmark = pytest.mark.asyncio
+
 
 
 class _SimpleProcess(monitored_process.MonitoredProcess):
@@ -75,6 +75,7 @@ def _make_mock_process(
     proc.kill = mock.MagicMock()
     return proc
 
+@pytest.mark.asyncio
 async def test_happy_path_readiness_in_stdout():
     proc = _make_mock_process(stdout_lines=["startup log", "ready", "more output"])
     with mock.patch("asyncio.create_subprocess_exec", return_value=proc):
@@ -83,6 +84,7 @@ async def test_happy_path_readiness_in_stdout():
             assert p._monitor_error is None
 
 
+@pytest.mark.asyncio
 async def test_happy_path_readiness_in_stderr():
     proc = _make_mock_process(stderr_lines=["ready"])
     with mock.patch("asyncio.create_subprocess_exec", return_value=proc):
@@ -90,6 +92,7 @@ async def test_happy_path_readiness_in_stderr():
             assert p._ready_event.is_set()
 
 
+@pytest.mark.asyncio
 async def test_subprocess_args_passed_correctly():
     proc = _make_mock_process(stdout_lines=["ready"])
     with mock.patch("asyncio.create_subprocess_exec", return_value=proc) as mock_exec:
@@ -100,6 +103,7 @@ async def test_subprocess_args_passed_correctly():
     assert call_args.args == ("mybin", "--flag")
 
 
+@pytest.mark.asyncio
 async def test_env_and_cwd_defaults():
     proc = _make_mock_process(stdout_lines=["ready"])
     with mock.patch("asyncio.create_subprocess_exec", return_value=proc) as mock_exec:
@@ -110,6 +114,7 @@ async def test_env_and_cwd_defaults():
     assert kwargs["env"] is None
 
 
+@pytest.mark.asyncio
 async def test_stdout_lines_go_to_stdout_buffer():
     proc = _make_mock_process(stdout_lines=["ready", "line2"])
     with mock.patch("asyncio.create_subprocess_exec", return_value=proc):
@@ -121,6 +126,7 @@ async def test_stdout_lines_go_to_stdout_buffer():
             assert len(p._stderr_buffer) == 0
 
 
+@pytest.mark.asyncio
 async def test_stderr_lines_go_to_stderr_buffer():
     proc = _make_mock_process(stdout_lines=["ready"], stderr_lines=["err1", "err2"])
     with mock.patch("asyncio.create_subprocess_exec", return_value=proc):
@@ -130,6 +136,7 @@ async def test_stderr_lines_go_to_stderr_buffer():
             assert "err2" in p._stderr_buffer
 
 
+@pytest.mark.asyncio
 async def test_graceful_shutdown_calls_terminate():
     proc = _make_mock_process(stdout_lines=["ready"])
     # returncode is None while running; set to 0 after terminate
@@ -154,6 +161,7 @@ async def test_graceful_shutdown_calls_terminate():
     proc.kill.assert_not_called()
 
 
+@pytest.mark.asyncio
 async def test_forced_kill_when_terminate_times_out():
     proc = _make_mock_process(stdout_lines=["ready"])
     proc.returncode = None
@@ -177,6 +185,7 @@ async def test_forced_kill_when_terminate_times_out():
     proc.kill.assert_called_once()
 
 
+@pytest.mark.asyncio
 async def test_error_pattern_in_stdout_raises_output_error():
     proc = _make_mock_process(stdout_lines=["starting up", "FATAL: something broke"])
     with mock.patch("asyncio.create_subprocess_exec", return_value=proc):
@@ -187,6 +196,7 @@ async def test_error_pattern_in_stdout_raises_output_error():
     assert exc_info.value.stream == "stdout"
 
 
+@pytest.mark.asyncio
 async def test_error_pattern_in_stderr_raises_output_error():
     proc = _make_mock_process(
         stdout_lines=["ready"],
@@ -200,6 +210,7 @@ async def test_error_pattern_in_stderr_raises_output_error():
     assert exc_info.value.stream == "stderr"
 
 
+@pytest.mark.asyncio
 async def test_readiness_timeout_raises_ready_timeout_error():
     class _NoReadyProcess(monitored_process.MonitoredProcess):
         READINESS_STRING = "never-appears"
@@ -227,6 +238,7 @@ async def test_readiness_timeout_raises_ready_timeout_error():
     assert exc_info.value.timeout_seconds == 0.05
 
 
+@pytest.mark.asyncio
 async def test_premature_exit_nonzero_raises_exited_error():
     proc = _make_mock_process(
         stderr_lines=["something went wrong"],
@@ -248,6 +260,7 @@ async def test_premature_exit_nonzero_raises_exited_error():
     assert exc_info.value.exit_code == 1
 
 
+@pytest.mark.asyncio
 async def test_configuration_error_on_missing_executable():
     with mock.patch(
         "asyncio.create_subprocess_exec",
@@ -258,6 +271,7 @@ async def test_configuration_error_on_missing_executable():
                 pass
 
 
+@pytest.mark.asyncio
 async def test_monitor_error_reraised_on_aexit():
     """An error captured after __aenter__ is re-raised when the context exits."""
     proc = _make_mock_process(stdout_lines=["ready"])
@@ -276,6 +290,7 @@ async def test_monitor_error_reraised_on_aexit():
                 await asyncio.sleep(0.1)
 
 
+@pytest.mark.asyncio
 async def test_monitor_error_not_suppressed_after_stdout_buffer_clear():
     """Monitor error is still raised even though __aexit__ clears stdout buffer first."""
     proc = _make_mock_process(stdout_lines=["ready"])
@@ -321,6 +336,7 @@ class _CustomProcess(_SimpleProcess):
         return _CustomConfigError(message)
 
 
+@pytest.mark.asyncio
 async def test_custom_output_error_factory():
     proc = _make_mock_process(stdout_lines=["FATAL: boom"])
     with mock.patch("asyncio.create_subprocess_exec", return_value=proc):
@@ -329,6 +345,7 @@ async def test_custom_output_error_factory():
                 pass
 
 
+@pytest.mark.asyncio
 async def test_custom_ready_timeout_error_factory():
     class _NeverReady(_CustomProcess):
         READINESS_STRING = "never-appears"
@@ -349,6 +366,7 @@ async def test_custom_ready_timeout_error_factory():
     block.set()
 
 
+@pytest.mark.asyncio
 async def test_custom_configuration_error_factory():
     with mock.patch(
         "asyncio.create_subprocess_exec",
@@ -358,6 +376,7 @@ async def test_custom_configuration_error_factory():
             async with _CustomProcess():
                 pass
 
+@pytest.mark.asyncio
 async def test_output_error_includes_buffers():
     proc = _make_mock_process(
         stdout_lines=["stdout line 1", "FATAL: crash"],
@@ -372,6 +391,7 @@ async def test_output_error_includes_buffers():
     assert "stdout line 1" in err.std_out_buffer
 
 
+@pytest.mark.asyncio
 async def test_exited_error_includes_stderr():
     proc = _make_mock_process(
         stderr_lines=["crash info"],
@@ -390,6 +410,7 @@ async def test_exited_error_includes_stderr():
     assert exc_info.value.exit_code == 3
 
 
+@pytest.mark.asyncio
 async def test_log_output_logs_last_lines_from_buffers():
     """log_output logs the last N lines from stdout and stderr buffers."""
     proc = _make_mock_process(
@@ -410,6 +431,7 @@ async def test_log_output_logs_last_lines_from_buffers():
             mock_info.assert_any_call("stderr:\n%s", "err2\nerr3")
 
 
+@pytest.mark.asyncio
 async def test_log_output_handles_empty_buffers():
     """log_output does not log stdout/stderr sections when buffers are empty."""
     proc = _make_mock_process(stdout_lines=["ready"])
@@ -429,6 +451,7 @@ async def test_log_output_handles_empty_buffers():
             mock_info.assert_any_call("stdout:\n%s", "ready")
 
 
+@pytest.mark.asyncio
 async def test_empty_readiness_string_never_fires_ready():
     """When READINESS_STRING is empty, the ready event is never set by output."""
 

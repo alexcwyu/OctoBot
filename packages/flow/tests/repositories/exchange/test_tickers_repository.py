@@ -8,10 +8,11 @@ import octobot_trading.constants as trading_constants
 
 import octobot_flow.repositories.exchange.tickers_repository as tickers_repository_module
 
-pytestmark = pytest.mark.asyncio
+
 
 
 class TestTickersRepositoryEnsureTemporaryTickerChannel:
+    @pytest.mark.asyncio
     async def test_delegates_to_channel_producer_ensure(self):
         exchange_manager = mock.Mock()
         with mock.patch.object(

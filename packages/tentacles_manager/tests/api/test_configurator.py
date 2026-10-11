@@ -28,11 +28,12 @@ from octobot_tentacles_manager.util.tentacle_fetching import fetch_and_extract_t
 from octobot_tentacles_manager.workers.install_worker import InstallWorker
 
 # All test coroutines will be treated as marked.
-pytestmark = pytest.mark.asyncio
+
 
 temp_dir = "temp_tests"
 
 
+@pytest.mark.asyncio
 async def test_update_activation_configuration():
     _cleanup(False)
     await fetch_and_extract_tentacles(temp_dir, join("tests", "static", "tentacles.zip"), None)

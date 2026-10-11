@@ -28,8 +28,6 @@ import octobot.enums as enums
 import octobot_commons.enums as commons_enums
 
 # All test coroutines will be treated as marked.
-pytestmark = pytest.mark.asyncio
-
 AUTH_URL = "https://oh.fake/auth"
 
 
@@ -79,6 +77,7 @@ async def authenticated_feed():
         await authenticator.stop()
 
 
+@pytest.mark.asyncio
 async def test_start_and_connect(authenticated_feed):
     authenticated_feed.feed_callbacks = {}
     with mock.patch.object(authenticated_feed.authenticator, "is_logged_in", mock.Mock(return_value=True)) \
@@ -122,6 +121,7 @@ async def test_start_and_connect(authenticated_feed):
              mock.patch.object(authenticated_feed.authenticator, "is_logged_in", mock.Mock(return_value=False)):
                 await authenticated_feed.start(None)
 
+@pytest.mark.asyncio
 async def test_connection(authenticated_feed):
     with mock.patch.object(authenticated_feed.authenticator, "is_logged_in", mock.Mock(return_value=True)) \
          as is_logged_in_mock:
@@ -141,6 +141,7 @@ async def test_connection(authenticated_feed):
             is_logged_in_mock.assert_called_once()
 
 
+@pytest.mark.asyncio
 async def test_subscribe_to_table(authenticated_feed):
     channel_mock = await authenticated_feed._realtime_client.channel()
     authenticated_feed._realtime_client.channel.reset_mock()
@@ -159,6 +160,7 @@ async def test_subscribe_to_table(authenticated_feed):
     )
 
 
+@pytest.mark.asyncio
 async def test_register_feed_callback(authenticated_feed):
     assert authenticated_feed.is_signal_receiver is False
     assert authenticated_feed.feed_callbacks == {}
@@ -215,6 +217,7 @@ async def test_register_feed_callback(authenticated_feed):
         _subscribe_to_table_if_necessary_mock.assert_not_called()
 
 
+@pytest.mark.asyncio
 async def test_send(authenticated_feed):
     assert authenticated_feed.is_signal_receiver is False
     assert authenticated_feed.is_signal_emitter is False
@@ -240,6 +243,7 @@ async def test_send(authenticated_feed):
         assert uuid4_mock.call_count == 2   # 2 calls to _build_message
 
 
+@pytest.mark.asyncio
 async def test_message_callback(authenticated_feed):
     message = {"text": "ploppp"}
     channel_type = commons_enums.CommunityChannelTypes.SIGNAL

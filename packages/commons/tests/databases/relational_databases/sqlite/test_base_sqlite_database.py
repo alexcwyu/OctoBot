@@ -10,10 +10,11 @@ import pytest
 import octobot_commons.errors as errors
 import octobot_commons.databases.relational_databases.sqlite.base_sqlite_database as base_sqlite_database_module
 
-pytestmark = pytest.mark.asyncio
+
 
 
 class TestBaseSQLiteDatabaseConnectionPragmas:
+    @pytest.mark.asyncio
     async def test_pragma_applied_on_initialize(self):
         with tempfile.NamedTemporaryFile(delete=False, suffix=".db") as temp_file:
             file_name = temp_file.name
@@ -30,6 +31,7 @@ class TestBaseSQLiteDatabaseConnectionPragmas:
 
 
 class TestBaseSQLiteDatabaseInitializeStop:
+    @pytest.mark.asyncio
     async def test_initialize_and_stop(self):
         with tempfile.NamedTemporaryFile(delete=False, suffix=".db") as temp_file:
             file_name = temp_file.name
@@ -42,6 +44,7 @@ class TestBaseSQLiteDatabaseInitializeStop:
         finally:
             os.remove(file_name)
 
+    @pytest.mark.asyncio
     async def test_stop_succeeds_when_checkpoint_would_be_busy(self):
         with tempfile.NamedTemporaryFile(delete=False, suffix=".db") as temp_file:
             file_name = temp_file.name
@@ -80,6 +83,7 @@ class TestBaseSQLiteDatabaseExecuteFetch:
             await database.stop()
             os.remove(file_name)
 
+    @pytest.mark.asyncio
     async def test_execute_fetchone_fetchall_and_commit(self):
         async with self._empty_database() as database:
             await database.execute(
@@ -92,6 +96,7 @@ class TestBaseSQLiteDatabaseExecuteFetch:
             rows = await database.fetchall("SELECT value FROM sample")
             assert rows == [("first",)]
 
+    @pytest.mark.asyncio
     async def test_executemany(self):
         async with self._empty_database() as database:
             await database.executemany(
@@ -128,16 +133,19 @@ class TestBaseSQLiteDatabaseReadOnly:
             await read_only_database.stop()
             os.remove(file_name)
 
+    @pytest.mark.asyncio
     async def test_fetchall_allowed_on_read_only_connection(self):
         async with self._database_with_sample_table() as database:
             rows = await database.fetchall("SELECT value FROM sample")
             assert rows == [("stored",)]
 
+    @pytest.mark.asyncio
     async def test_execute_raises_on_read_only_connection(self):
         async with self._database_with_sample_table() as database:
             with pytest.raises(errors.DatabaseReadOnlyError):
                 await database.execute("INSERT INTO sample (value) VALUES (?)", ("blocked",))
 
+    @pytest.mark.asyncio
     async def test_commit_raises_on_read_only_connection(self):
         async with self._database_with_sample_table() as database:
             with pytest.raises(errors.DatabaseReadOnlyError):
@@ -145,6 +153,7 @@ class TestBaseSQLiteDatabaseReadOnly:
 
 
 class TestSqliteDatabaseWriteLock:
+    @pytest.mark.asyncio
     async def test_concurrent_write_locks_for_same_path_serialize(self):
         with tempfile.NamedTemporaryFile(delete=False, suffix=".db") as temp_file:
             file_name = temp_file.name

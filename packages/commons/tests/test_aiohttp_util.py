@@ -16,15 +16,17 @@
 import contextlib
 import mock
 import pytest
+import asyncio
 import aiohttp
 import certifi
 
 import octobot_commons.aiohttp_util as aiohttp_util
 import octobot_commons.constants as commons_constants
 
-pytestmark = pytest.mark.asyncio
 
 
+
+@pytest.mark.asyncio
 async def test_get_ssl_fallback_aiohttp_client_session():
     origin_where = certifi.where
     ok_get_mock_calls = []
@@ -54,6 +56,7 @@ async def test_get_ssl_fallback_aiohttp_client_session():
             assert len(ko_get_mock) == 0
             where_mock.assert_not_called()
             await session.close()
+            await asyncio.sleep(0.25)
 
         # need for certifi
         with mock.patch.object(aiohttp.ClientSession, "get", _ko_get_mock):
@@ -66,6 +69,7 @@ async def test_get_ssl_fallback_aiohttp_client_session():
                 where_mock.assert_called_once()
 
 
+@pytest.mark.asyncio
 async def test_fetch_test_url_with_and_without_certify():
     base_session = aiohttp.ClientSession()
     certify_session = aiohttp_util._get_certify_aiohttp_client_session()
@@ -83,8 +87,10 @@ async def test_fetch_test_url_with_and_without_certify():
             await base_session.close()
         if certify_session:
             await certify_session.close()
+        await asyncio.sleep(0.25)
 
 
+@pytest.mark.asyncio
 async def test_certify_aiohttp_client_session():
     origin_where = certifi.where
 
@@ -94,6 +100,7 @@ async def test_certify_aiohttp_client_session():
             where_mock.assert_called_once()
 
 
+@pytest.mark.asyncio
 async def test_counter_client_session():
     async with aiohttp_util.CounterClientSession("test") as session:
         assert isinstance(session, aiohttp.ClientSession)
@@ -107,3 +114,4 @@ async def test_counter_client_session():
             assert session.per_min.paths == {"[GET] /": 1}
             assert session.per_hour.paths == {"[GET] /": 1}
             assert session.per_day.paths == {"[GET] /": 1}
+    await asyncio.sleep(0.25)

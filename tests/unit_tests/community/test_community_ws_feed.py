@@ -28,8 +28,6 @@ import octobot_commons.enums as commons_enums
 import octobot_commons.signals as commons_signals
 
 # All test coroutines will be treated as marked.
-pytestmark = pytest.mark.asyncio
-
 HOST = "127.0.0.1"
 PORT = 8765
 TOKEN = "acb1"
@@ -57,7 +55,7 @@ class MockedResponse:
 
 def _mocked_signal():
     return commons_signals.Signal(
-        "identifier", 
+        "identifier",
         {
             "key1": 11,
             "key2": "random value"
@@ -134,6 +132,7 @@ async def connected_community_feed(authenticator):
             await feed.stop()
 
 
+@pytest.mark.asyncio
 async def test_consume_base_message(community_echo_server, connected_community_feed):
     consume_mock = connected_community_feed.feed_callbacks[commons_enums.CommunityChannelTypes.SIGNAL][None][0]
     consume_mock.assert_not_called()
@@ -147,6 +146,7 @@ async def test_consume_base_message(community_echo_server, connected_community_f
     consume_mock.assert_called_once_with({'v': '1.0.0', 't': 't', 'i': 1, 's': json.dumps(DATA_DICT)})
 
 
+@pytest.mark.asyncio
 async def test_consume_signal_message(community_echo_server, connected_community_feed):
     # use strat1 as identifier
     consume_mock = connected_community_feed.feed_callbacks[commons_enums.CommunityChannelTypes.SIGNAL][None][0]
@@ -162,6 +162,7 @@ async def test_consume_signal_message(community_echo_server, connected_community
     consume_mock.assert_called_once_with({'v': '1.0.0', 't': 't', 'i': 1, 's': _mocked_signal().to_dict()})
 
 
+@pytest.mark.asyncio
 async def test_send_base_message(community_mocked_consumer_server, connected_community_feed):
     community_mocked_consumer_server.assert_called_once_with(
         '{"command": "subscribe", "identifier": "{\\"channel\\": \\"Spree::MessageChannel\\"}", "data": {}}'
@@ -190,6 +191,7 @@ async def test_send_base_message(community_mocked_consumer_server, connected_com
     consume_mock.assert_called_once_with({'v': '1.0.0', 't': 't', 'i': 1, 's': 2})
 
 
+@pytest.mark.asyncio
 async def test_send_signal_message(community_mocked_consumer_server, connected_community_feed):
     community_mocked_consumer_server.assert_called_once_with(
         '{"command": "subscribe", "identifier": "{\\"channel\\": \\"Spree::MessageChannel\\"}", "data": {}}'
@@ -209,6 +211,7 @@ async def test_send_signal_message(community_mocked_consumer_server, connected_c
     consume_mock.assert_called_once_with({'v': '1.0.0', 't': 't', 'i': 1, 's': 1})
 
 
+@pytest.mark.asyncio
 async def test_reconnect(authenticator):
     server = client = None
     try:

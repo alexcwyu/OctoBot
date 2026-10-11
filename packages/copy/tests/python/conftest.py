@@ -27,7 +27,7 @@ import octobot_backtesting.time as backtesting_time
 import octobot_commons.tests.test_config as test_config_module
 import octobot_trading.exchanges
 
-pytestmark = pytest.mark.asyncio
+
 
 DEFAULT_EXCHANGE_NAME = "binanceus"
 DEFAULT_FUTURE_EXCHANGE_NAME = "bybit"

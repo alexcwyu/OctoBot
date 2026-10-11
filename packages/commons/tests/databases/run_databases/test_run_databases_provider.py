@@ -20,7 +20,7 @@ import octobot_commons.databases as databases
 
 
 # All test coroutines will be treated as marked.
-pytestmark = pytest.mark.asyncio
+
 
 
 @pytest.fixture
@@ -36,18 +36,21 @@ def run_database_provider():
     return databases.RunDatabasesProvider.instance()
 
 
+@pytest.mark.asyncio
 async def test_add_bot_id(run_database_provider, run_database_identifier):
     await run_database_provider.add_bot_id("123", run_database_identifier)
     run_database_provider.get_run_databases_identifier("123").initialize.assert_called_once()
     assert "123" in run_database_provider.run_databases
 
 
+@pytest.mark.asyncio
 async def test_has_bot_id(run_database_provider, run_database_identifier):
     await run_database_provider.add_bot_id("123", run_database_identifier)
     assert run_database_provider.has_bot_id("123") is True
     assert run_database_provider.has_bot_id("1232") is False
 
 
+@pytest.mark.asyncio
 async def test_close(run_database_provider, run_database_identifier):
     await run_database_provider.add_bot_id("123", run_database_identifier)
     await run_database_provider.close("123")

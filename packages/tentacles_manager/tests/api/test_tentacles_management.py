@@ -12,10 +12,11 @@ import octobot_tentacles_manager.constants as constants
 import octobot_tentacles_manager.api.util.tentacles_management as tentacles_management
 
 
-pytestmark = pytest.mark.asyncio
+
 
 
 class TestManageTentaclesFilesystemLock:
+    @pytest.mark.asyncio
     @pytest.mark.asyncio
     async def test_manage_tentacles_acquires_filesystem_lock(self):
         worker = mock.Mock()
@@ -48,6 +49,7 @@ class TestManageTentaclesFilesystemLock:
         ]
         worker.process.assert_awaited_once_with(None)
 
+    @pytest.mark.asyncio
     @pytest.mark.asyncio
     async def test_manage_tentacles_lock_timeout_returns_error(self):
         worker = mock.Mock()

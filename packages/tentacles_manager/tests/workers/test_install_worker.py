@@ -32,9 +32,10 @@ from octobot_tentacles_manager.util.tentacle_fetching import fetch_and_extract_t
 from tests import event_loop, clean, fake_profiles, TEMP_DIR, OTHER_PROFILE
 
 # All test coroutines will be treated as marked.
-pytestmark = pytest.mark.asyncio
 
 
+
+@pytest.mark.asyncio
 async def test_install_two_tentacles(clean):
     _enable_loggers()
     tentacles_path = os.path.join("tests", "static", "tentacles.zip")
@@ -75,6 +76,7 @@ async def test_install_two_tentacles(clean):
         }
 
 
+@pytest.mark.asyncio
 async def test_install_one_tentacle_with_requirement(clean):
     async with aiohttp.ClientSession() as session:
         _enable_loggers()
@@ -114,6 +116,7 @@ async def test_install_one_tentacle_with_requirement(clean):
         os.path.join(TENTACLES_PATH, "Services", "Services_bases", "reddit_service", "reddit.py"))
 
 
+@pytest.mark.asyncio
 async def test_install_all_tentacles(clean):
     _enable_loggers()
     tentacles_path = os.path.join("tests", "static", "tentacles.zip")
@@ -165,6 +168,7 @@ async def test_install_all_tentacles(clean):
         }
 
 
+@pytest.mark.asyncio
 async def test_install_all_tentacles_with_profile(clean):
     _enable_loggers()
     profile_path = os.path.join(user_root_folder_provider.get_user_profiles_folder(), "many_traded_elements")
@@ -194,6 +198,7 @@ async def test_install_all_tentacles_with_profile(clean):
     assert os.path.isfile(os.path.join(profile_path, commons_constants.TENTACLES_SPECIFIC_CONFIG_FOLDER, "TwitterNewsEvaluator.json"))
 
 
+@pytest.mark.asyncio
 async def test_profiles_update(clean, fake_profiles):
     _enable_loggers()
     tentacles_path = os.path.join("tests", "static", "tentacles.zip")
@@ -237,6 +242,7 @@ async def test_profiles_update(clean, fake_profiles):
             assert ref_config == json.load(other_profile_config_file)
 
 
+@pytest.mark.asyncio
 async def test_install_all_tentacles_twice(clean):
     await fetch_and_extract_tentacles(TEMP_DIR, os.path.join("tests", "static", "tentacles.zip"), None)
     worker = InstallWorker(TEMP_DIR, TENTACLES_PATH, DEFAULT_BOT_PATH, False, None)
@@ -248,6 +254,7 @@ async def test_install_all_tentacles_twice(clean):
     assert trading_mode_files_count == 5
 
 
+@pytest.mark.asyncio
 async def test_install_all_tentacles_fetching_requirements(clean):
     async with aiohttp.ClientSession() as session:
         _enable_loggers()

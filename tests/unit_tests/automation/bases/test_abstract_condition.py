@@ -50,20 +50,20 @@ class FailingCondition(AbstractCondition):
 
 
 # All test coroutines will be treated as marked.
-pytestmark = pytest.mark.asyncio
-
-
 class TestAbstractCondition:
+    @pytest.mark.asyncio
     async def test_call_process_returns_true_when_evaluate_passes(self):
         condition = PassingCondition()
         result = await condition.call_process(ExecutionDetails(0, None, None))
         assert result is True
 
+    @pytest.mark.asyncio
     async def test_call_process_returns_false_when_evaluate_fails(self):
         condition = FailingCondition()
         result = await condition.call_process(ExecutionDetails(0, None, None))
         assert result is False
 
+    @pytest.mark.asyncio
     async def test_call_process_updates_last_execution_details_on_success(self):
         condition = PassingCondition()
         condition.last_execution_details.timestamp = 123
@@ -74,6 +74,7 @@ class TestAbstractCondition:
         # last exec details is updated
         assert condition.last_execution_details.timestamp > 123
 
+    @pytest.mark.asyncio
     async def test_call_process_does_not_update_last_execution_details_on_failure(self):
         condition = FailingCondition()
         condition.last_execution_details.timestamp = 123

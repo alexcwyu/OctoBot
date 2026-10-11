@@ -39,7 +39,7 @@ from octobot_trading.exchanges.traders.trader_simulator import TraderSimulator
 from octobot_trading.api.exchange import cancel_ccxt_throttle_task
 from tests.personal_data.orders import created_order
 
-pytestmark = pytest.mark.asyncio
+
 
 
 class TestOrderFactory:
@@ -62,6 +62,7 @@ class TestOrderFactory:
         cancel_ccxt_throttle_task()
         await exchange_manager.stop()
 
+    @pytest.mark.asyncio
     async def test_parse_order_type(self):
         _, exchange_manager, trader_inst = await self.init_default()
 
@@ -114,6 +115,7 @@ class TestOrderFactory:
 
         await self.stop(exchange_manager)
 
+    @pytest.mark.asyncio
     async def test_create_order_from_dict(self):
         price = decimal.Decimal("100")
         quantity = decimal.Decimal("2")
@@ -193,10 +195,11 @@ class TestOrderFactory:
 
         await self.stop(exchange_manager)
 
+    @pytest.mark.asyncio
     async def test_create_order_from_order_storage_details_with_simple_order(self):
         _, exchange_manager, trader_inst = await self.init_default()
         try:
-        
+
             order = personal_data.BuyLimitOrder(trader_inst)
             order.update(order_type=TraderOrderType.BUY_LIMIT,
                          symbol="BTC/USDT",
@@ -252,6 +255,7 @@ class TestOrderFactory:
         finally:
             await self.stop(exchange_manager)
 
+    @pytest.mark.asyncio
     async def test_create_order_from_order_storage_details_with_trailing_profile(self):
         _, exchange_manager, trader_inst = await self.init_default()
 
@@ -275,6 +279,7 @@ class TestOrderFactory:
         assert created_order.trailing_profile == trailing_profile
         await self.stop(exchange_manager)
 
+    @pytest.mark.asyncio
     async def test_create_order_from_order_storage_details_with_cancel_policy(self):
         _, exchange_manager, trader_inst = await self.init_default()
 
@@ -299,10 +304,11 @@ class TestOrderFactory:
         )
         assert created_order.cancel_policy == cancel_policy
         await self.stop(exchange_manager)
-    
+
+    @pytest.mark.asyncio
     async def test_create_order_from_order_storage_details_with_groups(self):
-        _, exchange_manager, trader_inst = await self.init_default()  
-        
+        _, exchange_manager, trader_inst = await self.init_default()
+
         order = personal_data.BuyLimitOrder(trader_inst)
         group = exchange_manager.exchange_personal_data.orders_manager.create_group(
             personal_data.OneCancelsTheOtherOrderGroup, group_name="plop",
@@ -316,7 +322,7 @@ class TestOrderFactory:
                      group=group)
         order_storage_details = orders_storage._format_order(order, exchange_manager)
         order_storage_details[enums.StoredOrdersAttr.GROUP.value][enums.StoredOrdersAttr.GROUP_ID.value] = "plop2"
-    
+
         pending_groups = {}
         created_order = await personal_data.create_order_from_order_storage_details(
             order_storage_details, exchange_manager, pending_groups
@@ -331,9 +337,10 @@ class TestOrderFactory:
         assert pending_groups["plop2"].active_order_swap_strategy == personal_data.StopFirstActiveOrderSwapStrategy(123)
         await self.stop(exchange_manager)
 
+    @pytest.mark.asyncio
     async def test_create_order_from_order_storage_details_with_chained_orders_with_group_and_trailing_profile_and_cancel_policy(self):
         _, exchange_manager, trader_inst = await self.init_default()
-    
+
         order = personal_data.BuyLimitOrder(trader_inst)
         group_1 = exchange_manager.exchange_personal_data.orders_manager.create_group(
             personal_data.OneCancelsTheOtherOrderGroup,
@@ -381,7 +388,7 @@ class TestOrderFactory:
         await chained_order_3.set_as_chained_order(chained_order_1, False, {}, False)
         chained_order_1.add_chained_order(chained_order_3)
         order_storage_details = orders_storage._format_order(order, exchange_manager)
-    
+
         pending_groups = {}
         created_order = await personal_data.create_order_from_order_storage_details(
             order_storage_details, exchange_manager, pending_groups
@@ -397,7 +404,7 @@ class TestOrderFactory:
         assert len(chained_orders) == 2
         for chained_order in chained_orders:
             assert chained_order.order_group is group_1
-    
+
         assert chained_orders[0].triggered_by is created_order
         assert chained_orders[0].has_been_bundled is False
         assert chained_orders[0].exchange_creation_params == {}
@@ -415,7 +422,7 @@ class TestOrderFactory:
         assert second_level_chained_orders[0].triggered_by is chained_orders[0]
         assert second_level_chained_orders[0].has_been_bundled is False
         assert second_level_chained_orders[0].exchange_creation_params == {}
-        assert second_level_chained_orders[0].trailing_profile is None  
+        assert second_level_chained_orders[0].trailing_profile is None
         assert second_level_chained_orders[0].cancel_policy is None
         await self.stop(exchange_manager)
 
@@ -525,6 +532,7 @@ class TestOrderFactoryClass:
         exchange.supports_order_type.assert_called_once_with(enums.TradeOrderType.STOP_LOSS)
 
     @pytest.mark.asyncio
+    @pytest.mark.asyncio
     async def test_order_factory_get_computed_price(self):
         exchange_manager = mock.Mock(exchange_name="test_exchange")
         factory = order_factory_module.OrderFactory(exchange_manager, None, None, False, False)
@@ -540,6 +548,7 @@ class TestOrderFactoryClass:
         )
 
     @pytest.mark.asyncio
+    @pytest.mark.asyncio
     async def test_order_factory_get_computed_quantity_returns_zero_for_empty_input(self):
         exchange_manager = mock.Mock()
         factory = order_factory_module.OrderFactory(exchange_manager, None, None, False, False)
@@ -554,6 +563,7 @@ class TestOrderFactoryClass:
             )
             assert result == constants.ZERO
 
+    @pytest.mark.asyncio
     @pytest.mark.asyncio
     async def test_order_factory_get_computed_quantity_delegates_to_get_amount_from_input_amount(self):
         exchange_manager = mock.Mock()
@@ -579,6 +589,7 @@ class TestOrderFactoryClass:
         )
 
     @pytest.mark.asyncio
+    @pytest.mark.asyncio
     async def test_order_factory_create_stop_orders_early_return_when_no_stop_loss_price(self):
         exchange_manager = mock.Mock()
         factory = order_factory_module.OrderFactory(exchange_manager, None, None, False, False)
@@ -591,6 +602,7 @@ class TestOrderFactoryClass:
         assert chained_orders == []
         assert params == {}
 
+    @pytest.mark.asyncio
     @pytest.mark.asyncio
     async def test_order_factory_create_stop_orders_creates_chained_order_when_stop_loss_price_set(self):
         _, exchange_manager, trader_inst = await self.init_default()
@@ -630,6 +642,7 @@ class TestOrderFactoryClass:
             await self.stop(exchange_manager)
 
     @pytest.mark.asyncio
+    @pytest.mark.asyncio
     async def test_order_factory_create_take_profit_orders_early_return_when_no_take_profit_prices(self):
         exchange_manager = mock.Mock()
         factory = order_factory_module.OrderFactory(exchange_manager, None, None, False, False)
@@ -642,6 +655,7 @@ class TestOrderFactoryClass:
         assert chained_orders == []
         assert params == {}
 
+    @pytest.mark.asyncio
     @pytest.mark.asyncio
     async def test_order_factory_create_take_profit_orders_invalid_volume_percents(self):
         exchange_manager = mock.Mock(exchange_name="test_exchange")
@@ -688,6 +702,7 @@ class TestOrderFactoryClass:
         create_mock.assert_called_once_with("SomeStrategy", **{})
 
     @pytest.mark.asyncio
+    @pytest.mark.asyncio
     async def test_order_factory_create_order_on_exchange_with_trading_mode(self):
         order = mock.Mock()
         created_order = mock.Mock()
@@ -705,6 +720,7 @@ class TestOrderFactoryClass:
         )
 
     @pytest.mark.asyncio
+    @pytest.mark.asyncio
     async def test_order_factory_create_order_on_exchange_without_trading_mode(self):
         order = mock.Mock()
         created_order = mock.Mock()
@@ -718,6 +734,7 @@ class TestOrderFactoryClass:
         assert result is created_order
         trader.create_order.assert_called_once_with(order, wait_for_creation=False)
 
+    @pytest.mark.asyncio
     @pytest.mark.asyncio
     async def test_order_factory_create_base_orders_unsupported_symbol(self):
         _, exchange_manager, _ = await self.init_default()
@@ -737,6 +754,7 @@ class TestOrderFactoryClass:
             await self.stop(exchange_manager)
 
     @pytest.mark.asyncio
+    @pytest.mark.asyncio
     async def test_order_factory_create_base_orders_try_to_handle_unconfigured_symbol(self):
         _, exchange_manager, _ = await self.init_default()
         try:
@@ -754,6 +772,7 @@ class TestOrderFactoryClass:
         finally:
             await self.stop(exchange_manager)
 
+    @pytest.mark.asyncio
     @pytest.mark.asyncio
     async def test_order_factory_create_base_orders_and_associated_elements_success(self):
         _, real_exchange_manager, _ = await self.init_default()

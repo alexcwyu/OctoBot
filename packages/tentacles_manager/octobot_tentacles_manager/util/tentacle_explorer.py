@@ -73,7 +73,7 @@ def _parse_all_tentacles(root: str):
         ] + [
             factory.create_tentacle_from_type(tentacle_name, tentacle_type, [tentacle_name])
             for tentacle_name, (tentacle_type, _) in _extra_tentacle_data_by_name.items()
-        ], 
+        ],
         key=lambda x: x.name # ensure parsed order stays consistent
     )
 
@@ -113,9 +113,10 @@ def _add_tentacle_type_if_is_valid(tentacle_type_entry: os.DirEntry,
 
 
 def _has_tentacle_in_direct_sub_directories(directory_entry: os.DirEntry):
-    return any(
-        file_entry.name == constants.TENTACLE_METADATA
-        for sub_directory_entry in os.scandir(directory_entry)
-        if sub_directory_entry.is_dir()
-        for file_entry in os.scandir(sub_directory_entry)
-    )
+    with os.scandir(directory_entry) as subdirectories:
+        for subdirectory in subdirectories:
+            if subdirectory.is_dir():
+                with os.scandir(subdirectory) as files:
+                    if any(entry.name == constants.TENTACLE_METADATA for entry in files):
+                        return True
+    return False

@@ -23,7 +23,6 @@ import tests.functionnal_tests.octobot_process_actions.octobot_process_functiona
 import octobot_flow.entities.accounts.exchange_account_elements as exchange_account_elements_import
 
 pytestmark = octobot_process_functional_shared.pytestmark
-pytest_plugins = (octobot_process_functional_shared.__name__,)
 
 ACTION_ID_UPDATE_AUTOMATION_CONFIGURATION = "action_update_automation_configuration"
 

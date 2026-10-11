@@ -30,9 +30,10 @@ from tests import event_loop
 from tests.personal_data import DEFAULT_MARKET_QUANTITY
 from tests.test_utils.random_numbers import decimal_random_price, decimal_random_quantity
 
-pytestmark = pytest.mark.asyncio
 
 
+
+@pytest.mark.asyncio
 async def test_get_symbol_position(future_trader_simulator_with_default_linear):
     config, exchange_manager, trader, default_contract = future_trader_simulator_with_default_linear
     positions_manager = exchange_manager.exchange_personal_data.positions_manager
@@ -50,11 +51,12 @@ async def test_get_symbol_position(future_trader_simulator_with_default_linear):
     assert p2 is not p2bis
 
 
+@pytest.mark.asyncio
 async def test_get_symbol_positions(future_trader_simulator_with_default_linear):
     config, exchange_manager, trader, default_contract = future_trader_simulator_with_default_linear
     positions_manager = exchange_manager.exchange_personal_data.positions_manager
     symbol_contract = default_contract
-    trader.exchange_manager.exchange.set_pair_future_contract(DEFAULT_FUTURE_SYMBOL, 
+    trader.exchange_manager.exchange.set_pair_future_contract(DEFAULT_FUTURE_SYMBOL,
                                                               default_contract)
 
     symbol_contract.set_position_mode(is_one_way=False)
@@ -66,11 +68,12 @@ async def test_get_symbol_positions(future_trader_simulator_with_default_linear)
     assert positions_manager.get_symbol_positions(symbol=DEFAULT_FUTURE_SYMBOL) == [p2, p1]
 
 
+@pytest.mark.asyncio
 async def test_get_order_position(future_trader_simulator_with_default_linear):
     config, exchange_manager, trader, default_contract = future_trader_simulator_with_default_linear
     positions_manager = exchange_manager.exchange_personal_data.positions_manager
     symbol_contract = default_contract
-    trader.exchange_manager.exchange.set_pair_future_contract(DEFAULT_FUTURE_SYMBOL, 
+    trader.exchange_manager.exchange.set_pair_future_contract(DEFAULT_FUTURE_SYMBOL,
                                                               default_contract)
 
     p1 = positions_manager.get_symbol_position(symbol=DEFAULT_FUTURE_SYMBOL, side=enums.PositionSide.BOTH)
@@ -82,11 +85,12 @@ async def test_get_order_position(future_trader_simulator_with_default_linear):
     assert p1 is p1bis
 
 
+@pytest.mark.asyncio
 async def test__generate_position_id(future_trader_simulator_with_default_linear):
     config, exchange_manager, trader, default_contract = future_trader_simulator_with_default_linear
     positions_manager = exchange_manager.exchange_personal_data.positions_manager
     symbol_contract = default_contract
-    trader.exchange_manager.exchange.set_pair_future_contract(DEFAULT_FUTURE_SYMBOL, 
+    trader.exchange_manager.exchange.set_pair_future_contract(DEFAULT_FUTURE_SYMBOL,
                                                               default_contract)
 
     if not os.getenv('CYTHON_IGNORE'):

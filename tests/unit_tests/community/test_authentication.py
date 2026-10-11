@@ -29,8 +29,6 @@ import octobot_commons.configuration
 import octobot_commons.profiles.profile_data
 
 # All test coroutines will be treated as marked.
-pytestmark = pytest.mark.asyncio
-
 AUTH_URL = "https://oh.fake/auth"
 _TEST_SYNC_URL = "https://test-sync.example"
 AUTH_RETURN = {
@@ -134,6 +132,7 @@ async def test_login(auth):
         auth.supabase_client.sign_in_with_otp_token.assert_awaited_once_with("password_t")
 
 
+@pytest.mark.asyncio
 async def test_fetch_bot_profile_data_without_tentacles_options(auth):
     FETCHED_PROFILE_USD_LIKE = {
         "bot_id": "53e0dc3e-3cbe-476d-9bda-b30bc4941fb4",
@@ -225,6 +224,7 @@ async def test_fetch_bot_profile_data_without_tentacles_options(auth):
         _fetch_full_exchange_configs_mock.assert_called_once()
 
 
+@pytest.mark.asyncio
 async def test_fetch_bot_profile_data_with_tentacles_options(auth):
     FETCHED_PROFILE = {
         "bot_id": "53e0dc3e-3cbe-476d-9bda-b30bc4941fb4",
@@ -321,6 +321,7 @@ async def test_fetch_bot_profile_data_with_tentacles_options(auth):
         _fetch_full_exchange_configs_mock.assert_called_once()
 
 
+@pytest.mark.asyncio
 async def test_logout(auth):
     with mock.patch.object(community.CommunityAuthentication, "_reset_tokens", mock.Mock()) as reset_mock, \
             mock.patch.object(community.CommunityAuthentication, "remove_login_detail", mock.Mock()) as remove_mock:
@@ -435,6 +436,7 @@ def test_init_account(auth):
         assert auth._fetch_account_task == "task"
 
 
+@pytest.mark.asyncio
 async def test_bot_data_update(auth):
     with (
         mock.patch.object(auth, "is_logged_in_and_has_selected_bot", mock.Mock(return_value=True)) as is_logged_in_and_has_selected_bot_mock,
@@ -446,7 +448,7 @@ async def test_bot_data_update(auth):
         async def ok_func(*args, **kwargs):
             # do not raise
             return "result"
-        
+
         await ok_func(auth)
         is_logged_in_and_has_selected_bot_mock.assert_called_once()
         refresh_session_mock.assert_not_called()
@@ -529,6 +531,7 @@ async def test_stop(auth):
 
 
 class TestCommunityAuthenticationStopLogging:
+    @pytest.mark.asyncio
     async def test_non_singleton_stop_does_not_log_lifecycle(self):
         auth = community.CommunityAuthentication.__new__(community.CommunityAuthentication)
         # __init__ is skipped via __new__; assign attributes normally set in __init__
@@ -547,6 +550,7 @@ class TestCommunityAuthenticationStopLogging:
         assert "Stopping ..." not in logged_messages
         assert "Stopped" not in logged_messages
 
+    @pytest.mark.asyncio
     async def test_singleton_stop_logs_lifecycle(self):
         auth = community.CommunityAuthentication.__new__(community.CommunityAuthentication)
         # __init__ is skipped via __new__; assign attributes normally set in __init__
@@ -692,6 +696,7 @@ class TestClearBotScopedConfig:
 
 
 class TestFetchPrivateData:
+    @pytest.mark.asyncio
     async def test_process_child_sets_pending_flag_with_install_only(self):
         config = mock.Mock()
         config.uses_shared_reference_tentacles.return_value = True
@@ -725,6 +730,7 @@ class TestFetchPrivateData:
         has_tentacles_mock.assert_awaited_once_with(auth, install_only=True)
         assert auth.user_account.has_pending_packages_to_install is True
 
+    @pytest.mark.asyncio
     async def test_sync_profile_fetch_private_data_does_not_use_profile_tentacles_path(self):
         config = mock.Mock()
         config.uses_shared_reference_tentacles.return_value = False
@@ -760,6 +766,7 @@ class TestFetchPrivateData:
         config.get_tentacles_config_path.assert_not_called()
         config.get_tentacles_setup_config_for_package_operations.assert_called()
 
+    @pytest.mark.asyncio
     async def test_non_process_child_sets_pending_flag_only(self):
         config = mock.Mock()
         config.uses_shared_reference_tentacles.return_value = False
@@ -809,6 +816,7 @@ def _new_auth_for_signal_session_tests():
 
 
 class TestGetSessionForAddress:
+    @pytest.mark.asyncio
     async def test_returns_the_same_session_on_a_second_call_for_the_same_address(self):
         auth = _new_auth_for_signal_session_tests()
         auth.get_wallet = mock.Mock(return_value=mock.Mock(private_key="pk"))
@@ -837,6 +845,7 @@ class TestGetSessionForAddress:
         assert second is sentinel_session
         mock_build_mirror_session.assert_awaited_once()
 
+    @pytest.mark.asyncio
     async def test_raises_wallet_error_when_sync_server_url_is_not_configured(self):
         auth = _new_auth_for_signal_session_tests()
         with mock.patch.object(
@@ -847,6 +856,7 @@ class TestGetSessionForAddress:
             with pytest.raises(octobot.community.wallet_backend.WalletError):
                 await auth.get_session_for_address("0xabc")
 
+    @pytest.mark.asyncio
     async def test_builds_the_session_with_the_bare_sync_url_and_signal_name(self):
         auth = _new_auth_for_signal_session_tests()
         auth.get_wallet = mock.Mock(return_value=mock.Mock(private_key="pk"))
@@ -874,6 +884,7 @@ class TestGetSessionForAddress:
             "derived-identity", _TEST_SYNC_URL, name="octobot-signals"
         )
 
+    @pytest.mark.asyncio
     async def test_distinct_addresses_get_distinct_sessions(self):
         auth = _new_auth_for_signal_session_tests()
         auth.get_wallet = mock.Mock(return_value=mock.Mock(private_key="pk"))
@@ -904,6 +915,7 @@ class TestGetSessionForAddress:
 
 
 class TestStopClosesCachedDkSessions:
+    @pytest.mark.asyncio
     async def test_stop_closes_and_clears_cached_dk_sessions(self):
         auth = community.CommunityAuthentication.__new__(community.CommunityAuthentication)
         # __init__ is skipped via __new__; assign attributes normally set in __init__
@@ -925,4 +937,3 @@ class TestStopClosesCachedDkSessions:
         cached_session.content_client.close.assert_awaited_once()
         cached_session.account_client.close.assert_awaited_once()
         assert auth._dk_sessions == {}
-

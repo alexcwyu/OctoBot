@@ -22,7 +22,7 @@ import octobot_commons.tentacles_management as tentacles_management
 
 
 # All test coroutines will be treated as marked.
-pytestmark = pytest.mark.asyncio
+
 
 
 @pytest.fixture
@@ -40,6 +40,7 @@ def time_frames():
     return [TimeFrames.THREE_DAYS, TimeFrames.ONE_HOUR]
 
 
+@pytest.mark.asyncio
 async def test_create_evaluators_no_wild_card(symbols_by_crypto_currencies, symbols, time_frames):
     evaluators = await _create_evaluators(EvaluatorNoWildCard, symbols_by_crypto_currencies, symbols, time_frames)
     assert len(evaluators) == 6
@@ -72,6 +73,7 @@ async def test_create_evaluators_no_wild_card(symbols_by_crypto_currencies, symb
     assert len(set([e.time_frame for e in evaluators if e.symbol == "ETH/BTC"])) == 2
 
 
+@pytest.mark.asyncio
 async def test_create_evaluators_wild_card(symbols_by_crypto_currencies, symbols, time_frames):
     evaluators = await _create_evaluators(EvaluatorWildCard, symbols_by_crypto_currencies, symbols, time_frames)
 
@@ -81,6 +83,7 @@ async def test_create_evaluators_wild_card(symbols_by_crypto_currencies, symbols
         evaluators[0].time_frame is None
 
 
+@pytest.mark.asyncio
 async def test_create_evaluators_no_cc_wild_card(symbols_by_crypto_currencies, symbols, time_frames):
     evaluators = await _create_evaluators(EvaluatorNoCCWildCard, symbols_by_crypto_currencies, symbols, time_frames)
 
@@ -90,6 +93,7 @@ async def test_create_evaluators_no_cc_wild_card(symbols_by_crypto_currencies, s
     assert sorted([e.cryptocurrency for e in evaluators]) == sorted(["BTC", "ETH"])
 
 
+@pytest.mark.asyncio
 async def test_create_evaluators_no_cc_name_wild_card(symbols_by_crypto_currencies, symbols, time_frames):
     evaluators = await _create_evaluators(EvaluatorNoCCNameWildCard, symbols_by_crypto_currencies, symbols, time_frames)
 
@@ -99,6 +103,7 @@ async def test_create_evaluators_no_cc_name_wild_card(symbols_by_crypto_currenci
         evaluators[0].time_frame is None
 
 
+@pytest.mark.asyncio
 async def test_create_evaluators_no_cc_name_and_no_cc_wild_card(symbols_by_crypto_currencies, symbols, time_frames):
     evaluators = await _create_evaluators(EvaluatorNoCCNameNoCCWildCard, symbols_by_crypto_currencies,
                                           symbols, time_frames)
@@ -110,6 +115,7 @@ async def test_create_evaluators_no_cc_name_and_no_cc_wild_card(symbols_by_crypt
     assert sorted([e.cryptocurrency_name for e in evaluators]) == sorted(["Bitcoin", "Ethereum"])
 
 
+@pytest.mark.asyncio
 async def test_create_evaluators_no_symbol_wild_card(symbols_by_crypto_currencies, symbols, time_frames):
     evaluators = await _create_evaluators(EvaluatorNoSymbolWildCard, symbols_by_crypto_currencies, symbols, time_frames)
 
@@ -119,6 +125,7 @@ async def test_create_evaluators_no_symbol_wild_card(symbols_by_crypto_currencie
     assert [e.symbol for e in evaluators] == symbols
 
 
+@pytest.mark.asyncio
 async def test_create_evaluators_no_time_frame_wild_card(symbols_by_crypto_currencies, symbols, time_frames):
     evaluators = await _create_evaluators(EvaluatorNoTimeFrameWildCard, symbols_by_crypto_currencies,
                                           symbols, time_frames)
@@ -129,6 +136,7 @@ async def test_create_evaluators_no_time_frame_wild_card(symbols_by_crypto_curre
     assert [e.time_frame for e in evaluators] == time_frames
 
 
+@pytest.mark.asyncio
 async def test_create_evaluators_no_cc_name_no_symbol_wild_card(symbols_by_crypto_currencies, symbols, time_frames):
     evaluators = await _create_evaluators(EvaluatorNoCCNameSymbolWildCard, symbols_by_crypto_currencies,
                                           symbols, time_frames)
@@ -140,6 +148,7 @@ async def test_create_evaluators_no_cc_name_no_symbol_wild_card(symbols_by_crypt
     assert [e.symbol for e in evaluators] == symbols
 
 
+@pytest.mark.asyncio
 async def test_create_evaluators_no_cc_time_frame_wild_card(symbols_by_crypto_currencies, symbols, time_frames):
     evaluators = await _create_evaluators(EvaluatorNoCCTimeFrameWildCard, symbols_by_crypto_currencies,
                                           symbols, time_frames)
@@ -153,6 +162,7 @@ async def test_create_evaluators_no_cc_time_frame_wild_card(symbols_by_crypto_cu
     assert all(tf in time_frames for tf in tfs)
 
 
+@pytest.mark.asyncio
 async def test_create_evaluators_no_symbol_time_frame_wild_card(symbols_by_crypto_currencies, symbols, time_frames):
     evaluators = await _create_evaluators(EvaluatorNoSymbolTimeFrameWildCard, symbols_by_crypto_currencies,
                                           symbols, time_frames)

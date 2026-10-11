@@ -28,7 +28,7 @@ import octobot_evaluators.util.evaluator_result as evaluator_result
 import octobot_trading.modes.mode_dsl_factory as trading_mode_dsl_factory
 
 
-pytestmark = pytest.mark.asyncio
+
 
 _TENTACLE_TYPE = common_enums.UserInputTentacleTypes.TRADING_MODE.value
 
@@ -591,6 +591,7 @@ class TestCreateAllTradingModeOperators:
 
 
 class TestPreCompute:
+    @pytest.mark.asyncio
     async def test_raises_when_exchange_manager_is_none(self):
         OpCls = trading_mode_dsl_factory.create_trading_mode_operator(
             FakeTradingModeBeta,
@@ -608,6 +609,7 @@ class TestPreCompute:
                 await op.pre_compute()
         assert "Exchange manager is required" in str(excinfo.value)
 
+    @pytest.mark.asyncio
     async def test_raises_when_matrix_id_is_none(self):
         OpCls = trading_mode_dsl_factory.create_trading_mode_operator(
             FakeTradingModeBeta,
@@ -625,6 +627,7 @@ class TestPreCompute:
                 await op.pre_compute()
         assert "Matrix id is required" in str(excinfo.value)
 
+    @pytest.mark.asyncio
     async def test_seeds_matrix_from_dynamic_dependencies_before_execution(self):
         op, exchange_manager = _operator_with_exchange_manager()
         tm = _trading_mode_mock()
@@ -681,6 +684,7 @@ class TestPreCompute:
             },
         )
 
+    @pytest.mark.asyncio
     async def test_sets_value_and_invokes_manual_trigger_for_each_mode(self):
         op, em = _operator_with_exchange_manager()
         tm_a = _trading_mode_mock(waiting_time=10.0, dsl_state={"id": "a"}, name="A")
@@ -739,6 +743,7 @@ class TestPreCompute:
         merged_dsl = json.loads(inner[trading_mode_dsl_factory.STATE_KEY])
         assert merged_dsl["id"] == "b"
 
+    @pytest.mark.asyncio
     async def test_calls_optimize_initial_portfolio_on_first_execution(self):
         op, em = _operator_with_exchange_manager()
         tm = _trading_mode_mock()
@@ -765,6 +770,7 @@ class TestPreCompute:
                         await op.pre_compute()
         optimize_mock.assert_awaited_once_with([tm], [], {})
 
+    @pytest.mark.asyncio
     async def test_skips_optimize_when_enable_initial_portfolio_optimization_false(self):
         op, _em = _operator_with_exchange_manager()
         tm = _trading_mode_mock()
@@ -792,6 +798,7 @@ class TestPreCompute:
         optimize_mock.assert_not_awaited()
         tm.manual_trigger.assert_awaited_once()
 
+    @pytest.mark.asyncio
     async def test_skips_optimize_when_get_last_execution_result_truthy(self):
         op, em = _operator_with_exchange_manager()
         tm = _trading_mode_mock()
@@ -823,6 +830,7 @@ class TestPreCompute:
                             await op.pre_compute()
         optimize_mock.assert_not_awaited()
 
+    @pytest.mark.asyncio
     async def test_optimize_failure_is_logged_and_execution_continues(self):
         op, em = _operator_with_exchange_manager()
         tm = _trading_mode_mock()
@@ -859,6 +867,7 @@ class TestPreCompute:
 
 
 class TestOptimizeInitialPortfolio:
+    @pytest.mark.asyncio
     async def test_returns_early_when_mode_does_not_support_optimization(self):
         op, _em = _operator_with_exchange_manager()
         tm = _trading_mode_mock(supports_portfolio_optimization=False)
@@ -869,6 +878,7 @@ class TestOptimizeInitialPortfolio:
         assert "does not support initial" in logger.info.call_args[0][0]
         tm.optimize_initial_portfolio.assert_not_called()
 
+    @pytest.mark.asyncio
     async def test_calls_optimize_when_mode_supports_it(self):
         op, em = _operator_with_exchange_manager()
         tm = _trading_mode_mock(supports_portfolio_optimization=True)

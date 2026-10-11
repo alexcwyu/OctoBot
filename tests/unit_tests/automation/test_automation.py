@@ -26,12 +26,10 @@ import octobot.errors as errors
 
 
 # All test coroutines will be treated as marked.
-pytestmark = pytest.mark.asyncio
-
-
 class TestLastExecutionDetailsUpdater:
     """Tests for automation_step.last_execution_details_updater decorator."""
 
+    @pytest.mark.asyncio
     async def test_updates_last_execution_details_when_result_is_truthy(self):
         class StepWithDecorator:
             def __init__(self):
@@ -50,6 +48,7 @@ class TestLastExecutionDetailsUpdater:
         assert result is True
         assert step.update_called is True
 
+    @pytest.mark.asyncio
     async def test_does_not_update_when_result_is_falsy(self):
         class StepWithDecorator:
             def __init__(self):
@@ -68,6 +67,7 @@ class TestLastExecutionDetailsUpdater:
         assert result is False
         assert step.update_called is False
 
+    @pytest.mark.asyncio
     async def test_preserves_return_value(self):
         class StepWithDecorator:
             def __init__(self):
@@ -180,6 +180,7 @@ class TestAutomation:
         assert Automation.CONDITIONS == "conditions"
         assert Automation.ACTIONS == "actions"
 
+    @pytest.mark.asyncio
     async def test_initialize_when_automations_disabled(self, mock_tentacles_setup_config):
         with patch("octobot.automation.automation.constants") as mock_constants:
             mock_constants.ENABLE_AUTOMATIONS = False
@@ -187,6 +188,7 @@ class TestAutomation:
             await automation.initialize()
         # Should not raise, just logs
 
+    @pytest.mark.asyncio
     async def test_initialize_when_automations_enabled(self, mock_tentacles_setup_config):
         with patch("octobot.automation.automation.constants") as mock_constants:
             mock_constants.ENABLE_AUTOMATIONS = True
@@ -195,6 +197,7 @@ class TestAutomation:
                 await automation.initialize()
                 automation.restart.assert_awaited_once()
 
+    @pytest.mark.asyncio
     async def test_restart_raises_when_disabled(self, mock_tentacles_setup_config):
         import octobot.errors as errors
         with patch("octobot.automation.automation.constants") as mock_constants:
@@ -234,6 +237,7 @@ class TestAutomation:
             assert "MockCondition" in conditions
             assert "MockAction" in actions
 
+    @pytest.mark.asyncio
     async def test_check_conditions_all_pass(self, automation):
         trigger = MockTriggerEvent()
         conditions = [MockCondition(), MockCondition()]
@@ -243,6 +247,7 @@ class TestAutomation:
         result = await automation._check_conditions(details, exec_details)
         assert result is True
 
+    @pytest.mark.asyncio
     async def test_check_conditions_one_fails(self, automation):
         class FailingCondition(AbstractCondition):
             @staticmethod
@@ -264,6 +269,7 @@ class TestAutomation:
         result = await automation._check_conditions(details, exec_details)
         assert result is False
 
+    @pytest.mark.asyncio
     async def test_process_actions(self, automation):
         trigger = MockTriggerEvent()
         conditions = [MockCondition()]
@@ -273,6 +279,7 @@ class TestAutomation:
         await automation._process_actions(details, exec_details)
         # Should not raise
 
+    @pytest.mark.asyncio
     async def test_run_automation(self, automation):
         trigger = MockTriggerEvent()
         conditions = [MockCondition()]

@@ -296,7 +296,7 @@ class TestGetScheduledWorkflowTriggerTime:
 
 
 class TestRegisterSchedules:
-    pytestmark = pytest.mark.asyncio
+
 
     @pytest.fixture
     def dbos_cleanup_workflow_module(self, temp_dbos_scheduler):
@@ -316,6 +316,7 @@ class TestRegisterSchedules:
 
         yield portfolio_history_workflow_module_loaded
 
+    @pytest.mark.asyncio
     async def test_creates_schedule_when_missing(
         self,
         dbos_cleanup_workflow_module,
@@ -407,6 +408,7 @@ class TestRegisterSchedules:
             portfolio_history_schedule_input["schedule"],
         )
 
+    @pytest.mark.asyncio
     async def test_keeps_schedule_when_config_matches(
         self,
         dbos_cleanup_workflow_module,
@@ -478,6 +480,7 @@ class TestRegisterSchedules:
             global_view_schedule_input["schedule"],
         )
 
+    @pytest.mark.asyncio
     async def test_recreates_schedule_when_config_differs(
         self,
         dbos_cleanup_workflow_module,
@@ -549,6 +552,7 @@ class TestRegisterSchedules:
             _configured_global_view_schedule_input(global_view_workflow_module)["schedule"],
         )
 
+    @pytest.mark.asyncio
     async def test_backfills_when_last_fired_at_is_null(
         self,
         dbos_cleanup_workflow_module,
@@ -654,6 +658,7 @@ class TestRegisterSchedules:
             0,
         )
 
+    @pytest.mark.asyncio
     async def test_skips_backfill_when_all_window_slots_terminal(
         self,
         dbos_cleanup_workflow_module,
@@ -751,6 +756,7 @@ class TestRegisterSchedules:
             dbos.WorkflowStatusString.SUCCESS.value,
         )
 
+    @pytest.mark.asyncio
     async def test_backfill_logs_unchanged_when_slot_already_terminal_in_mixed_window(
         self,
         dbos_cleanup_workflow_module,
@@ -868,6 +874,7 @@ class TestRegisterSchedules:
             1,
         )
 
+    @pytest.mark.asyncio
     async def test_skips_backfill_when_last_fired_at_set(
         self,
         dbos_cleanup_workflow_module,
@@ -925,6 +932,7 @@ class TestRegisterSchedules:
 
         backfill_to_thread_mock.assert_not_awaited()
 
+    @pytest.mark.asyncio
     async def test_skips_backfill_when_automatic_backfill_false(
         self,
         dbos_cleanup_workflow_module,
@@ -986,7 +994,7 @@ class TestRegisterSchedules:
 
 
 class TestMaybeCatchUpScheduleOnceOnStartup:
-    pytestmark = pytest.mark.asyncio
+
 
     @pytest.fixture
     def portfolio_history_workflow_module(self, temp_dbos_scheduler):
@@ -994,6 +1002,7 @@ class TestMaybeCatchUpScheduleOnceOnStartup:
 
         yield portfolio_history_workflow_module_loaded
 
+    @pytest.mark.asyncio
     async def test_backfills_latest_slot_when_missing(self, portfolio_history_workflow_module, temp_dbos_scheduler):
         import octobot_node.scheduler.schedules as schedules_module
 
@@ -1046,6 +1055,7 @@ class TestMaybeCatchUpScheduleOnceOnStartup:
         assert backfill_start == trigger_time - datetime.timedelta(seconds=1)
         assert backfill_end == trigger_time + datetime.timedelta(seconds=1)
 
+    @pytest.mark.asyncio
     async def test_skips_when_latest_slot_terminal(self, portfolio_history_workflow_module, temp_dbos_scheduler):
         import octobot_node.scheduler.schedules as schedules_module
 
@@ -1080,6 +1090,7 @@ class TestMaybeCatchUpScheduleOnceOnStartup:
 
         backfill_to_thread_mock.assert_not_awaited()
 
+    @pytest.mark.asyncio
     async def test_skips_when_latest_slot_in_progress(self, portfolio_history_workflow_module, temp_dbos_scheduler):
         import octobot_node.scheduler.schedules as schedules_module
 
@@ -1114,6 +1125,7 @@ class TestMaybeCatchUpScheduleOnceOnStartup:
 
         backfill_to_thread_mock.assert_not_awaited()
 
+    @pytest.mark.asyncio
     async def test_skips_when_flag_disabled(self, portfolio_history_workflow_module, temp_dbos_scheduler):
         import octobot_node.scheduler.schedules as schedules_module
 
@@ -1137,7 +1149,7 @@ class TestMaybeCatchUpScheduleOnceOnStartup:
 
 
 class TestScheduledWorkflowsDisabled:
-    pytestmark = pytest.mark.asyncio
+
 
     @pytest.fixture
     def dbos_cleanup_workflow_module(self, temp_dbos_scheduler):
@@ -1157,6 +1169,7 @@ class TestScheduledWorkflowsDisabled:
 
         yield portfolio_history_workflow_module_loaded
 
+    @pytest.mark.asyncio
     async def test_register_schedules_when_disabled_removes_existing_schedules(
         self,
         dbos_cleanup_workflow_module,
@@ -1206,6 +1219,7 @@ class TestScheduledWorkflowsDisabled:
         create_schedule_mock.assert_not_awaited()
         apply_schedules_mock.assert_not_awaited()
 
+    @pytest.mark.asyncio
     async def test_register_schedules_when_disabled_skips_delete_when_schedule_missing(
         self,
         dbos_cleanup_workflow_module,
@@ -1236,6 +1250,7 @@ class TestScheduledWorkflowsDisabled:
 
         delete_schedule_mock.assert_not_awaited()
 
+    @pytest.mark.asyncio
     async def test_register_schedules_when_disabled_does_not_run_startup_backfill_or_catch_up(
         self,
         dbos_cleanup_workflow_module,
@@ -1264,6 +1279,7 @@ class TestScheduledWorkflowsDisabled:
         backfill_mock.assert_not_awaited()
         catch_up_mock.assert_not_awaited()
 
+    @pytest.mark.asyncio
     async def test_update_cleanup_schedule_cron_when_disabled(
         self,
         dbos_cleanup_workflow_module,
@@ -1295,7 +1311,7 @@ class TestScheduledWorkflowsDisabled:
 
 
 class TestUpdateCleanupScheduleCron:
-    pytestmark = pytest.mark.asyncio
+
 
     @pytest.fixture
     def dbos_cleanup_workflow_module(self, temp_dbos_scheduler):
@@ -1303,6 +1319,7 @@ class TestUpdateCleanupScheduleCron:
 
         yield dbos_cleanup_workflow_module_loaded
 
+    @pytest.mark.asyncio
     async def test_applies_schedule_when_cron_changes(
         self,
         dbos_cleanup_workflow_module,
@@ -1330,6 +1347,7 @@ class TestUpdateCleanupScheduleCron:
         assert result == {"changed": True, "cron": desired_cron}
         apply_schedules_mock.assert_awaited_once_with([schedule_input])
 
+    @pytest.mark.asyncio
     async def test_skips_apply_when_cron_unchanged(
         self,
         dbos_cleanup_workflow_module,

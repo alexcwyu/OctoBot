@@ -24,11 +24,12 @@ from octobot_tentacles_manager.managers.tentacles_setup_manager import Tentacles
 import tests
 
 # All test coroutines will be treated as marked.
-pytestmark = pytest.mark.asyncio
+
 
 temp_dir = "temp_tests"
 
 
+@pytest.mark.asyncio
 async def test_create_missing_tentacles_arch():
     _cleanup()
     tentacles_setup_manager = TentaclesSetupManager(TENTACLES_PATH)

@@ -111,6 +111,9 @@ TENTACLES_SERVICES_BASES_PATH = "Services_bases"
 TENTACLES_SERVICES_FEEDS_PATH = "Services_feeds"
 TENTACLES_TRADING_PATH = "Trading"
 
+# Profile bundles from standalone Commons still preserve this legacy configuration directory.
+TENTACLES_SPECIFIC_CONFIG_FOLDER = "specific_config"
+
 # Tentacles sub-folders
 TENTACLE_MAX_SUB_FOLDERS_LEVEL = 3
 TENTACLES_AGENTS_SUBAGENTS_PATH = "sub_agents"

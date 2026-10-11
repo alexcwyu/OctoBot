@@ -105,8 +105,9 @@ class TestGetTimeFrameFilter:
 
 
 class TestSubscribeToRegistrationTopic:
-    pytestmark = pytest.mark.asyncio
 
+
+    @pytest.mark.asyncio
     async def test_matrix_subscription_uses_wildcard_time_frame(self, simulated_trader):
         trading_mode = _get_trading_mode(simulated_trader)
         producer = _build_producer(trading_mode.exchange_manager, trading_mode)
@@ -136,6 +137,7 @@ class TestSubscribeToRegistrationTopic:
         assert producer.evaluator_consumers == [(matrix_consumer, matrix_topic)]
         assert trading_mode.is_triggered_after_candle_close is False
 
+    @pytest.mark.asyncio
     async def test_matrix_subscription_uses_time_frame_filter_when_not_wildcard(self, simulated_trader):
         trading_mode = _get_trading_mode(simulated_trader)
         producer = _build_producer(trading_mode.exchange_manager, trading_mode)
@@ -162,6 +164,7 @@ class TestSubscribeToRegistrationTopic:
             supervised=trading_mode.exchange_manager.is_backtesting,
         )
 
+    @pytest.mark.asyncio
     async def test_ohlcv_subscription_sets_triggered_after_candle_close(self, simulated_trader):
         trading_mode = _get_trading_mode(simulated_trader)
         producer = _build_producer(trading_mode.exchange_manager, trading_mode)
@@ -187,6 +190,7 @@ class TestSubscribeToRegistrationTopic:
         assert producer.trading_consumers == [(ohlcv_consumer, ohlcv_topic)]
         assert trading_mode.is_triggered_after_candle_close is True
 
+    @pytest.mark.asyncio
     async def test_trading_channel_uses_wildcard_when_filter_is_none(self, simulated_trader):
         trading_mode = _get_trading_mode(simulated_trader)
         producer = _build_producer(trading_mode.exchange_manager, trading_mode)
@@ -207,6 +211,7 @@ class TestSubscribeToRegistrationTopic:
             time_frame=common_constants.CONFIG_WILDCARD,
         )
 
+    @pytest.mark.asyncio
     async def test_matrix_import_error_is_logged(self, simulated_trader):
         trading_mode = _get_trading_mode(simulated_trader)
         producer = _build_producer(trading_mode.exchange_manager, trading_mode)

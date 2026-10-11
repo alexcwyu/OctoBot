@@ -22,7 +22,7 @@ import octobot_trading.enums as trading_enums
 
 import octobot_copy.exchange.orders as orders_module
 
-pytestmark = pytest.mark.asyncio
+
 
 _EXCHANGE_ID_COLUMN = trading_enums.ExchangeConstantsOrderColumns.EXCHANGE_ID.value
 
@@ -57,10 +57,12 @@ def _pending_order_stub(*, exchange_order_id: str, symbol: str = "BTC/USDC"):
 
 
 class TestOrdersInterfaceWaitForOrdersToOpen:
+    @pytest.mark.asyncio
     async def test_returns_immediately_when_no_orders(self):
         orders_interface, _, _ = _orders_interface_with_exchange()
         await orders_interface.wait_for_orders_to_open([], "BTC/USDC")
 
+    @pytest.mark.asyncio
     async def test_promotes_pending_orders_found_on_exchange(self):
         orders_interface, exchange_manager, exchange = _orders_interface_with_exchange()
         order = _pending_order_stub(exchange_order_id="ex-open-1")
@@ -87,6 +89,7 @@ class TestOrdersInterfaceWaitForOrdersToOpen:
             )
         promote_mock.assert_awaited_once_with(order)
 
+    @pytest.mark.asyncio
     async def test_does_not_call_update_from_raw_when_promoting(self):
         orders_interface, exchange_manager, exchange = _orders_interface_with_exchange()
         order = _pending_order_stub(exchange_order_id="ex-open-2")
@@ -103,6 +106,7 @@ class TestOrdersInterfaceWaitForOrdersToOpen:
         order.on_open.assert_awaited()
         order.update_from_raw.assert_not_awaited()
 
+    @pytest.mark.asyncio
     async def test_logs_warning_on_timeout(self, caplog):
         orders_interface, _, exchange = _orders_interface_with_exchange()
         order = _pending_order_stub(exchange_order_id="ex-still-pending")
@@ -119,6 +123,7 @@ class TestOrdersInterfaceWaitForOrdersToOpen:
             for record in caplog.records
         )
 
+    @pytest.mark.asyncio
     async def test_logs_start_and_completion_when_orders_open(self, caplog):
         orders_interface, exchange_manager, exchange = _orders_interface_with_exchange()
         order = _pending_order_stub(exchange_order_id="ex-open-3")
@@ -137,6 +142,7 @@ class TestOrdersInterfaceWaitForOrdersToOpen:
         assert any("Waiting for 1 mirrored order(s) on BTC/USDC to open on kraken" in message for message in info_messages)
         assert any("All 1 mirrored order(s) open on kraken for BTC/USDC after" in message for message in info_messages)
 
+    @pytest.mark.asyncio
     async def test_logs_promotion_progress(self, caplog):
         orders_interface, exchange_manager, exchange = _orders_interface_with_exchange()
         first_order = _pending_order_stub(exchange_order_id="ex-open-a")

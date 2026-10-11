@@ -30,9 +30,10 @@ from tests.exchanges import backtesting_trader, backtesting_config, backtesting_
 from tests import event_loop
 
 # All test coroutines will be treated as marked.
-pytestmark = pytest.mark.asyncio
+
 
 @pytest.mark.parametrize("backtesting_exchange_manager", ["spot", "margin", "futures", "options"], indirect=True)
+@pytest.mark.asyncio
 async def test_get_current_crypto_currencies_values(backtesting_trader):
     config, exchange_manager, trader = backtesting_trader
     portfolio_manager = exchange_manager.exchange_personal_data.portfolio_manager
@@ -113,6 +114,7 @@ async def test_get_current_crypto_currencies_values(backtesting_trader):
 
 
 @pytest.mark.parametrize("backtesting_exchange_manager", ["spot", "margin", "futures", "options"], indirect=True)
+@pytest.mark.asyncio
 async def test_get_current_holdings_values(backtesting_trader):
     config, exchange_manager, trader = backtesting_trader
     portfolio_manager = exchange_manager.exchange_personal_data.portfolio_manager
@@ -208,6 +210,7 @@ async def test_get_current_holdings_values(backtesting_trader):
 
 
 @pytest.mark.parametrize("backtesting_exchange_manager", ["spot", "margin", "futures", "options"], indirect=True)
+@pytest.mark.asyncio
 async def test_get_origin_portfolio_current_value(backtesting_trader):
     config, exchange_manager, trader = backtesting_trader
     portfolio_manager = exchange_manager.exchange_personal_data.portfolio_manager
@@ -217,6 +220,7 @@ async def test_get_origin_portfolio_current_value(backtesting_trader):
     assert portfolio_value_holder.get_origin_portfolio_current_value() == decimal.Decimal(str(10))
 
 @pytest.mark.parametrize("backtesting_exchange_manager", ["spot", "margin", "futures", "options"], indirect=True)
+@pytest.mark.asyncio
 async def test_get_origin_portfolio_current_value_with_different_reference_market(backtesting_trader):
     config, exchange_manager, trader = backtesting_trader
     portfolio_manager = exchange_manager.exchange_personal_data.portfolio_manager
@@ -227,6 +231,7 @@ async def test_get_origin_portfolio_current_value_with_different_reference_marke
     assert portfolio_value_holder.get_origin_portfolio_current_value() == decimal.Decimal(str(1000))
 
 @pytest.mark.parametrize("backtesting_exchange_manager", ["spot", "margin", "futures", "options"], indirect=True)
+@pytest.mark.asyncio
 async def test_update_origin_crypto_currencies_values(backtesting_trader):
     config, exchange_manager, trader = backtesting_trader
     portfolio_manager = exchange_manager.exchange_personal_data.portfolio_manager
@@ -255,6 +260,7 @@ async def test_update_origin_crypto_currencies_values(backtesting_trader):
            is False
 
 @pytest.mark.parametrize("backtesting_exchange_manager", ["spot", "margin", "futures", "options"], indirect=True)
+@pytest.mark.asyncio
 async def test_sync_portfolio_current_value_using_available_currencies_values(backtesting_trader):
     config, exchange_manager, trader = backtesting_trader
     portfolio_manager = exchange_manager.exchange_personal_data.portfolio_manager
@@ -271,6 +277,7 @@ async def test_sync_portfolio_current_value_using_available_currencies_values(ba
     assert portfolio_value_holder.portfolio_current_value == decimal.Decimal(str(20)) # now includes USDT
 
 @pytest.mark.parametrize("backtesting_exchange_manager", ["spot", "futures"], indirect=True)
+@pytest.mark.asyncio
 async def test_get_holdings_ratio(backtesting_trader):
     config, exchange_manager, trader = backtesting_trader
     portfolio_manager = exchange_manager.exchange_personal_data.portfolio_manager
@@ -363,8 +370,9 @@ async def test_get_holdings_ratio(backtesting_trader):
             commons_symbols.parse_symbol("BTC/USDT"), commons_symbols.parse_symbol("ETH/USDT")
         ])
         assert portfolio_value_holder.get_holdings_ratio("BTC", traded_symbols_only=True) == constants.ONE
- 
+
 @pytest.mark.parametrize("backtesting_exchange_manager", ["spot", "margin", "futures", "options"], indirect=True)
+@pytest.mark.asyncio
 async def test_get_holdings_ratio_with_include_assets_in_open_orders(backtesting_trader):
     config, exchange_manager, trader = backtesting_trader
     portfolio_manager = exchange_manager.exchange_personal_data.portfolio_manager
@@ -495,7 +503,7 @@ async def test_get_holdings_ratio_with_include_assets_in_open_orders(backtesting
         assert portfolio_value_holder.get_holdings_ratio(
                 "ETH", traded_symbols_only=True, include_assets_in_open_orders=True
         ) == decimal.Decimal('0.1091')
-            
+
         # ETH now in traded assets
         exchange_manager.exchange_config.traded_symbols.extend([
             commons_symbols.parse_symbol("ETH/USDT")
@@ -504,7 +512,7 @@ async def test_get_holdings_ratio_with_include_assets_in_open_orders(backtesting
         assert portfolio_value_holder.get_holdings_ratio(
                 "ETH", traded_symbols_only=True, include_assets_in_open_orders=True
         ) == decimal.Decimal('0.1000083333333333333333333333')  # ETH now taken into account in total value
-            
+
         # ETH now taken into account in total value: BTC % of holdings is not 1 anymore (as ETH takes a part of this %)
         assert portfolio_value_holder.get_holdings_ratio(
             "BTC", traded_symbols_only=True, include_assets_in_open_orders=True
@@ -518,24 +526,25 @@ async def test_get_holdings_ratio_with_include_assets_in_open_orders(backtesting
     ("BTC", ["USDT"]),
     ("BTC", ["BTC", "ETH"]),
 ])
+@pytest.mark.asyncio
 async def test_get_traded_assets_holdings_value(backtesting_trader, unit, coins_whitelist):
     config, exchange_manager, trader = backtesting_trader
     portfolio_manager = exchange_manager.exchange_personal_data.portfolio_manager
     portfolio_value_holder = portfolio_manager.portfolio_value_holder
-    
+
     portfolio_manager.portfolio.update_portfolio_from_balance({
         'BTC': {'available': decimal.Decimal("10"), 'total': decimal.Decimal("10")},
         'USDT': {'available': decimal.Decimal("1000"), 'total': decimal.Decimal("1000")},
         'ETH': {'available': decimal.Decimal("5"), 'total': decimal.Decimal("5")},
     }, True)
-    
+
     exchange_manager.exchange_config.traded_symbols = [commons_symbols.parse_symbol("BTC/USDT")]
     exchange_manager.client_symbols.append("BTC/USDT")
     portfolio_value_holder.value_converter.last_prices_by_trading_pair["BTC/USDT"] = decimal.Decimal("1000")
     portfolio_value_holder.value_converter.missing_currency_data_in_exchange.discard("USDT")
-    
+
     result = portfolio_value_holder.get_traded_assets_holdings_value(unit, coins_whitelist)
-    
+
     # Verify result is a decimal and non-negative
     assert isinstance(result, decimal.Decimal)
     assert result >= constants.ZERO
@@ -550,26 +559,27 @@ async def test_get_traded_assets_holdings_value(backtesting_trader, unit, coins_
     ("BTC", True, True, ["BTC"], False),
     ("XYZ", False, False, None, True),
 ])
+@pytest.mark.asyncio
 async def test_get_holdings_ratio_from_portfolio(backtesting_trader, currency, traded_symbols_only, include_assets_in_open_orders, coins_whitelist, expected_ratio_zero):
     config, exchange_manager, trader = backtesting_trader
     portfolio_manager = exchange_manager.exchange_personal_data.portfolio_manager
     portfolio_value_holder = portfolio_manager.portfolio_value_holder
-    
+
     portfolio_manager.portfolio.update_portfolio_from_balance({
         'BTC': {'available': decimal.Decimal("10"), 'total': decimal.Decimal("10")},
         'USDT': {'available': decimal.Decimal("1000"), 'total': decimal.Decimal("1000")},
     }, True)
-    
+
     exchange_manager.exchange_config.traded_symbols = [commons_symbols.parse_symbol("BTC/USDT")]
     exchange_manager.client_symbols.append("BTC/USDT")
     portfolio_value_holder.value_converter.last_prices_by_trading_pair["BTC/USDT"] = decimal.Decimal("1000")
     portfolio_value_holder.value_converter.missing_currency_data_in_exchange.discard("USDT")
     portfolio_value_holder.sync_portfolio_current_value_using_available_currencies_values(init_price_fetchers=False)
-    
+
     result = portfolio_value_holder._get_holdings_ratio_from_portfolio(
         currency, traded_symbols_only, include_assets_in_open_orders, coins_whitelist
     )
-    
+
     assert isinstance(result, decimal.Decimal)
     assert result >= constants.ZERO
     assert result <= constants.ONE
@@ -584,24 +594,25 @@ async def test_get_holdings_ratio_from_portfolio(backtesting_trader, currency, t
     (["BTC", "USDT"], False, False),
     (["BTC"], True, False),
 ])
+@pytest.mark.asyncio
 async def test_get_total_holdings_value(backtesting_trader, coins_whitelist, traded_symbols_only, use_portfolio_current_value):
     config, exchange_manager, trader = backtesting_trader
     portfolio_manager = exchange_manager.exchange_personal_data.portfolio_manager
     portfolio_value_holder = portfolio_manager.portfolio_value_holder
-    
+
     portfolio_manager.portfolio.update_portfolio_from_balance({
         'BTC': {'available': decimal.Decimal("10"), 'total': decimal.Decimal("10")},
         'USDT': {'available': decimal.Decimal("1000"), 'total': decimal.Decimal("1000")},
     }, True)
-    
+
     exchange_manager.exchange_config.traded_symbols = [commons_symbols.parse_symbol("BTC/USDT")]
     exchange_manager.client_symbols.append("BTC/USDT")
     portfolio_value_holder.value_converter.last_prices_by_trading_pair["BTC/USDT"] = decimal.Decimal("1000")
     portfolio_value_holder.value_converter.missing_currency_data_in_exchange.discard("USDT")
     portfolio_value_holder.sync_portfolio_current_value_using_available_currencies_values(init_price_fetchers=False)
-    
+
     result = portfolio_value_holder._get_total_holdings_value(coins_whitelist, traded_symbols_only)
-    
+
     assert isinstance(result, decimal.Decimal)
     assert result >= constants.ZERO
     if use_portfolio_current_value and not coins_whitelist and not traded_symbols_only:
@@ -616,25 +627,26 @@ async def test_get_total_holdings_value(backtesting_trader, coins_whitelist, tra
     ("BTC", "ETH/BTC", enums.TradeOrderSide.SELL, decimal.Decimal("2"), decimal.Decimal("0.1"), decimal.Decimal("0.1")),
     ("XYZ", "BTC/USDT", enums.TradeOrderSide.BUY, decimal.Decimal("1"), decimal.Decimal("1000"), constants.ZERO),
 ])
+@pytest.mark.asyncio
 async def test_get_orders_delta(backtesting_trader, currency, order_symbol, order_side, order_quantity, order_cost, expected_delta):
     config, exchange_manager, trader = backtesting_trader
     portfolio_manager = exchange_manager.exchange_personal_data.portfolio_manager
     portfolio_value_holder = portfolio_manager.portfolio_value_holder
-    
+
     mock_order = mock.Mock()
     mock_order.symbol = order_symbol
     mock_order.side = order_side
     mock_order.origin_quantity = order_quantity
     mock_order.total_cost = order_cost
     mock_order.status = enums.OrderStatus.OPEN
-    
+
     with mock.patch.object(
         portfolio_manager.exchange_manager.exchange_personal_data.orders_manager,
         "get_open_orders",
         return_value=[mock_order]
     ):
         result = portfolio_value_holder._get_orders_delta(currency)
-        
+
         assert isinstance(result, decimal.Decimal)
         assert result == expected_delta
 
@@ -650,46 +662,48 @@ async def test_get_orders_delta(backtesting_trader, currency, order_symbol, orde
     # Sell order partially filled: -(10 - 5) * 50 = -250
     (enums.TradeOrderSide.SELL, decimal.Decimal("10"), decimal.Decimal("5"), decimal.Decimal("50"), decimal.Decimal("-250")),
 ])
+@pytest.mark.asyncio
 async def test_get_open_orders_value_for_symbol(backtesting_trader, order_side, order_quantity, filled_quantity, order_price, expected_value):
     config, exchange_manager, trader = backtesting_trader
     portfolio_manager = exchange_manager.exchange_personal_data.portfolio_manager
     portfolio_value_holder = portfolio_manager.portfolio_value_holder
-    
+
     test_symbol = "slug/USDC:USDC-260331-0-YES"
-    
+
     # Create a real order object based on the side
     if order_side == enums.TradeOrderSide.BUY:
         order = personal_data.BuyLimitOrder(trader)
     else:
         order = personal_data.SellLimitOrder(trader)
-    
+
     order.update(order_type=enums.TraderOrderType.BUY_LIMIT if order_side == enums.TradeOrderSide.BUY else enums.TraderOrderType.SELL_LIMIT,
                  symbol=test_symbol,
                  current_price=order_price,
                  quantity=order_quantity,
                  price=order_price)
     order.filled_quantity = filled_quantity
-    
+
     with mock.patch.object(
         portfolio_manager.exchange_manager.exchange_personal_data.orders_manager,
         "get_open_orders",
         return_value=[order]
     ):
         result = portfolio_value_holder._get_open_orders_value_for_symbol(test_symbol)
-        
+
         assert isinstance(result, decimal.Decimal)
         assert result == expected_value
 
 
 @pytest.mark.parametrize("backtesting_exchange_manager", ["spot", "margin", "futures", "options"], indirect=True)
+@pytest.mark.asyncio
 async def test_get_open_orders_value_for_symbol_multiple_orders(backtesting_trader):
     """Test that multiple orders for the same symbol are summed correctly."""
     config, exchange_manager, trader = backtesting_trader
     portfolio_manager = exchange_manager.exchange_personal_data.portfolio_manager
     portfolio_value_holder = portfolio_manager.portfolio_value_holder
-    
+
     test_symbol = "slug/USDC:USDC-260331-0-YES"
-    
+
     # Buy order: 10 * 50 = 500
     buy_order = personal_data.BuyLimitOrder(trader)
     buy_order.update(order_type=enums.TraderOrderType.BUY_LIMIT,
@@ -698,7 +712,7 @@ async def test_get_open_orders_value_for_symbol_multiple_orders(backtesting_trad
                      quantity=decimal.Decimal("10"),
                      price=decimal.Decimal("50"))
     buy_order.filled_quantity = decimal.Decimal("0")
-    
+
     # Sell order: -5 * 40 = -200
     sell_order = personal_data.SellLimitOrder(trader)
     sell_order.update(order_type=enums.TraderOrderType.SELL_LIMIT,
@@ -707,7 +721,7 @@ async def test_get_open_orders_value_for_symbol_multiple_orders(backtesting_trad
                       quantity=decimal.Decimal("5"),
                       price=decimal.Decimal("40"))
     sell_order.filled_quantity = decimal.Decimal("0")
-    
+
     # Net value: 500 - 200 = 300
     with mock.patch.object(
         portfolio_manager.exchange_manager.exchange_personal_data.orders_manager,
@@ -715,7 +729,7 @@ async def test_get_open_orders_value_for_symbol_multiple_orders(backtesting_trad
         return_value=[buy_order, sell_order]
     ):
         result = portfolio_value_holder._get_open_orders_value_for_symbol(test_symbol)
-        
+
         assert isinstance(result, decimal.Decimal)
         assert result == decimal.Decimal("300")
 
@@ -832,4 +846,3 @@ class TestPortfolioValueHolderOrdersDeltaNetworkQualified:
         holder, _value_converter_mock = _portfolio_value_holder_without_value_converter(portfolio_manager)
         delta = holder._get_orders_delta("BTC@BTC")
         assert delta == decimal.Decimal("2")
-

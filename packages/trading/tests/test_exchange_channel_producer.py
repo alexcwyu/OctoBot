@@ -6,10 +6,11 @@ import pytest
 
 import octobot_trading.exchange_channel as exchange_channel_module
 
-pytestmark = pytest.mark.asyncio
+
 
 
 class TestExchangeChannelProducerPause:
+    @pytest.mark.asyncio
     async def test_does_not_log_when_exchange_only(self):
         exchange_manager = mock.Mock()
         exchange_manager.exchange_name = "binance"
@@ -26,6 +27,7 @@ class TestExchangeChannelProducerPause:
         assert producer.is_running is False
         assert channel.is_paused is True
 
+    @pytest.mark.asyncio
     async def test_logs_when_lifecycle_debug_enabled(self):
         exchange_manager = mock.Mock()
         exchange_manager.exchange_name = "binance"
@@ -42,6 +44,7 @@ class TestExchangeChannelProducerPause:
 
 
 class TestExchangeChannelProducerResume:
+    @pytest.mark.asyncio
     async def test_does_not_log_when_exchange_only(self):
         exchange_manager = mock.Mock()
         exchange_manager.exchange_name = "binance"
@@ -57,6 +60,7 @@ class TestExchangeChannelProducerResume:
         producer.logger.debug.assert_not_called()
         assert channel.is_paused is False
 
+    @pytest.mark.asyncio
     async def test_logs_when_lifecycle_debug_enabled(self):
         exchange_manager = mock.Mock()
         exchange_manager.exchange_name = "binance"

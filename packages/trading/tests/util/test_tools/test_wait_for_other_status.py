@@ -11,7 +11,7 @@ import octobot_trading.enums as trading_enums
 import octobot_trading.personal_data as trading_personal_data
 import octobot_trading.util.test_tools.exchanges_test_tools as exchanges_test_tools
 
-pytestmark = pytest.mark.asyncio
+
 
 PENDING_STATUS = trading_enums.OrderStatus.PENDING_CREATION.value
 OPEN_STATUS = trading_enums.OrderStatus.OPEN.value
@@ -55,6 +55,7 @@ def _fast_poll_settings():
 
 class TestWaitForOtherStatus:
 
+    @pytest.mark.asyncio
     async def test_returns_immediately_when_status_changes_on_first_poll(self):
         order = _pending_order()
         confirmed_order = mock.Mock()
@@ -69,6 +70,7 @@ class TestWaitForOtherStatus:
         order.exchange_manager.exchange.get_order.assert_awaited_once()
         parse_order_dict_mock.assert_called_once()
 
+    @pytest.mark.asyncio
     async def test_raises_timeout_error_when_get_order_always_returns_none(self):
         order = _pending_order()
         order.exchange_manager.exchange.get_order = mock.AsyncMock(return_value=None)
@@ -76,6 +78,7 @@ class TestWaitForOtherStatus:
         with _fast_poll_settings(), pytest.raises(TimeoutError):
             await exchanges_test_tools.wait_for_other_status(order, timeout=0.05)
 
+    @pytest.mark.asyncio
     async def test_logs_at_iterations_five_and_ten(self):
         order = _pending_order()
         order.exchange_manager.exchange.get_order = mock.AsyncMock(return_value=None)
@@ -95,6 +98,7 @@ class TestWaitForOtherStatus:
         assert "pending order status poll 5" in poll_log_messages[0]
         assert "pending order status poll 10" in poll_log_messages[1]
 
+    @pytest.mark.asyncio
     async def test_does_not_log_on_iterations_one_through_four(self):
         order = _pending_order()
         poll_count = {"count": 0}
@@ -121,6 +125,7 @@ class TestWaitForOtherStatus:
         ]
         assert poll_log_messages == []
 
+    @pytest.mark.asyncio
     async def test_returns_when_open_orders_fallback_finds_order(self):
         order = _pending_order()
         order.exchange_manager.exchange.get_order = mock.AsyncMock(return_value=None)
@@ -138,6 +143,7 @@ class TestWaitForOtherStatus:
 
 class TestCreateOrderDeferConfirmation:
 
+    @pytest.mark.asyncio
     async def test_defer_true_returns_pending_order_without_waiting(self):
         exchange_manager = mock.Mock(exchange_name="coinbase")
         pending_order = mock.Mock(status=trading_enums.OrderStatus.PENDING_CREATION)
@@ -166,6 +172,7 @@ class TestCreateOrderDeferConfirmation:
         assert result is pending_order
         wait_for_other_status_mock.assert_not_called()
 
+    @pytest.mark.asyncio
     async def test_defer_false_blocks_until_confirmation(self):
         exchange_manager = mock.Mock(exchange_name="coinbase")
         pending_order = mock.Mock(status=trading_enums.OrderStatus.PENDING_CREATION)
@@ -198,6 +205,7 @@ class TestCreateOrderDeferConfirmation:
 
 class TestConfirmOrderStatus:
 
+    @pytest.mark.asyncio
     async def test_delegates_to_wait_for_other_status_with_same_timeout(self):
         order = _pending_order()
         confirmed_order = mock.Mock()

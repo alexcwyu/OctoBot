@@ -137,7 +137,7 @@ def mocked_community_authentication():
             mock.patch.object(
                 community.CommunityAuthentication,
                 "is_logged_in",
-                mock.AsyncMock(return_value=True),
+                mock.Mock(return_value=True),
             )
         )
         yield login_mock
@@ -373,7 +373,7 @@ def empty_copy_exchange_account_action(
 
 
 @pytest.fixture
-def isolated_exchange_cache(): 
+def isolated_exchange_cache():
     import octobot_trading.exchanges.connectors.ccxt.ccxt_clients_cache as ccxt_clients_cache
     with ccxt_clients_cache.isolated_empty_cache():
         yield

@@ -23,14 +23,16 @@ import octobot_commons.multiprocessing_util as multiprocessing_util
 
 
 class TestAsyncFilesystemBasedLock:
-    pytestmark = pytest.mark.asyncio
 
+
+    @pytest.mark.asyncio
     async def test_acquire_and_release_removes_lock_file(self, tmp_path):
         lock_file_path = tmp_path / "test.lock"
         async with multiprocessing_util.async_filesystem_based_lock(str(lock_file_path)):
             assert lock_file_path.is_file()
         assert not lock_file_path.exists()
 
+    @pytest.mark.asyncio
     async def test_second_acquire_waits_until_release(self, tmp_path):
         lock_file_path = tmp_path / "test.lock"
         second_acquire_finished = asyncio.Event()
@@ -55,6 +57,7 @@ class TestAsyncFilesystemBasedLock:
         await asyncio.wait_for(second_task, timeout=2)
         assert second_acquire_finished.is_set()
 
+    @pytest.mark.asyncio
     async def test_stale_lock_is_removed_and_reacquired(self, tmp_path):
         lock_file_path = tmp_path / "stale.lock"
         lock_file_path.write_text("stale", encoding="utf-8")
@@ -67,6 +70,7 @@ class TestAsyncFilesystemBasedLock:
             assert lock_file_path.is_file()
         assert not lock_file_path.exists()
 
+    @pytest.mark.asyncio
     async def test_acquire_timeout_raises(self, tmp_path):
         lock_file_path = tmp_path / "busy.lock"
         lock_file_path.write_text("held", encoding="utf-8")

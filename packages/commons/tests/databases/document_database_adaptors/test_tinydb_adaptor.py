@@ -27,7 +27,7 @@ import octobot_commons.errors as errors
 import octobot_commons.databases.document_database_adaptors.tinydb_adaptor as tinydb_adaptor
 
 # All test coroutines will be treated as marked.
-pytestmark = pytest.mark.asyncio
+
 
 
 # ============== Fixtures and Helpers ==============
@@ -54,31 +54,36 @@ async def get_temp_database(cache_size=None):
 
 # ============== Static Methods Tests ==============
 
-def test_is_file_system_based():
+@pytest.mark.asyncio
+async def test_is_file_system_based():
     assert tinydb_adaptor.TinyDBAdaptor.is_file_system_based() is True
 
 
-def test_get_db_file_ext():
+@pytest.mark.asyncio
+async def test_get_db_file_ext():
     assert tinydb_adaptor.TinyDBAdaptor.get_db_file_ext() == constants.TINYDB_EXT
     assert tinydb_adaptor.TinyDBAdaptor.get_db_file_ext() == ".json"
 
 
 # ============== Initialization Tests ==============
 
-def test_init_sets_attributes():
+@pytest.mark.asyncio
+async def test_init_sets_attributes():
     adaptor = tinydb_adaptor.TinyDBAdaptor("/some/path/db.json", cache_size=100)
     assert adaptor.db_path == "/some/path/db.json"
     assert adaptor.cache_size == 100
     assert adaptor.database is None
 
 
-def test_init_with_default_cache_size():
+@pytest.mark.asyncio
+async def test_init_with_default_cache_size():
     adaptor = tinydb_adaptor.TinyDBAdaptor("/some/path/db.json")
     assert adaptor.cache_size is None
     assert adaptor.database is None
 
 
-def test_initialize_creates_database():
+@pytest.mark.asyncio
+async def test_initialize_creates_database():
     with get_temp_directory() as temp_dir:
         db_path = os.path.join(temp_dir, "test_db.json")
         adaptor = tinydb_adaptor.TinyDBAdaptor(db_path)
@@ -90,7 +95,8 @@ def test_initialize_creates_database():
             adaptor.database.close()
 
 
-def test_initialize_with_custom_cache_size():
+@pytest.mark.asyncio
+async def test_initialize_with_custom_cache_size():
     with get_temp_directory() as temp_dir:
         db_path = os.path.join(temp_dir, "test_db.json")
         custom_cache_size = 1000
@@ -104,7 +110,8 @@ def test_initialize_with_custom_cache_size():
             adaptor.database.close()
 
 
-def test_initialize_uses_default_cache_size():
+@pytest.mark.asyncio
+async def test_initialize_uses_default_cache_size():
     with get_temp_directory() as temp_dir:
         db_path = os.path.join(temp_dir, "test_db.json")
         adaptor = tinydb_adaptor.TinyDBAdaptor(db_path)
@@ -115,7 +122,8 @@ def test_initialize_uses_default_cache_size():
             adaptor.database.close()
 
 
-def test_initialize_raises_database_not_found_error():
+@pytest.mark.asyncio
+async def test_initialize_raises_database_not_found_error():
     # Path with non-existent parent directory
     db_path = "/non/existent/path/db.json"
     adaptor = tinydb_adaptor.TinyDBAdaptor(db_path)
@@ -125,6 +133,7 @@ def test_initialize_raises_database_not_found_error():
 
 # ============== Identifier Operations Tests ==============
 
+@pytest.mark.asyncio
 async def test_create_identifier():
     with get_temp_directory() as temp_dir:
         identifier_path = os.path.join(temp_dir, "new_identifier")
@@ -134,6 +143,7 @@ async def test_create_identifier():
         assert os.path.isdir(identifier_path)
 
 
+@pytest.mark.asyncio
 async def test_identifier_exists_file():
     with get_temp_directory() as temp_dir:
         file_path = os.path.join(temp_dir, "test_file.json")
@@ -145,6 +155,7 @@ async def test_identifier_exists_file():
         assert await tinydb_adaptor.TinyDBAdaptor.identifier_exists(file_path, is_full_identifier=True) is True
 
 
+@pytest.mark.asyncio
 async def test_identifier_exists_directory():
     with get_temp_directory() as temp_dir:
         dir_path = os.path.join(temp_dir, "test_dir")
@@ -155,6 +166,7 @@ async def test_identifier_exists_directory():
         assert await tinydb_adaptor.TinyDBAdaptor.identifier_exists(dir_path, is_full_identifier=False) is True
 
 
+@pytest.mark.asyncio
 async def test_get_sub_identifiers():
     with get_temp_directory() as temp_dir:
         # Create subdirectories
@@ -176,6 +188,7 @@ async def test_get_sub_identifiers():
         assert "file.txt" not in sub_identifiers
 
 
+@pytest.mark.asyncio
 async def test_get_single_sub_identifier_returns_name():
     with get_temp_directory() as temp_dir:
         # Create single subdirectory
@@ -185,6 +198,7 @@ async def test_get_single_sub_identifier_returns_name():
         assert result == "only_sub"
 
 
+@pytest.mark.asyncio
 async def test_get_single_sub_identifier_returns_none_for_multiple():
     with get_temp_directory() as temp_dir:
         # Create multiple subdirectories
@@ -195,12 +209,14 @@ async def test_get_single_sub_identifier_returns_none_for_multiple():
         assert result is None
 
 
+@pytest.mark.asyncio
 async def test_get_single_sub_identifier_returns_none_for_empty():
     with get_temp_directory() as temp_dir:
         result = await tinydb_adaptor.TinyDBAdaptor.get_single_sub_identifier(temp_dir, [])
         assert result is None
 
 
+@pytest.mark.asyncio
 async def test_get_single_sub_identifier_ignores_specified():
     with get_temp_directory() as temp_dir:
         os.makedirs(os.path.join(temp_dir, "sub1"))
@@ -212,6 +228,7 @@ async def test_get_single_sub_identifier_ignores_specified():
 
 # ============== Document Operations Tests ==============
 
+@pytest.mark.asyncio
 async def test_get_uuid():
     async with get_temp_database() as adaptor:
         doc_id = await adaptor.insert("test_table", {"name": "test"})
@@ -220,6 +237,7 @@ async def test_get_uuid():
         assert adaptor.get_uuid(documents[0]) == doc_id
 
 
+@pytest.mark.asyncio
 async def test_select_all():
     async with get_temp_database() as adaptor:
         await adaptor.insert("test_table", {"name": "doc1"})
@@ -234,6 +252,7 @@ async def test_select_all():
         assert "doc3" in names
 
 
+@pytest.mark.asyncio
 async def test_select_with_query():
     async with get_temp_database() as adaptor:
         await adaptor.insert("test_table", {"name": "alice", "age": 30})
@@ -248,6 +267,7 @@ async def test_select_with_query():
         assert "charlie" in names
 
 
+@pytest.mark.asyncio
 async def test_select_by_uuid():
     async with get_temp_database() as adaptor:
         doc1_id = await adaptor.insert("test_table", {"name": "doc1"})
@@ -257,6 +277,7 @@ async def test_select_by_uuid():
         assert result["name"] == "doc1"
 
 
+@pytest.mark.asyncio
 async def test_tables():
     async with get_temp_database() as adaptor:
         await adaptor.insert("table1", {"data": 1})
@@ -269,6 +290,7 @@ async def test_tables():
         assert "table3" in tables
 
 
+@pytest.mark.asyncio
 async def test_insert():
     async with get_temp_database() as adaptor:
         doc_id = await adaptor.insert("test_table", {"name": "test", "value": 42})
@@ -281,6 +303,7 @@ async def test_insert():
         assert results[0]["value"] == 42
 
 
+@pytest.mark.asyncio
 async def test_insert_many():
     async with get_temp_database() as adaptor:
         rows = [
@@ -296,6 +319,7 @@ async def test_insert_many():
         assert len(results) == 3
 
 
+@pytest.mark.asyncio
 async def test_upsert_insert():
     async with get_temp_database() as adaptor:
         query = await adaptor.query_factory()
@@ -307,6 +331,7 @@ async def test_upsert_insert():
         assert results[0]["value"] == 100
 
 
+@pytest.mark.asyncio
 async def test_upsert_update_with_query():
     async with get_temp_database() as adaptor:
         await adaptor.insert("test_table", {"name": "existing2", "value": 150})
@@ -322,6 +347,7 @@ async def test_upsert_update_with_query():
         assert results[0]["value"] == 200
 
 
+@pytest.mark.asyncio
 async def test_upsert_update_with_uuid():
     async with get_temp_database() as adaptor:
         doc_id = await adaptor.insert("test_table", {"name": "existing", "value": 50})
@@ -333,6 +359,7 @@ async def test_upsert_update_with_uuid():
         assert result["value"] == 300
 
 
+@pytest.mark.asyncio
 async def test_update_with_query():
     async with get_temp_database() as adaptor:
         await adaptor.insert("test_table", {"name": "alice", "status": "active"})
@@ -346,6 +373,7 @@ async def test_update_with_query():
         assert results[0]["name"] == "alice"
 
 
+@pytest.mark.asyncio
 async def test_update_with_uuid():
     async with get_temp_database() as adaptor:
         doc_id = await adaptor.insert("test_table", {"name": "test", "value": 10})
@@ -357,6 +385,7 @@ async def test_update_with_uuid():
         assert result["value"] == 999
 
 
+@pytest.mark.asyncio
 async def test_update_many():
     async with get_temp_database() as adaptor:
         doc1_id = await adaptor.insert("test_table", {"name": "doc1", "value": 1})
@@ -375,6 +404,7 @@ async def test_update_many():
         assert result2["value"] == 200
 
 
+@pytest.mark.asyncio
 async def test_delete_with_query():
     async with get_temp_database() as adaptor:
         await adaptor.insert("test_table", {"name": "keep", "type": "a"})
@@ -388,6 +418,7 @@ async def test_delete_with_query():
         assert results[0]["name"] == "keep"
 
 
+@pytest.mark.asyncio
 async def test_delete_with_uuid():
     async with get_temp_database() as adaptor:
         doc1_id = await adaptor.insert("test_table", {"name": "doc1"})
@@ -400,6 +431,7 @@ async def test_delete_with_uuid():
         assert results[0]["name"] == "doc2"
 
 
+@pytest.mark.asyncio
 async def test_delete_drop_table():
     async with get_temp_database() as adaptor:
         await adaptor.insert("test_table", {"name": "doc1"})
@@ -416,6 +448,7 @@ async def test_delete_drop_table():
         assert "other_table" in tables_after
 
 
+@pytest.mark.asyncio
 async def test_count():
     async with get_temp_database() as adaptor:
         await adaptor.insert("test_table", {"name": "alice", "type": "user"})
@@ -430,6 +463,7 @@ async def test_count():
         assert admin_count == 1
 
 
+@pytest.mark.asyncio
 async def test_query_factory():
     async with get_temp_database() as adaptor:
         query = await adaptor.query_factory()
@@ -438,6 +472,7 @@ async def test_query_factory():
 
 # ============== Lifecycle Operations Tests ==============
 
+@pytest.mark.asyncio
 async def test_hard_reset():
     with get_temp_directory() as temp_dir:
         db_path = os.path.join(temp_dir, "test_db.json")
@@ -465,6 +500,7 @@ async def test_hard_reset():
         await adaptor.close()
 
 
+@pytest.mark.asyncio
 async def test_flush():
     with get_temp_directory() as temp_dir:
         db_path = os.path.join(temp_dir, "test_db.json")
@@ -479,6 +515,7 @@ async def test_flush():
             await adaptor.close()
 
 
+@pytest.mark.asyncio
 async def test_close():
     with get_temp_directory() as temp_dir:
         db_path = os.path.join(temp_dir, "test_db.json")
@@ -490,12 +527,14 @@ async def test_close():
         await adaptor.close()
 
 
+@pytest.mark.asyncio
 async def test_close_handles_attribute_error():
     adaptor = tinydb_adaptor.TinyDBAdaptor("/some/path/db.json")
     # database is None, close should handle AttributeError gracefully
     await adaptor.close()  # Should not raise
 
 
+@pytest.mark.asyncio
 async def test_close_handles_type_error():
     with get_temp_directory() as temp_dir:
         db_path = os.path.join(temp_dir, "test_db.json")
@@ -510,7 +549,8 @@ async def test_close_handles_type_error():
 
 # ============== LazyJSONStorage Tests ==============
 
-def test_lazy_storage_does_not_create_file_on_init():
+@pytest.mark.asyncio
+async def test_lazy_storage_does_not_create_file_on_init():
     with get_temp_directory() as temp_dir:
         db_path = os.path.join(temp_dir, "lazy_test.json")
         LazyJSONStorage = tinydb_adaptor.TinyDBAdaptor._get_storage()
@@ -521,7 +561,8 @@ def test_lazy_storage_does_not_create_file_on_init():
         storage.close()
 
 
-def test_lazy_storage_creates_file_on_handle_access():
+@pytest.mark.asyncio
+async def test_lazy_storage_creates_file_on_handle_access():
     with get_temp_directory() as temp_dir:
         db_path = os.path.join(temp_dir, "lazy_test.json")
         LazyJSONStorage = tinydb_adaptor.TinyDBAdaptor._get_storage()
@@ -536,7 +577,8 @@ def test_lazy_storage_creates_file_on_handle_access():
         storage.close()
 
 
-def test_lazy_storage_close_without_open():
+@pytest.mark.asyncio
+async def test_lazy_storage_close_without_open():
     with get_temp_directory() as temp_dir:
         db_path = os.path.join(temp_dir, "lazy_test.json")
         LazyJSONStorage = tinydb_adaptor.TinyDBAdaptor._get_storage()
@@ -547,7 +589,8 @@ def test_lazy_storage_close_without_open():
         assert not os.path.exists(db_path)
 
 
-def test_lazy_storage_raises_file_not_found_for_missing_parent():
+@pytest.mark.asyncio
+async def test_lazy_storage_raises_file_not_found_for_missing_parent():
     LazyJSONStorage = tinydb_adaptor.TinyDBAdaptor._get_storage()
     with pytest.raises(FileNotFoundError):
         LazyJSONStorage("/non/existent/path/db.json")
@@ -555,6 +598,7 @@ def test_lazy_storage_raises_file_not_found_for_missing_parent():
 
 # ============== Functional Integration Test ==============
 
+@pytest.mark.asyncio
 async def test_full_workflow_functional():
     """
     Comprehensive functional test exercising most TinyDBAdaptor methods

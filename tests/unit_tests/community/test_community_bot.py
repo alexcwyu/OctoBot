@@ -32,9 +32,6 @@ from octobot.community.community_bot import (
 
 
 # All test coroutines will be treated as marked.
-pytestmark = pytest.mark.asyncio
-
-
 @pytest.fixture
 def user_account():
     account = mock.Mock()
@@ -60,6 +57,7 @@ def authenticator(user_account):
 
 
 class TestSuppressedLocalEnvBotError:
+    @pytest.mark.asyncio
     async def test_suppresses_bot_error_in_local_env(self):
 
         @suppressed_local_env_bot_error
@@ -78,6 +76,7 @@ class TestSuppressedLocalEnvBotError:
         assert "Skipped bot update" in log_msg
         assert "boom" in log_msg
 
+    @pytest.mark.asyncio
     async def test_propagates_bot_error_in_cloud_env(self):
         @suppressed_local_env_bot_error
         async def _raise_bot_error():
@@ -105,6 +104,7 @@ class TestCaughtGlobalExceptions:
 
 
 class TestInitializedBotId:
+    @pytest.mark.asyncio
     async def test_suppresses_missing_bot_error_in_local_env(self, authenticator):
         authenticator.user_account.bot_id = None
         bot = CommunityBot(authenticator)
@@ -126,6 +126,7 @@ class TestInitializedBotId:
         logger.info.assert_called_once()
         assert "Skipped bot update" in logger.info.call_args[0][0]
 
+    @pytest.mark.asyncio
     async def test_raises_missing_bot_error_in_cloud_env(self, authenticator):
         @suppressed_local_env_bot_error
         async def wrapped(*args, **kwargs):
@@ -145,6 +146,7 @@ class TestInitializedBotId:
 
 
 class TestShouldTradeAccordingToProductsSubscriptionAndDeploymentErrorStatus:
+    @pytest.mark.asyncio
     async def test_returns_true_for_active_subscription_without_stop_condition(self, authenticator):
         products_subscription = {
             supabase_enums.ProductsSubscriptionsKeys.DESIRED_STATUS.value:
@@ -157,6 +159,7 @@ class TestShouldTradeAccordingToProductsSubscriptionAndDeploymentErrorStatus:
 
         assert await bot.should_trade_according_to_products_subscription_and_deployment_error_status() is True
 
+    @pytest.mark.asyncio
     async def test_returns_false_when_stop_condition_triggered(self, authenticator):
         authenticator.user_account.get_selected_bot_deployment_error_status = mock.Mock(
             return_value=supabase_enums.BotDeploymentErrorsStatuses.STOP_CONDITION_TRIGGERED.value
@@ -172,6 +175,7 @@ class TestShouldTradeAccordingToProductsSubscriptionAndDeploymentErrorStatus:
 
         assert await bot.should_trade_according_to_products_subscription_and_deployment_error_status() is False
 
+    @pytest.mark.asyncio
     async def test_does_not_check_deployment_status_when_subscription_not_active(self, authenticator):
         bot = CommunityBot(authenticator)
 
@@ -188,6 +192,7 @@ class TestShouldTradeAccordingToProductsSubscriptionAndDeploymentErrorStatus:
 
 
 class TestOnStartedBot:
+    @pytest.mark.asyncio
     async def test_calls_startup_helpers_only_in_cloud_env(self, authenticator):
         bot = CommunityBot(authenticator)
         bot._insert_bot_started_log = mock.AsyncMock()
@@ -209,6 +214,7 @@ class TestOnStartedBot:
 
 
 class TestScheduleBotStop:
+    @pytest.mark.asyncio
     async def test_updates_status_and_cancels_subscription_when_reason_provided(self, authenticator):
         bot = CommunityBot(authenticator)
 
@@ -225,6 +231,7 @@ class TestScheduleBotStop:
             supabase_enums.ProductSubscriptionDesiredStatus.CANCELED
         )
 
+    @pytest.mark.asyncio
     async def test_does_not_update_deployment_error_when_reason_is_none(self, authenticator):
         bot = CommunityBot(authenticator)
 
@@ -239,6 +246,7 @@ class TestScheduleBotStop:
         )
 
 class TestOnTradingModesStoppedAndTradersPaused:
+    @pytest.mark.asyncio
     async def test_schedules_bot_stop_when_schedule_bot_stop_is_true(self, authenticator):
         bot = CommunityBot(authenticator)
         bot.schedule_bot_stop = mock.AsyncMock()
@@ -251,6 +259,7 @@ class TestOnTradingModesStoppedAndTradersPaused:
         bot.update_deployment_error_status_for_stop_reason.assert_not_awaited()
         bot.insert_stopped_strategy_execution_log.assert_not_awaited()
 
+    @pytest.mark.asyncio
     async def test_updates_deployment_error_status_when_schedule_bot_stop_is_false(self, authenticator):
         bot = CommunityBot(authenticator)
         bot.schedule_bot_stop = mock.AsyncMock()
@@ -263,6 +272,7 @@ class TestOnTradingModesStoppedAndTradersPaused:
         bot.update_deployment_error_status_for_stop_reason.assert_awaited_once_with(commons_enums.StopReason.MISSING_MINIMAL_FUNDS)
         bot.insert_stopped_strategy_execution_log.assert_not_awaited()
 
+    @pytest.mark.asyncio
     async def test_inserts_stopped_strategy_execution_log_when_execution_details_is_provided(self, authenticator):
         bot = CommunityBot(authenticator)
         bot.schedule_bot_stop = mock.AsyncMock()
@@ -280,6 +290,7 @@ class TestOnTradingModesStoppedAndTradersPaused:
         bot.update_deployment_error_status_for_stop_reason.assert_awaited_once_with(commons_enums.StopReason.MISSING_MINIMAL_FUNDS)
         bot.insert_stopped_strategy_execution_log.assert_awaited_once_with("user requested stop", max_period=_STOPPED_STRATEGY_EXECUTION_LOG_MAX_PERIOD)
 
+    @pytest.mark.asyncio
     async def test_logs_error_when_scheduling_bot_stop_and_log_insert_fails(self, authenticator):
         bot = CommunityBot(authenticator)
         bot.schedule_bot_stop = mock.AsyncMock(side_effect=Exception("boom1"))
@@ -304,6 +315,7 @@ class TestOnTradingModesStoppedAndTradersPaused:
 
 
 class TestUpdateDeploymentErrorStatusForStopReason:
+    @pytest.mark.asyncio
     async def test_updates_deployment_error_status_for_stop_reason(self, authenticator):
         bot = CommunityBot(authenticator)
         bot._update_deployment_error_status = mock.AsyncMock()
@@ -312,10 +324,11 @@ class TestUpdateDeploymentErrorStatusForStopReason:
 
         bot._update_deployment_error_status.assert_awaited_once_with(
             supabase_enums.BotDeploymentErrorsStatuses.MISSING_MINIMAL_FUNDS
-        )   
+        )
 
 
 class TestUpdateDeploymentErrorStatus:
+    @pytest.mark.asyncio
     async def test_updates_supabase_client(self, authenticator):
         bot = CommunityBot(authenticator)
         logger = mock.Mock()
@@ -331,6 +344,7 @@ class TestUpdateDeploymentErrorStatus:
         )
         logger.info.assert_called_once()
 
+    @pytest.mark.asyncio
     async def test_raises_when_deployment_missing(self, authenticator):
         authenticator.user_account.get_selected_bot_deployment_id = mock.Mock(side_effect=KeyError())
         bot = CommunityBot(authenticator)
@@ -343,6 +357,7 @@ class TestUpdateDeploymentErrorStatus:
 
 
 class TestEnsureClearDeploymentErrorStatus:
+    @pytest.mark.asyncio
     async def test_clears_known_errors(self, authenticator):
         bot = CommunityBot(authenticator)
         bot._is_deployment_error_status_in = mock.Mock(return_value=True)
@@ -359,6 +374,7 @@ class TestEnsureClearDeploymentErrorStatus:
             supabase_enums.BotDeploymentErrorsStatuses.NO_ERROR
         )
 
+    @pytest.mark.asyncio
     async def test_does_nothing_when_no_error(self, authenticator):
         bot = CommunityBot(authenticator)
         bot._is_deployment_error_status_in = mock.Mock(return_value=False)
@@ -375,6 +391,7 @@ class TestEnsureClearDeploymentErrorStatus:
 
 
 class TestFetchProductsSubscription:
+    @pytest.mark.asyncio
     async def test_raises_when_missing(self, authenticator):
         bot = CommunityBot(authenticator)
 
@@ -383,6 +400,7 @@ class TestFetchProductsSubscription:
 
 
 class TestInsertStoppedStrategyExecutionLog:
+    @pytest.mark.asyncio
     async def test_calls_insert_bot_log_with_stopped_strategy_type_and_reason(self, authenticator):
         bot = CommunityBot(authenticator)
         bot.insert_bot_log = mock.AsyncMock()
@@ -394,6 +412,7 @@ class TestInsertStoppedStrategyExecutionLog:
             {supabase_enums.BotLogContentKeys.REASON.value: "user requested stop"},
         )
 
+    @pytest.mark.asyncio
     async def test_skips_call_within_max_period(self, authenticator):
         bot = CommunityBot(authenticator)
         bot.insert_bot_log = mock.AsyncMock()
@@ -418,6 +437,7 @@ class TestInsertStoppedStrategyExecutionLog:
 
 
 class TestInsertBotLog:
+    @pytest.mark.asyncio
     async def test_inserts_log_via_supabase_and_logs(self, authenticator):
         bot = CommunityBot(authenticator)
         logger = mock.Mock()
@@ -524,6 +544,7 @@ class TestIsDeploymentErrorStatusIn:
 
 
 class TestUpdateProductSubscriptionDesiredStatus:
+    @pytest.mark.asyncio
     async def test_fetches_subscription_and_updates_via_supabase(self, authenticator):
         products_subscription = {
             supabase_enums.ProductsSubscriptionsKeys.ID.value: "sub-123",

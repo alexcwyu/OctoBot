@@ -20,12 +20,10 @@ import octobot.commands as commands
 
 
 # All test coroutines will be treated as marked.
-pytestmark = pytest.mark.asyncio
-
-
 class TestInstallDefaultTentacles:
     """Tests for INSTALL_DEFAULT_TENTACLES env var behavior."""
 
+    @pytest.mark.asyncio
     async def test_install_or_update_tentacles_passes_only_additional_false_by_default(self):
         config = mock.Mock()
         config.load_profiles = mock.Mock()
@@ -40,6 +38,7 @@ class TestInstallDefaultTentacles:
                 only_additional=False,
             )
 
+    @pytest.mark.asyncio
     async def test_install_or_update_tentacles_passes_only_additional_true(self):
         config = mock.Mock()
         config.load_profiles = mock.Mock()
@@ -54,6 +53,7 @@ class TestInstallDefaultTentacles:
                 only_additional=True,
             )
 
+    @pytest.mark.asyncio
     async def test_internal_install_respects_install_default_true(self):
         community_auth = mock.Mock()
         community_auth.get_saved_package_urls = mock.Mock(return_value=["https://saved.com/pkg.zip"])
@@ -65,6 +65,7 @@ class TestInstallDefaultTentacles:
             await commands._install_or_update_tentacles(community_auth, config)
             mock_install.assert_awaited_once_with(config, ["https://saved.com/pkg.zip"], False)
 
+    @pytest.mark.asyncio
     async def test_internal_install_respects_install_default_false(self):
         community_auth = mock.Mock()
         community_auth.get_saved_package_urls = mock.Mock(return_value=["https://saved.com/pkg.zip"])
@@ -76,6 +77,7 @@ class TestInstallDefaultTentacles:
             await commands._install_or_update_tentacles(community_auth, config)
             mock_install.assert_awaited_once_with(config, ["https://saved.com/pkg.zip"], True)
 
+    @pytest.mark.asyncio
     async def test_install_all_tentacles_skips_base_urls_when_only_additional(self):
         additional_urls = ["https://custom.com/tentacles.zip"]
         with mock.patch(
@@ -105,6 +107,7 @@ class TestInstallDefaultTentacles:
             installed_url = mock_api_install.call_args_list[0].args[0]
             assert installed_url == "https://custom.com/tentacles.zip"
 
+    @pytest.mark.asyncio
     async def test_install_all_tentacles_includes_base_urls_when_not_only_additional(self):
         additional_urls = ["https://custom.com/tentacles.zip"]
         with mock.patch(
@@ -135,6 +138,7 @@ class TestInstallDefaultTentacles:
             assert "https://default.octobot.online/tentacles.zip" in installed_urls
             assert "https://custom.com/tentacles.zip" in installed_urls
 
+    @pytest.mark.asyncio
     async def test_install_all_tentacles_includes_env_variable_urls_in_base(self):
         env_urls = ["https://env-var.com/tentacles.zip"]
         with mock.patch(
@@ -161,6 +165,7 @@ class TestInstallDefaultTentacles:
             )
             assert mock_api_install.await_count == 0
 
+    @pytest.mark.asyncio
     async def test_install_all_tentacles_no_additional_urls(self):
         with mock.patch(
             "octobot.configuration_manager.get_default_tentacles_url",
@@ -187,6 +192,7 @@ class TestInstallDefaultTentacles:
             assert mock_api_install.await_count == 1
             assert mock_api_install.call_args_list[0].args[0] == "https://default.octobot.online/tentacles.zip"
 
+    @pytest.mark.asyncio
     async def test_update_or_repair_outdated_respects_install_default_false(self):
         community_auth = mock.Mock()
         tentacles_setup_config = mock.Mock()
@@ -209,6 +215,7 @@ class TestInstallDefaultTentacles:
             )
             mock_install.assert_awaited_once_with(config, [], True)
 
+    @pytest.mark.asyncio
     async def test_update_or_repair_outdated_respects_install_default_true(self):
         community_auth = mock.Mock()
         tentacles_setup_config = mock.Mock()
@@ -231,6 +238,7 @@ class TestInstallDefaultTentacles:
             )
             mock_install.assert_awaited_once_with(config, [], False)
 
+    @pytest.mark.asyncio
     async def test_update_or_repair_damaged_respects_install_default_false(self):
         community_auth = mock.Mock()
         tentacles_setup_config = mock.Mock()
@@ -255,6 +263,7 @@ class TestInstallDefaultTentacles:
             )
             mock_install.assert_awaited_once_with(config, [], True)
 
+    @pytest.mark.asyncio
     async def test_update_or_repair_damaged_respects_install_default_true(self):
         community_auth = mock.Mock()
         tentacles_setup_config = mock.Mock()
@@ -293,7 +302,7 @@ class TestInstallMissingAdditionalTentaclesOnly:
             "octobot.community.tentacles_packages.get_urls_to_install",
             return_value=[],
         ), mock.patch(
-            "octobot.commands.asyncio.run",
+            "octobot.commands.asyncio.run", side_effect=lambda coro: coro.close(),
         ) as asyncio_run_mock, mock.patch(
             "octobot_tentacles_manager.api.load_tentacles", return_value=True
         ) as load_mock:
@@ -311,7 +320,7 @@ class TestInstallMissingAdditionalTentaclesOnly:
             "octobot.community.tentacles_packages.get_urls_to_install",
             return_value=["https://premium.example/pkg.zip"],
         ), mock.patch(
-            "octobot.commands.asyncio.run",
+            "octobot.commands.asyncio.run", side_effect=lambda coro: coro.close(),
         ) as asyncio_run_mock:
             commands.run_install_missing_additional_tentacles_only(
                 community_auth, config, tentacles_setup_config
@@ -322,7 +331,7 @@ class TestInstallMissingAdditionalTentaclesOnly:
         config = mock.Mock()
         tentacles_setup_config = mock.Mock()
         with mock.patch(
-            "octobot.commands.asyncio.run",
+            "octobot.commands.asyncio.run", side_effect=lambda coro: coro.close(),
         ) as asyncio_run_mock, mock.patch(
             "octobot_tentacles_manager.api.load_tentacles", return_value=True
         ) as load_mock:

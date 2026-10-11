@@ -15,11 +15,27 @@
 #  License along with OctoBot. If not, see <https://www.gnu.org/licenses/>.
 import copy
 import typing
+import httpx
 import postgrest
 import supabase
 
 
 class AuthenticatedAsyncSupabaseClient(supabase.AClient):
+    @staticmethod
+    def _init_postgrest_client(
+        rest_url: str, headers: dict, schema: str, timeout: float = 30,
+        verify: bool = True, proxy: typing.Optional[str] = None,
+        http_client: typing.Optional[httpx.AsyncClient] = None,
+    ) -> postgrest.AsyncPostgrestClient:
+        # PostgREST now accepts transport settings on its HTTP client.
+        client = http_client or httpx.AsyncClient(
+            base_url=rest_url, headers=headers, timeout=timeout, verify=verify,
+            proxy=proxy, follow_redirects=True, http2=True,
+        )
+        return postgrest.AsyncPostgrestClient(
+            rest_url, headers=headers, schema=schema, http_client=client,
+        )
+
     async def init_other_postgrest_client(
         self, supabase_url: str = None, supabase_key: str = None, schema: str = "public"
     ) -> postgrest.AsyncPostgrestClient:

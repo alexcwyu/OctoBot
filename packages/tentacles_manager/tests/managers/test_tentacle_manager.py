@@ -25,7 +25,7 @@ import octobot_tentacles_manager.managers.tentacle_manager as tentacle_manager
 import octobot_tentacles_manager.models as models
 
 # All test coroutines will be treated as marked.
-pytestmark = pytest.mark.asyncio
+
 
 
 def _create_tentacle(base_dir, type_path, name, metadata_dict, files=None):
@@ -69,6 +69,7 @@ def temp_dirs():
     shutil.rmtree(temp_dir, ignore_errors=True)
 
 
+@pytest.mark.asyncio
 async def test_install_without_include_copies_everything(temp_dirs):
     """Without include patterns, all files are copied."""
     source, install = temp_dirs
@@ -82,6 +83,7 @@ async def test_install_without_include_copies_everything(temp_dirs):
     assert set(installed) == {"__init__.py", "metadata.json", "evaluator.py", "helper.py", "config/default.json"}
 
 
+@pytest.mark.asyncio
 async def test_install_with_include_filters_files(temp_dirs):
     """Include patterns filter to only matching files + always-included files."""
     source, install = temp_dirs

@@ -25,7 +25,7 @@ import octobot_copy.entities as copy_entities
 import octobot_copy.errors as copy_errors
 
 
-pytestmark = pytest.mark.asyncio
+
 
 
 def _copied_reference_account() -> protocol_models.CopiedAccount:
@@ -89,6 +89,7 @@ class TestAccountCopierCopyAccount:
         await copier.copy_account()
         return synchronizer
 
+    @pytest.mark.asyncio
     async def test_bypasses_grace_after_market_rebalance_when_grace_identified(self):
         synchronizer = await self._run_copy_account(
             should_rebalance=True,
@@ -98,6 +99,7 @@ class TestAccountCopierCopyAccount:
         synchronizer.abort_mirrored_orphan_grace.assert_called_once()
         synchronizer.synchronize.assert_awaited_once()
 
+    @pytest.mark.asyncio
     async def test_does_not_bypass_after_market_rebalance_when_grace_not_identified(self):
         synchronizer = await self._run_copy_account(
             should_rebalance=True,
@@ -106,6 +108,7 @@ class TestAccountCopierCopyAccount:
         )
         synchronizer.abort_mirrored_orphan_grace.assert_not_called()
 
+    @pytest.mark.asyncio
     async def test_does_not_bypass_grace_when_no_rebalance_orders(self):
         synchronizer = await self._run_copy_account(
             should_rebalance=False,
@@ -114,6 +117,7 @@ class TestAccountCopierCopyAccount:
         )
         synchronizer.abort_mirrored_orphan_grace.assert_not_called()
 
+    @pytest.mark.asyncio
     async def test_does_not_bypass_grace_when_rebalance_has_no_market_orders(self):
         synchronizer = await self._run_copy_account(
             should_rebalance=True,
@@ -124,6 +128,7 @@ class TestAccountCopierCopyAccount:
 
 
 class TestAccountCopierCopyAccountOutdatedReference:
+    @pytest.mark.asyncio
     async def test_skips_rebalance_and_sync_when_reference_account_is_outdated(self):
         reference_account = _copied_reference_account()
         exchange_interface = mock.MagicMock()

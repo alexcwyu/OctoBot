@@ -34,9 +34,10 @@ from tests import event_loop, clean, fake_profiles, TEMP_DIR, OTHER_PROFILE, \
     CLEAN_TENTACLES_ARCHITECTURE_FILES_FOLDERS_COUNT
 
 # All test coroutines will be treated as marked.
-pytestmark = pytest.mark.asyncio
 
 
+
+@pytest.mark.asyncio
 async def test_uninstall_two_tentacles(clean):
     _enable_loggers()
     tentacles_path = os.path.join("tests", "static", "tentacles.zip")
@@ -86,6 +87,7 @@ async def test_uninstall_two_tentacles(clean):
         }
 
 
+@pytest.mark.asyncio
 async def test_profiles_update(clean, fake_profiles):
     _enable_loggers()
     tentacles_path = os.path.join("tests", "static", "tentacles.zip")
@@ -127,6 +129,7 @@ async def test_profiles_update(clean, fake_profiles):
             assert ref_profile_config == json.load(other_c)
 
 
+@pytest.mark.asyncio
 async def test_uninstall_all_tentacles(clean):
     _enable_loggers()
     tentacles_path = os.path.join("tests", "static", "tentacles.zip")

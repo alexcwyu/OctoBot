@@ -26,9 +26,10 @@ import octobot_tentacles_manager.loaders.tentacle_loading as tentacle_loading
 # All test coroutines will be treated as marked.
 from octobot_tentacles_manager.managers.tentacles_setup_manager import TentaclesSetupManager
 
-pytestmark = pytest.mark.asyncio
 
 
+
+@pytest.mark.asyncio
 async def test_get_tentacle_without_loading():
     # reload tentacle_loading module to force reset of cached tentacle data
     reload(tentacle_loading)
@@ -42,6 +43,7 @@ async def test_get_tentacle_without_loading():
     _cleanup()
 
 
+@pytest.mark.asyncio
 async def test_with_reload_tentacle_by_tentacle_class_installed_tentacles():
     async with aiohttp.ClientSession() as session:
         await install_all_tentacles(_tentacles_local_path(), aiohttp_session=session)

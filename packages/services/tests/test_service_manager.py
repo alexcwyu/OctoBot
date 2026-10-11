@@ -22,7 +22,7 @@ import octobot_services.constants as services_constants
 import octobot_services.managers.service_manager as service_manager_module
 
 
-pytestmark = pytest.mark.asyncio
+
 
 
 class _SlowService:
@@ -44,6 +44,7 @@ class _FastService:
 
 
 class TestStopServices:
+    @pytest.mark.asyncio
     async def test_continues_after_slow_service_timeout(self):
         _FastService.stopped = False
         with mock.patch.object(

@@ -29,7 +29,7 @@ import tests.static.dsl_test_operators as dsl_test_operators
 import tests.static.fake_evaluators as fake_evaluators
 
 
-pytestmark = pytest.mark.asyncio
+
 
 _FAKE_OHLCV_OPERATOR_NAME = str_util.camel_to_snake(
     fake_evaluators.FakeOHLCVEvaluator.get_name()
@@ -94,6 +94,7 @@ def _create_evaluator_interpreter(
 
 
 class TestEvaluatorDslInterpreterFakeOHLCVEvaluator:
+    @pytest.mark.asyncio
     async def test_interpreter_returns_eval_note_from_keyword(self, matrix_id):
         await evaluator_api.create_evaluator_channels(matrix_id)
         exchange_manager = mock.Mock()
@@ -155,6 +156,7 @@ class TestEvaluatorDslInterpreterFakeOHLCVEvaluator:
 
 
 class TestEvaluatorDslInterpreterFakeMatrixReadingStrategyEvaluator:
+    @pytest.mark.asyncio
     async def test_strategy_reads_dummy_evaluator_values_from_matrix(self, matrix_id):
         await evaluator_api.create_evaluator_channels(matrix_id)
         exchange_manager = mock.Mock()

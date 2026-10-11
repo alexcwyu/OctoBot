@@ -42,7 +42,7 @@ def _load_copy_tests_python_helpers():
 
 copy_tests_python_helpers = _load_copy_tests_python_helpers()
 
-pytestmark = pytest.mark.asyncio
+
 
 _BTC_USDT = "BTC/USDT"
 _BTC_PRICE = decimal.Decimal("60300")
@@ -124,6 +124,7 @@ def _open_order_by_id(exchange_manager, order_id: str):
 
 class TestSynchronize:
     @pytest.mark.parametrize("backtesting_config", ["USDT"], indirect=True)
+    @pytest.mark.asyncio
     async def test_creates_buy_after_downsize_replace_frees_stale_quote(self, live_trading_trader):
         # Live trading keeps portfolio.available frozen until an exchange refresh; mirror sync
         # downsizes existing buys (freeing quote on the exchange) then may create new buys in the
@@ -252,6 +253,7 @@ def _reference_account_with_one_sell() -> protocol_models.CopiedAccount:
 
 class TestSynchronizeGraceElapsedSellRecreate:
     @pytest.mark.parametrize("backtesting_config", ["USDT"], indirect=True)
+    @pytest.mark.asyncio
     async def test_creates_sell_after_grace_elapsed_respects_available_base(self, live_trading_trader):
         # Jul 2 log: sibling sells lock most BTC; grace-elapsed resync recreates a missing mirrored
         # sell. Sizing must cap to available base (total minus sibling locks), not raw total.

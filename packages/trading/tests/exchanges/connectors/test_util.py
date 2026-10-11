@@ -25,9 +25,10 @@ import octobot_trading.errors as errors
 
 
 # All test coroutines will be treated as marked.
-pytestmark = pytest.mark.asyncio
 
 
+
+@pytest.mark.asyncio
 async def test_retried_failed_network_request():
   request_mock = mock.AsyncMock(return_value=1)
   @exchanges.connectors.util.retried_failed_network_request()
@@ -59,8 +60,8 @@ async def test_retried_failed_network_request():
 
     # retriable errors
     for raised_error in [
-      ccxt.ExchangeNotAvailable("Exchange not available"), 
-      ccxt.RequestTimeout("Request timeout"), 
+      ccxt.ExchangeNotAvailable("Exchange not available"),
+      ccxt.RequestTimeout("Request timeout"),
       ccxt.InvalidNonce("Invalid nonce"),
       errors.RetriableFailedRequest("Retriable failed request"),
     ]:

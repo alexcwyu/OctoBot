@@ -24,8 +24,6 @@ import octobot.constants as constants
 import octobot_commons.enums as commons_enums
 
 # All test coroutines will be treated as marked.
-pytestmark = pytest.mark.asyncio
-
 FEED_URL = "x.y.z"
 TOKEN = "acb1"
 NAME = "name_a"
@@ -71,18 +69,20 @@ async def connected_community_feed(authenticator):
             await feed.stop()
 
 
+@pytest.mark.asyncio
 async def test_start_and_connect(connected_community_feed):
     # connected_community_feed already called _connect, check that everything has been set
     assert isinstance(connected_community_feed._mqtt_client, gmqtt.Client)
-    assert connected_community_feed._mqtt_client._config["reconnect_retries"] == \
+    assert connected_community_feed._mqtt_client._connection_state.config["reconnect_retries"] == \
            connected_community_feed.DISABLE_RECONNECT_VALUE
-    assert connected_community_feed._mqtt_client.on_connect == connected_community_feed._on_connect
-    assert connected_community_feed._mqtt_client.on_message == connected_community_feed._on_message
-    assert connected_community_feed._mqtt_client.on_disconnect == connected_community_feed._on_disconnect
-    assert connected_community_feed._mqtt_client.on_subscribe == connected_community_feed._on_subscribe
+    assert connected_community_feed._mqtt_client.on_connect.func == connected_community_feed._on_connect
+    assert connected_community_feed._mqtt_client.on_message.func == connected_community_feed._on_message
+    assert connected_community_feed._mqtt_client.on_disconnect.func == connected_community_feed._on_disconnect
+    assert connected_community_feed._mqtt_client.on_subscribe.func == connected_community_feed._on_subscribe
     assert connected_community_feed._mqtt_client._username == TOKEN.encode()
 
 
+@pytest.mark.asyncio
 async def test_stop(connected_community_feed):
     connected_community_feed._reconnect_task = None
     with mock.patch.object(connected_community_feed, "_stop_mqtt_client", mock.AsyncMock()) as _stop_mqtt_client_mock:
@@ -104,11 +104,13 @@ async def test_stop(connected_community_feed):
         connected_community_feed._reconnect_task.cancel.assert_called_once()
 
 
+@pytest.mark.asyncio
 async def test_register_feed_callback(connected_community_feed):
     # TODO
     pass
 
 
+@pytest.mark.asyncio
 async def test_on_message(connected_community_feed):
     client = mock.Mock(client_id="1")
     topic = "topic"

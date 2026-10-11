@@ -13,6 +13,7 @@
 #
 #  You should have received a copy of the GNU General Public
 #  License along with OctoBot. If not, see <https://www.gnu.org/licenses/>.
+import os
 from copy import deepcopy
 
 from octobot_backtesting.importers.exchanges.exchange_importer import ExchangeDataImporter
@@ -41,7 +42,7 @@ class DataBank(Initializable):
 
     def __init__(self, data_file=None):
         super().__init__()
-        self.data_file = data_file if data_file else "tests/static/AbstractExchangeHistoryCollector_1586017993.616272.data"
+        self.data_file = data_file if data_file else os.path.join(os.path.dirname(__file__), "..", "static", "AbstractExchangeHistoryCollector_1586017993.616272.data")
         self.exchange_name = None
         self.data_importer = ExchangeDataImporter({}, self.data_file)
         self.default_symbol = "BTC/USDT"

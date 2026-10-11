@@ -2,12 +2,18 @@ import {
   type ColumnDef,
   type ColumnFiltersState,
   flexRender,
-  getCoreRowModel,
-  getFilteredRowModel,
-  getSortedRowModel,
+  createFilteredRowModel,
+  createSortedRowModel,
   type SortingState,
-  useReactTable,
-  type VisibilityState,
+  useTable,
+  tableFeatures,
+  columnFilteringFeature,
+  globalFilteringFeature,
+  rowSortingFeature,
+  columnVisibilityFeature,
+  filterFns,
+  sortFns,
+  type ColumnVisibilityState,
 } from "@tanstack/react-table"
 import {
   ArrowLeft,
@@ -148,6 +154,17 @@ function buildColumnsForFullDetails(rows: ExportRow[]): ExportColumnDef[] {
 
 // ── Component ──────────────────────────────────────────────────────────
 
+const exportTableFeatures = tableFeatures({
+  columnFilteringFeature,
+  globalFilteringFeature,
+  rowSortingFeature,
+  columnVisibilityFeature,
+  filteredRowModel: createFilteredRowModel(),
+  sortedRowModel: createSortedRowModel(),
+  filterFns,
+  sortFns,
+})
+
 export default function ExportResultsContent({
   tasks,
   onClose,
@@ -163,7 +180,7 @@ export default function ExportResultsContent({
   const [addColumnLabel, setAddColumnLabel] = useState("")
   const [sorting, setSorting] = useState<SortingState>([])
   const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([])
-  const [columnVisibility, setColumnVisibility] = useState<VisibilityState>({})
+  const [columnVisibility, setColumnVisibility] = useState<ColumnVisibilityState>({})
   const [globalFilter, setGlobalFilter] = useState("")
 
   const exportRows = useMemo(() => buildExportRows(tasks), [tasks])
@@ -304,7 +321,7 @@ export default function ExportResultsContent({
     [templateColumns, customColumns],
   )
 
-  const tableColumns = useMemo((): ColumnDef<ExportRow>[] => {
+  const tableColumns = useMemo((): ColumnDef<typeof exportTableFeatures, ExportRow>[] => {
     return allColumns.map((col) => ({
       id: col.key,
       accessorFn: (row: ExportRow) => {
@@ -337,7 +354,8 @@ export default function ExportResultsContent({
     }))
   }, [allColumns])
 
-  const table = useReactTable({
+  const table = useTable({
+    features: exportTableFeatures,
     data: displayRows,
     columns: tableColumns,
     state: { sorting, columnFilters, columnVisibility, globalFilter },
@@ -345,9 +363,6 @@ export default function ExportResultsContent({
     onColumnFiltersChange: setColumnFilters,
     onColumnVisibilityChange: setColumnVisibility,
     onGlobalFilterChange: setGlobalFilter,
-    getCoreRowModel: getCoreRowModel(),
-    getSortedRowModel: getSortedRowModel(),
-    getFilteredRowModel: getFilteredRowModel(),
     globalFilterFn: "includesString",
   })
 

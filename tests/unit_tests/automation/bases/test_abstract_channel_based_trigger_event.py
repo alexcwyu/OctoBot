@@ -67,9 +67,6 @@ class ConcreteChannelBasedTrigger(AbstractChannelBasedTriggerEvent):
 
 
 # All test coroutines will be treated as marked.
-pytestmark = pytest.mark.asyncio
-
-
 class TestAbstractChannelBasedTriggerEvent:
     def test_init(self):
         trigger = ConcreteChannelBasedTrigger()
@@ -79,6 +76,7 @@ class TestAbstractChannelBasedTriggerEvent:
         assert trigger._waiter_future is None
         assert trigger.should_stop is False
 
+    @pytest.mark.asyncio
     async def test_register_consumers_raises_not_implemented_on_base(self):
         class IncompleteTrigger(AbstractChannelBasedTriggerEvent):
             @staticmethod
@@ -95,6 +93,7 @@ class TestAbstractChannelBasedTriggerEvent:
         with pytest.raises(NotImplementedError):
             await trigger.register_consumers("exchange_id")
 
+    @pytest.mark.asyncio
     async def test_trigger_sets_future_result(self):
         trigger = ConcreteChannelBasedTrigger()
         trigger._waiter_future = asyncio.get_event_loop().create_future()
@@ -103,6 +102,7 @@ class TestAbstractChannelBasedTriggerEvent:
         assert trigger._waiter_future.done()
         assert trigger._waiter_future.result() == "test description"
 
+    @pytest.mark.asyncio
     async def test_clear_future_cancels_future(self):
         trigger = ConcreteChannelBasedTrigger()
         trigger._waiter_future = asyncio.get_event_loop().create_future()
@@ -110,6 +110,7 @@ class TestAbstractChannelBasedTriggerEvent:
         trigger.clear_future()
         assert trigger._waiter_future.cancelled()
 
+    @pytest.mark.asyncio
     async def test_get_next_event_returns_description_when_future_is_set(self):
         trigger = ConcreteChannelBasedTrigger()
         trigger._registered_consumer = True
@@ -122,6 +123,7 @@ class TestAbstractChannelBasedTriggerEvent:
         result = await trigger._get_next_event()
         assert result == "threshold exceeded"
 
+    @pytest.mark.asyncio
     async def test_get_next_event_returns_none_when_future_is_cancelled(self):
         trigger = ConcreteChannelBasedTrigger()
         trigger._registered_consumer = True
@@ -136,6 +138,7 @@ class TestAbstractChannelBasedTriggerEvent:
         except errors.AutomationStopped:
             pass
 
+    @pytest.mark.asyncio
     async def test_get_next_event_registers_consumer_on_first_call(self):
         trigger = ConcreteChannelBasedTrigger()
         assert trigger._registered_consumer is False
@@ -150,12 +153,14 @@ class TestAbstractChannelBasedTriggerEvent:
                 await trigger._get_next_event()
                 mock_register.assert_awaited_once()
 
+    @pytest.mark.asyncio
     async def test_check_initial_event_default_is_noop(self):
         """Base class check_initial_event does nothing and does not raise."""
         trigger = ConcreteChannelBasedTrigger()
         await trigger.check_initial_event()
         # Should complete without error
 
+    @pytest.mark.asyncio
     async def test_check_initial_event_called_on_first_get_next_event(self):
         """check_initial_event is called after _register_exchange_channel_consumer on first _get_next_event call."""
         trigger = ConcreteChannelBasedTrigger()
@@ -171,6 +176,7 @@ class TestAbstractChannelBasedTriggerEvent:
                 await trigger._get_next_event()
                 mock_check.assert_awaited_once()
 
+    @pytest.mark.asyncio
     async def test_check_initial_event_skipped_when_already_registered(self):
         """check_initial_event is not called when _register_exchange_channel_consumer is already True."""
         trigger = ConcreteChannelBasedTrigger()
@@ -187,6 +193,7 @@ class TestAbstractChannelBasedTriggerEvent:
                 mock_register.assert_not_awaited()
                 mock_check.assert_not_awaited()
 
+    @pytest.mark.asyncio
     async def test_check_initial_event_trigger_resolves_get_next_event(self):
         """If check_initial_event calls trigger(), _get_next_event returns immediately."""
         trigger = ConcreteChannelBasedTrigger()
@@ -200,6 +207,7 @@ class TestAbstractChannelBasedTriggerEvent:
                 result = await trigger._get_next_event()
                 assert result == "initial event detected"
 
+    @pytest.mark.asyncio
     async def test_stop_cleans_up_consumers(self):
         trigger = ConcreteChannelBasedTrigger()
         trigger._consumers = []
@@ -211,6 +219,7 @@ class TestAbstractChannelBasedTriggerEvent:
 class TestRegisterExchangeChannelConsumer:
     """Tests for _register_exchange_channel_consumer."""
 
+    @pytest.mark.asyncio
     async def test_sets_registered_consumer_to_true(self):
         trigger = TriggerWithBaseRegisterConsumer()
         trigger.exchange = "binance"
@@ -224,6 +233,7 @@ class TestRegisterExchangeChannelConsumer:
 
         assert trigger._registered_consumer is True
 
+    @pytest.mark.asyncio
     async def test_exchange_and_exchange_id_uses_get_exchange_manager_from_name_and_id(self):
         trigger = TriggerWithBaseRegisterConsumer()
         trigger.exchange = "binance"
@@ -241,6 +251,7 @@ class TestRegisterExchangeChannelConsumer:
         mock_trading_api.get_exchange_manager_from_exchange_id.assert_not_called()
         mock_trading_api.get_exchange_managers_from_exchange_name.assert_not_called()
 
+    @pytest.mark.asyncio
     async def test_exchange_id_only_uses_get_exchange_manager_from_exchange_id(self):
         trigger = TriggerWithBaseRegisterConsumer()
         trigger.exchange_id = "exchange_1"
@@ -255,6 +266,7 @@ class TestRegisterExchangeChannelConsumer:
         mock_trading_api.get_exchange_manager_from_exchange_name_and_id.assert_not_called()
         mock_trading_api.get_exchange_managers_from_exchange_name.assert_not_called()
 
+    @pytest.mark.asyncio
     async def test_exchange_only_single_manager_succeeds(self):
         trigger = TriggerWithBaseRegisterConsumer()
         trigger.exchange = "binance"
@@ -268,6 +280,7 @@ class TestRegisterExchangeChannelConsumer:
         mock_trading_api.get_exchange_managers_from_exchange_name.assert_called_once_with("binance")
         mock_trading_api.get_exchange_manager_from_exchange_id.assert_not_called()
 
+    @pytest.mark.asyncio
     async def test_exchange_only_multiple_managers_raises_value_error(self):
         trigger = TriggerWithBaseRegisterConsumer()
         trigger.exchange = "binance"
@@ -282,6 +295,7 @@ class TestRegisterExchangeChannelConsumer:
             with pytest.raises(ValueError, match="Expected 1 exchange manager for exchange binance, got 2"):
                 await trigger._register_exchange_channel_consumer()
 
+    @pytest.mark.asyncio
     async def test_no_exchange_nor_exchange_id_registers_for_all_exchange_ids(self):
         trigger = TriggerWithBaseRegisterConsumer()
         mock_exchange_manager = Mock()
@@ -297,6 +311,7 @@ class TestRegisterExchangeChannelConsumer:
         mock_trading_api.get_exchange_manager_from_exchange_id.assert_any_call("id_1")
         mock_trading_api.get_exchange_manager_from_exchange_id.assert_any_call("id_2")
 
+    @pytest.mark.asyncio
     async def test_symbol_not_in_trading_pairs_raises_value_error(self):
         trigger = TriggerWithBaseRegisterConsumer()
         trigger.exchange = "binance"
@@ -310,6 +325,7 @@ class TestRegisterExchangeChannelConsumer:
             with pytest.raises(ValueError, match="Symbol BTC/USDT not found on binance"):
                 await trigger._register_exchange_channel_consumer()
 
+    @pytest.mark.asyncio
     async def test_symbol_in_trading_pairs_calls_register_consumers(self):
         trigger = TriggerWithBaseRegisterConsumer()
         trigger.exchange = "binance"
@@ -326,6 +342,7 @@ class TestRegisterExchangeChannelConsumer:
         mock_trading_api.get_trading_pairs.assert_called_once_with(mock_exchange_manager)
         assert len(trigger._consumers) == 1
 
+    @pytest.mark.asyncio
     async def test_extends_consumers_from_register_consumers(self):
         trigger = TriggerWithBaseRegisterConsumer()
         trigger.exchange = "binance"
@@ -340,6 +357,7 @@ class TestRegisterExchangeChannelConsumer:
         assert len(trigger._consumers) == 1
         assert trigger._consumers[0].stop is not None
 
+    @pytest.mark.asyncio
     async def test_parameters_override_instance_attributes(self):
         trigger = TriggerWithBaseRegisterConsumer()
         trigger.exchange = "binance"
@@ -357,4 +375,3 @@ class TestRegisterExchangeChannelConsumer:
         mock_trading_api.get_exchange_manager_from_exchange_name_and_id.assert_called_once_with(
             "kraken", "kraken_1"
         )
-

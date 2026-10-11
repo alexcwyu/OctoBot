@@ -26,7 +26,6 @@ import octobot_flow.entities.accounts.exchange_account_elements as exchange_acco
 import octobot_flow.entities.accounts.process_bot_state as process_bot_state_import  # Metadata only (hybrid: EAE from job.dump)
 
 pytestmark = octobot_process_functional_shared.pytestmark
-pytest_plugins = (octobot_process_functional_shared.__name__,)
 
 
 # --- Main lifecycle: spawn child OctoBot; EAE from job.dump() after merge; metadata from file; recall, stop ---

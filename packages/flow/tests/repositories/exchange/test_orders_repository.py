@@ -10,7 +10,7 @@ import octobot_trading.personal_data as trading_personal_data
 import octobot_flow.entities
 import octobot_flow.repositories.exchange.orders_repository as orders_repository_module
 
-pytestmark = pytest.mark.asyncio
+
 
 
 def _open_order_dict(exchange_id: str, symbol: str) -> dict:
@@ -22,6 +22,7 @@ def _open_order_dict(exchange_id: str, symbol: str) -> dict:
 
 
 class TestOrdersRepositoryEnsureTemporaryOrdersChannel:
+    @pytest.mark.asyncio
     async def test_delegates_to_channel_producer_ensure(self):
         exchange_manager = mock.Mock()
         with mock.patch.object(
@@ -39,6 +40,7 @@ class TestOrdersRepositoryEnsureTemporaryOrdersChannel:
 
 
 class TestFetchOpenOrders:
+    @pytest.mark.asyncio
     async def test_returns_parsed_orders_from_updater(self):
         eth_order = _open_order_dict("stays-order-2", "ETH/USDT")
         parsed_order = {
@@ -80,6 +82,7 @@ class TestFetchOpenOrders:
         )
         assert open_orders == [parsed_order]
 
+    @pytest.mark.asyncio
     async def test_returns_empty_list_when_no_symbols(self):
         exchange_manager = mock.Mock()
         repository = orders_repository_module.OrdersRepository(

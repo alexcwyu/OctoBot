@@ -27,6 +27,8 @@ import octobot_flow.enums
 import tests.functionnal_tests as functionnal_tests
 import tests.functionnal_tests.tentacle_test_configs as tentacle_test_configs
 
+
+
 pytestmark = pytest.mark.asyncio
 
 OCTOBOT_PROCESS_TEST_GROUP = "octobot_process_xdist_group"

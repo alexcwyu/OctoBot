@@ -27,7 +27,7 @@ from octobot_commons.enums import TimeFrames
 import tests.database_test_util as database_test_util
 
 # All test coroutines will be treated as marked.
-pytestmark = pytest.mark.asyncio
+
 
 EXCHANGE_HISTORY_DATA_FILE = "ExchangeHistoryDataCollector_1589740606.4862757.data"
 STATIC_FIXTURE_PATH = database_test_util.static_database_fixture_path(EXCHANGE_HISTORY_DATA_FILE)
@@ -51,6 +51,7 @@ async def get_importer():
         await importer.stop()
 
 
+@pytest.mark.asyncio
 async def test_initialize():
     async with get_importer() as importer:
         assert importer.exchange_name == "binance"
@@ -61,6 +62,7 @@ async def test_initialize():
         assert importer.available_data_types == [ExchangeDataTables.OHLCV]
 
 
+@pytest.mark.asyncio
 async def test_get_data_timestamp_interval():
     async with get_importer() as importer:
         # over all data
@@ -71,6 +73,7 @@ async def test_get_data_timestamp_interval():
         assert await importer.get_data_timestamp_interval("1M") == (1501459200, 1590883200)
 
 
+@pytest.mark.asyncio
 async def test_get_ohlcv():
     async with get_importer() as importer:
         # default values
@@ -102,6 +105,7 @@ async def test_get_ohlcv():
         assert len(ohlcv) == 0
 
 
+@pytest.mark.asyncio
 async def test_get_ohlcv_from_timestamps():
     async with get_importer() as importer:
         # default values
@@ -114,6 +118,7 @@ async def test_get_ohlcv_from_timestamps():
         assert all(1587978000 <= data[0] <= 1588060800 for data in ohlcv)
 
 
+@pytest.mark.asyncio
 async def test_get_ticker():
     async with get_importer() as importer:
         # TODO complete this test when available datafile with ticker data
@@ -121,6 +126,7 @@ async def test_get_ticker():
             await importer.get_ticker()
 
 
+@pytest.mark.asyncio
 async def test_get_ticker_from_timestamps():
     async with get_importer() as importer:
         # TODO complete this test when available datafile with ticker data
@@ -128,6 +134,7 @@ async def test_get_ticker_from_timestamps():
             await importer.get_ticker_from_timestamps()
 
 
+@pytest.mark.asyncio
 async def test_get_order_book():
     async with get_importer() as importer:
         # TODO complete this test when available datafile with order book data
@@ -135,6 +142,7 @@ async def test_get_order_book():
             await importer.get_order_book()
 
 
+@pytest.mark.asyncio
 async def test_get_order_book_from_timestamps():
     async with get_importer() as importer:
         # TODO complete this test when available datafile with order book data
@@ -142,6 +150,7 @@ async def test_get_order_book_from_timestamps():
             await importer.get_order_book_from_timestamps()
 
 
+@pytest.mark.asyncio
 async def test_get_recent_trades():
     async with get_importer() as importer:
         # TODO complete this test when available datafile with recent trades data
@@ -149,6 +158,7 @@ async def test_get_recent_trades():
             await importer.get_recent_trades()
 
 
+@pytest.mark.asyncio
 async def test_get_recent_trades_from_timestamps():
     async with get_importer() as importer:
         # TODO complete this test when available datafile with recent trades data
@@ -156,6 +166,7 @@ async def test_get_recent_trades_from_timestamps():
             await importer.get_recent_trades_from_timestamps()
 
 
+@pytest.mark.asyncio
 async def test_get_kline():
     async with get_importer() as importer:
         # TODO complete this test when available datafile with kline data
@@ -163,6 +174,7 @@ async def test_get_kline():
             await importer.get_kline()
 
 
+@pytest.mark.asyncio
 async def test_get_kline_from_timestamps():
     async with get_importer() as importer:
         # TODO complete this test when available datafile with kline data

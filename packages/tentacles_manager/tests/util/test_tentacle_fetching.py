@@ -23,11 +23,12 @@ import octobot_tentacles_manager.util as tentacles_manager_util
 from tests import event_loop
 
 # All test coroutines will be treated as marked.
-pytestmark = pytest.mark.asyncio
+
 
 temp_dir = "tests_temp"
 
 
+@pytest.mark.asyncio
 async def test_fetch_and_extract_tentacles_using_download():
     _cleanup()
     # ensure cleanup is working
@@ -38,6 +39,7 @@ async def test_fetch_and_extract_tentacles_using_download():
     _cleanup()
 
 
+@pytest.mark.asyncio
 async def test_fetch_and_extract_tentacles_using_download_with_wrong_url():
     _cleanup()
     # ensure cleanup is working
@@ -48,6 +50,7 @@ async def test_fetch_and_extract_tentacles_using_download_with_wrong_url():
     _cleanup()
 
 
+@pytest.mark.asyncio
 async def test_fetch_and_extract_tentacles_using_download_without_session():
     _cleanup()
     with pytest.raises(RuntimeError):
@@ -55,6 +58,7 @@ async def test_fetch_and_extract_tentacles_using_download_without_session():
     assert not path.isdir(temp_dir)
 
 
+@pytest.mark.asyncio
 async def test_fetch_and_extract_tentacles_using_local_file():
     _cleanup()
     await tentacles_manager_util.fetch_and_extract_tentacles(temp_dir, path.join("tests", "static", "tentacles.zip"), None)

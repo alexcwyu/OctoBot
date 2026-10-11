@@ -18,7 +18,7 @@ import pytest
 
 import octobot_commons.cache_util as cache_util
 
-pytestmark = pytest.mark.asyncio
+
 
 
 class _TestClass:
@@ -31,6 +31,7 @@ class _TestClass:
         return self.call_count
 
 
+@pytest.mark.asyncio
 async def test_prevented_multiple_calls_without_max_period():
     """Without max_period, function should always be called."""
     obj = _TestClass()
@@ -40,6 +41,7 @@ async def test_prevented_multiple_calls_without_max_period():
     assert obj.call_count == 3
 
 
+@pytest.mark.asyncio
 async def test_prevented_multiple_calls_with_max_period_blocks_duplicate():
     """With max_period, duplicate calls within period should be skipped."""
     obj = _TestClass()
@@ -54,6 +56,7 @@ async def test_prevented_multiple_calls_with_max_period_blocks_duplicate():
     assert obj.call_count == 1
 
 
+@pytest.mark.asyncio
 async def test_prevented_multiple_calls_with_max_period_allows_after_period():
     """With max_period, call after period should execute."""
     obj = _TestClass()
@@ -66,6 +69,7 @@ async def test_prevented_multiple_calls_with_max_period_allows_after_period():
     assert obj.call_count == 2
 
 
+@pytest.mark.asyncio
 async def test_prevented_multiple_calls_different_args_independent():
     """Different args should have independent cache entries."""
     obj = _TestClass()
@@ -76,6 +80,7 @@ async def test_prevented_multiple_calls_different_args_independent():
     assert obj.call_count == 2
 
 
+@pytest.mark.asyncio
 async def test_prevented_multiple_calls_with_kwargs():
     """kwargs should be part of the cache key."""
     obj = _TestClass()

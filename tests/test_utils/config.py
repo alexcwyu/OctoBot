@@ -15,7 +15,9 @@
 #  License along with OctoBot. If not, see <https://www.gnu.org/licenses/>.
 from octobot_tentacles_manager.api.configurator import get_tentacles_setup_config
 
-TEST_CONFIG_FOLDER = "tests/static"
+import os
+
+TEST_CONFIG_FOLDER = os.path.join(os.path.dirname(__file__), "..", "static")
 
 
 def load_test_tentacles_config():

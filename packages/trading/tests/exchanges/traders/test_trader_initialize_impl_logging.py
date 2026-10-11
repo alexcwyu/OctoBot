@@ -6,10 +6,11 @@ import pytest
 
 import octobot_trading.exchanges.traders.trader as trader_module
 
-pytestmark = pytest.mark.asyncio
+
 
 
 class TestTraderInitializeImplLogging:
+    @pytest.mark.asyncio
     async def test_does_not_log_enabled_on_when_exchange_only(self):
         exchange_manager = mock.Mock()
         exchange_manager.exchange_name = "kraken"
@@ -24,6 +25,7 @@ class TestTraderInitializeImplLogging:
 
         trader.logger.debug.assert_not_called()
 
+    @pytest.mark.asyncio
     async def test_logs_enabled_on_when_lifecycle_debug_enabled(self):
         exchange_manager = mock.Mock()
         exchange_manager.exchange_name = "kraken"

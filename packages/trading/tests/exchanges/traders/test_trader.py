@@ -57,7 +57,7 @@ from tests.exchanges import future_simulated_exchange_manager, get_fees_mock, \
 from tests.exchanges.traders import future_trader_simulator_with_default_linear
 
 # All test coroutines will be treated as marked.
-pytestmark = pytest.mark.asyncio
+
 
 
 async def init_default(simulated=True, is_future=False):
@@ -91,6 +91,7 @@ async def stop(exchange_manager):
 class TestTrader:
     DEFAULT_SYMBOL = "BTC/USDT"
 
+    @pytest.mark.asyncio
     async def test_init_paused(simulated=True, is_future=False):
         config = load_test_config()
         config[commons_constants.CONFIG_TRADING][commons_constants.CONFIG_TRADER_PAUSED] = True
@@ -110,8 +111,9 @@ class TestTrader:
         assert exchange_manager.trader is trader # trader is registered
         assert trader.is_enabled is False # trader is paused
 
-        return config, exchange_manager, trader
+        await stop(exchange_manager)
 
+    @pytest.mark.asyncio
     async def test_enabled(self):
         config, exchange_manager, trader_inst = await init_default()
         await stop(exchange_manager)
@@ -123,6 +125,7 @@ class TestTrader:
         assert not Trader.enabled(config)
         await stop(exchange_manager)
 
+    @pytest.mark.asyncio
     async def test_is_paused(self):
         config, exchange_manager, trader_inst = await init_default()
         await stop(exchange_manager)
@@ -133,6 +136,7 @@ class TestTrader:
         config[commons_constants.CONFIG_TRADING][commons_constants.CONFIG_TRADER_PAUSED] = False
         assert Trader.is_paused(config) is False
 
+    @pytest.mark.asyncio
     async def test_can_trade_if_not_paused(self):
         config, exchange_manager, trader_inst = await init_default()
 
@@ -162,6 +166,7 @@ class TestTrader:
 
         await stop(exchange_manager)
 
+    @pytest.mark.asyncio
     async def test_get_risk(self):
         config, exchange_manager, trader_inst = await init_default()
         await stop(exchange_manager)
@@ -181,6 +186,7 @@ class TestTrader:
         assert trader_2.risk == decimal.Decimal(str(0.5))
         await stop(exchange_manager)
 
+    @pytest.mark.asyncio
     async def test_enabled_or_forced_only_methods(self):
         _, exchange_manager, trader_inst = await init_default()
         trader_inst.set_is_enabled(False)
@@ -213,38 +219,39 @@ class TestTrader:
             with pytest.raises(TypeError, match="unexpected keyword argument"):
                 await method(*args, force_if_disabled=True, **kwargs)
 
+    @pytest.mark.asyncio
     async def test_enabled_or_forced_only(self):
         _, exchange_manager, trader_inst = await init_default()
-        
+
         # Create a mock class with decorated methods that mimics Trader structure
         class MockTraderClass:
             def __init__(self, exchange_manager):
                 self.exchange_manager = exchange_manager
                 self.logger = mock.Mock()
                 self.is_enabled = True
-            
+
             @enabled_or_forced_only
             def test_method(self, arg1, arg2=None, **kwargs):
                 return f"executed with {arg1}, {arg2}, {kwargs}"
-            
+
             @enabled_or_forced_only
             def no_args_method(self):
                 return "no_args_result"
-        
+
         mock_trader = MockTraderClass(exchange_manager)
-        
+
         # Test 1: Trader enabled - function should execute normally
         mock_trader.is_enabled = True
         result = mock_trader.test_method("test", arg2="value", extra="data")
         assert result == "executed with test, value, {'extra': 'data'}"
         mock_trader.logger.info.assert_not_called()
-        
+
         # Test 2: Trader disabled without force - should raise TraderDisabledError
         mock_trader.is_enabled = False
         with pytest.raises(errors.TraderDisabledError, match="trader disabled.*test_method.*is not allowed on disabled trader"):
             mock_trader.test_method("test", arg2="value")
         mock_trader.logger.info.assert_not_called()
-        
+
         # Test 3: Trader disabled with force_if_disabled=True - should log info and execute
         mock_trader.is_enabled = False
         result = mock_trader.test_method("test", arg2="value", force_if_disabled=True, extra="data")
@@ -257,25 +264,25 @@ class TestTrader:
         assert "test_method" in info_message
         assert "execution is forced" in info_message
         mock_trader.logger.info.reset_mock()
-        
+
         # Test 4: Trader enabled with force_if_disabled=True - should execute normally (force is ignored)
         mock_trader.is_enabled = True
         result = mock_trader.test_method("test", arg2="value", force_if_disabled=True)
         assert result == "executed with test, value, {}"
         mock_trader.logger.info.assert_not_called()
-        
+
         # Test 5: Method with no arguments - trader enabled
         mock_trader.is_enabled = True
         result = mock_trader.no_args_method()
         assert result == "no_args_result"
         mock_trader.logger.info.assert_not_called()
-        
+
         # Test 6: Method with no arguments - trader disabled without force
         mock_trader.is_enabled = False
         with pytest.raises(errors.TraderDisabledError, match="trader disabled.*no_args_method"):
             mock_trader.no_args_method()
         mock_trader.logger.info.assert_not_called()
-        
+
         # Test 7: Method with no arguments - trader disabled with force
         mock_trader.is_enabled = False
         result = mock_trader.no_args_method(force_if_disabled=True)
@@ -284,9 +291,10 @@ class TestTrader:
         info_message = mock_trader.logger.info.call_args[0][0]
         assert "no_args_method" in info_message
         assert "execution is forced" in info_message
-        
+
         await stop(exchange_manager)
 
+    @pytest.mark.asyncio
     async def test_cancel_limit_order(self):
         _, exchange_manager, trader_inst = await init_default()
         orders_manager = exchange_manager.exchange_personal_data.orders_manager
@@ -311,6 +319,7 @@ class TestTrader:
 
         await stop(exchange_manager)
 
+    @pytest.mark.asyncio
     async def test_cancel_stop_order(self):
         _, exchange_manager, trader_inst = await init_default()
         orders_manager = exchange_manager.exchange_personal_data.orders_manager
@@ -335,6 +344,7 @@ class TestTrader:
 
         await stop(exchange_manager)
 
+    @pytest.mark.asyncio
     async def test_cancel_closed_order(self):
         _, exchange_manager, trader_inst = await init_default()
 
@@ -355,6 +365,7 @@ class TestTrader:
         await stop(exchange_manager)
 
 
+    @pytest.mark.asyncio
     async def test_cancel_order_error(self):
         _, exchange_manager, trader_inst = await init_default()
 
@@ -417,6 +428,7 @@ class TestTrader:
         finally:
             trader_inst.simulate = True
 
+    @pytest.mark.asyncio
     async def test_cancel_order_skip_pending_cancel_status(self):
         _, exchange_manager, trader_inst = await init_default()
         orders_manager = exchange_manager.exchange_personal_data.orders_manager
@@ -451,6 +463,7 @@ class TestTrader:
 
         await stop(exchange_manager)
 
+    @pytest.mark.asyncio
     async def test_cancel_open_orders_default_symbol(self):
         config, exchange_manager, trader_inst = await init_default()
         orders_manager = exchange_manager.exchange_personal_data.orders_manager
@@ -510,6 +523,7 @@ class TestTrader:
 
         await stop(exchange_manager)
 
+    @pytest.mark.asyncio
     async def test_cancel_open_orders_multi_symbol(self):
         config, exchange_manager, trader_inst = await init_default()
         orders_manager = exchange_manager.exchange_personal_data.orders_manager
@@ -571,6 +585,7 @@ class TestTrader:
 
         await stop(exchange_manager)
 
+    @pytest.mark.asyncio
     async def test_cancel_all_open_orders_with_currency(self):
         config, exchange_manager, trader_inst = await init_default()
         orders_manager = exchange_manager.exchange_personal_data.orders_manager
@@ -657,6 +672,7 @@ class TestTrader:
 
         await stop(exchange_manager)
 
+    @pytest.mark.asyncio
     async def test_close_filled_order(self):
         config, exchange_manager, trader_inst = await init_default()
         orders_manager = exchange_manager.exchange_personal_data.orders_manager
@@ -706,6 +722,7 @@ class TestTrader:
 
         await stop(exchange_manager)
 
+    @pytest.mark.asyncio
     async def test_close_filled_buy_limit_order(self):
         _, exchange_manager, trader_inst = await init_default()
         portfolio_manager = exchange_manager.exchange_personal_data.portfolio_manager
@@ -737,6 +754,7 @@ class TestTrader:
 
         await stop(exchange_manager)
 
+    @pytest.mark.asyncio
     async def test_close_filled_stop_sell_order(self):
         _, exchange_manager, trader_inst = await init_default()
         portfolio_manager = exchange_manager.exchange_personal_data.portfolio_manager
@@ -769,6 +787,7 @@ class TestTrader:
 
         await stop(exchange_manager)
 
+    @pytest.mark.asyncio
     async def test_close_filled_stop_buy_order(self):
         _, exchange_manager, trader_inst = await init_default()
         portfolio_manager = exchange_manager.exchange_personal_data.portfolio_manager
@@ -801,6 +820,7 @@ class TestTrader:
 
         await stop(exchange_manager)
 
+    @pytest.mark.asyncio
     async def test_close_filled_sell_limit_order_one_in_two(self):
         _, exchange_manager, trader_inst = await init_default()
         portfolio_manager = exchange_manager.exchange_personal_data.portfolio_manager
@@ -859,6 +879,7 @@ class TestTrader:
 
         await stop(exchange_manager)
 
+    @pytest.mark.asyncio
     async def test_close_filled_sell_limit_order(self):
         _, exchange_manager, trader_inst = await init_default()
         portfolio_manager = exchange_manager.exchange_personal_data.portfolio_manager
@@ -904,6 +925,7 @@ class TestTrader:
 
         await stop(exchange_manager)
 
+    @pytest.mark.asyncio
     async def test_close_filled_order_with_oco_orders(self):
         config, exchange_manager, trader_inst = await init_default()
         orders_manager = exchange_manager.exchange_personal_data.orders_manager
@@ -961,6 +983,7 @@ class TestTrader:
 
         await stop(exchange_manager)
 
+    @pytest.mark.asyncio
     async def test_sell_all_currencies(self):
         _, exchange_manager, trader_inst = await init_default()
         portfolio_manager = exchange_manager.exchange_personal_data.portfolio_manager
@@ -1004,6 +1027,7 @@ class TestTrader:
 
         await stop(exchange_manager)
 
+    @pytest.mark.asyncio
     async def test_sell_all(self):
         _, exchange_manager, trader_inst = await init_default()
         portfolio_manager = exchange_manager.exchange_personal_data.portfolio_manager
@@ -1085,6 +1109,7 @@ class TestTrader:
 
         await stop(exchange_manager)
 
+    @pytest.mark.asyncio
     async def test_parse_exchange_order_to_trade_instance(self):
         _, exchange_manager, trader_inst = await init_default()
 
@@ -1110,6 +1135,7 @@ class TestTrader:
 
         await stop(exchange_manager)
 
+    @pytest.mark.asyncio
     async def test_parse_exchange_order_to_order_instance(self):
         _, exchange_manager, trader_inst = await init_default()
 
@@ -1141,6 +1167,7 @@ class TestTrader:
 
         await stop(exchange_manager)
 
+    @pytest.mark.asyncio
     async def test_edit_order(self):
         _, exchange_manager, trader_inst = await init_default()
         portfolio_manager = exchange_manager.exchange_personal_data.portfolio_manager
@@ -1194,6 +1221,7 @@ class TestTrader:
 
         await stop(exchange_manager)
 
+    @pytest.mark.asyncio
     async def test_bundle_chained_order_with_uncreated_order(self):
         _, exchange_manager, trader_inst = await init_default()
 
@@ -1238,6 +1266,7 @@ class TestTrader:
 
         await stop(exchange_manager)
 
+    @pytest.mark.asyncio
     async def test_on_invalid_credentials(self):
         config, exchange_manager, trader_inst = await init_default()
 
@@ -1317,16 +1346,17 @@ class TestTrader:
 
         await stop(exchange_manager)
 
+    @pytest.mark.asyncio
     async def test_withdraw(self):
         config, exchange_manager, trader_inst = await init_default()
-        
+
         asset = "BTC"
         amount = decimal.Decimal("0.1")
         address = "1A1zP1eP5QGefi2DMPTfTL5SLmv7DivfNa"
         network = "bitcoin"
         tag = ""
         params = {}
-        
+
         # Mock withdrawal data that exchange.withdraw would return
         withdrawal_data = {
             ExchangeConstantsTransactionColumns.CURRENCY.value: asset,
@@ -1338,45 +1368,46 @@ class TestTrader:
             ExchangeConstantsTransactionColumns.STATUS.value: "ok",
             ExchangeConstantsTransactionColumns.FEE.value: {"BTC": decimal.Decimal("0.001")},
         }
-        
+
         portfolio_manager = exchange_manager.exchange_personal_data.portfolio_manager
-        
+
         # Get initial BTC holdings before withdrawal
         initial_btc_available = portfolio_manager.portfolio.get_currency_portfolio(asset).available
         initial_btc_total = portfolio_manager.portfolio.get_currency_portfolio(asset).total
-        
+
         assert constants.ALLOW_FUNDS_TRANSFER is False # default is False
         with patch.object(trader_inst, '_withdraw_on_exchange', new=AsyncMock(return_value=withdrawal_data)) as _withdraw_on_exchange_mock:
             with patch('octobot_trading.constants.ALLOW_FUNDS_TRANSFER', True):
-                
+
                 result = await trader_inst.withdraw(asset, amount, network, address, tag=tag, params=params)
-                
+
                 # Verify exchange.withdraw was called correctly
                 _withdraw_on_exchange_mock.assert_called_once_with(asset, amount, network, address, tag=tag, params=params)
-                
+
                 # Verify result matches withdrawal data
                 assert result == withdrawal_data
-                
+
                 # Get BTC holdings after withdrawal
                 final_btc_available = portfolio_manager.portfolio.get_currency_portfolio(asset).available
                 final_btc_total = portfolio_manager.portfolio.get_currency_portfolio(asset).total
-                
+
                 # Verify BTC holdings decreased by withdrawal amount
                 # Note: The withdrawal amount is deducted, fees are deducted from the withdrawal amount and should not be subtracted again
                 assert final_btc_available == initial_btc_available - amount
                 assert final_btc_total == initial_btc_total - amount
                 _withdraw_on_exchange_mock.reset_mock()
-        
+
             # Test when ALLOW_FUNDS_TRANSFER is False - should raise DisabledFundsTransferError
             with patch('octobot_trading.constants.ALLOW_FUNDS_TRANSFER', False):
                 with pytest.raises(DisabledFundsTransferError) as exc_info:
                     await trader_inst.withdraw(asset, amount, network, address, tag=tag, params=params)
                 assert "Withdraw funds is not enabled" in str(exc_info.value)
                 _withdraw_on_exchange_mock.assert_not_called()
-        
+
         await stop(exchange_manager)
 
 
+@pytest.mark.asyncio
 async def test_close_position(future_trader_simulator_with_default_linear):
     _, exchange_manager_inst, trader_inst, default_contract = future_trader_simulator_with_default_linear
 
@@ -1413,6 +1444,7 @@ async def test_close_position(future_trader_simulator_with_default_linear):
             assert orders[0].reduce_only is True
 
 
+@pytest.mark.asyncio
 async def test_set_leverage(future_trader_simulator_with_default_linear):
     _, exchange_manager_inst, trader_inst, default_contract = future_trader_simulator_with_default_linear
 
@@ -1431,6 +1463,7 @@ async def test_set_leverage(future_trader_simulator_with_default_linear):
         await trader_inst.set_leverage(DEFAULT_FUTURE_SYMBOL, None, decimal.Decimal(200))
 
 
+@pytest.mark.asyncio
 async def test_set_symbol_take_profit_stop_loss_mode(future_trader_simulator_with_default_linear):
     _, exchange_manager_inst, trader_inst, default_contract = future_trader_simulator_with_default_linear
 
@@ -1443,6 +1476,7 @@ async def test_set_symbol_take_profit_stop_loss_mode(future_trader_simulator_wit
     assert contract.take_profit_stop_loss_mode is TakeProfitStopLossMode.FULL
 
 
+@pytest.mark.asyncio
 async def test_set_margin_type(future_trader_simulator_with_default_linear):
     _, exchange_manager_inst, trader_inst, default_contract = future_trader_simulator_with_default_linear
 
@@ -1457,6 +1491,7 @@ async def test_set_margin_type(future_trader_simulator_with_default_linear):
     assert contract.is_isolated()
 
 
+@pytest.mark.asyncio
 async def test_set_position_mode(future_trader_simulator_with_default_linear):
     _, exchange_manager_inst, trader_inst, default_contract = future_trader_simulator_with_default_linear
 
@@ -1483,6 +1518,7 @@ async def test_set_position_mode(future_trader_simulator_with_default_linear):
         await trader_inst.set_position_mode(DEFAULT_FUTURE_SYMBOL, PositionMode.HEDGE)
 
 
+@pytest.mark.asyncio
 async def test__has_open_position(future_trader_simulator_with_default_linear):
     _, exchange_manager_inst, trader_inst, default_contract = future_trader_simulator_with_default_linear
 
@@ -1502,6 +1538,7 @@ async def test__has_open_position(future_trader_simulator_with_default_linear):
     assert trader_inst._has_open_position(DEFAULT_FUTURE_SYMBOL)
 
 
+@pytest.mark.asyncio
 async def test_create_order(future_trader_simulator_with_default_linear):
     _, exchange_manager_inst, trader_inst, default_contract = future_trader_simulator_with_default_linear
     order_mock = mock.Mock()

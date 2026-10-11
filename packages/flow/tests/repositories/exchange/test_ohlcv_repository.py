@@ -7,10 +7,11 @@ import octobot_trading.exchange_data as exchange_data_module
 
 import octobot_flow.repositories.exchange.ohlcv_repository as ohlcv_repository_module
 
-pytestmark = pytest.mark.asyncio
+
 
 
 class TestOhlcvRepositoryEnsureTemporaryOhlcvChannel:
+    @pytest.mark.asyncio
     async def test_delegates_to_channel_producer_ensure(self):
         exchange_manager = mock.Mock()
         with mock.patch.object(

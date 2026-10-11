@@ -24,7 +24,7 @@ from octobot_trading.exchange_data.exchange_symbols_data import ExchangeSymbolsD
 from tests import event_loop
 from tests.exchanges import exchange_manager
 
-pytestmark = pytest.mark.asyncio
+
 
 DEFAULT_SYMBOL = "BTC/USDT"
 SECOND_SYMBOL = "ETH/USDT"
@@ -62,12 +62,14 @@ async def exchange_symbols_data(exchange_manager):
     return ExchangeSymbolsData(exchange_manager)
 
 
+@pytest.mark.asyncio
 async def test_get_exchange_symbol_data(exchange_symbols_data):
     new_symbols_data = exchange_symbols_data.get_exchange_symbol_data("BTC/USDT")
     assert new_symbols_data is not None
     assert exchange_symbols_data.get_exchange_symbol_data("BTC/USDT") is new_symbols_data
 
 
+@pytest.mark.asyncio
 async def test_get_exchange_symbol_data_without_creation(exchange_symbols_data):
     with pytest.raises(KeyError):
         exchange_symbols_data.get_exchange_symbol_data("BTC/USDT", allow_creation=False)
@@ -77,20 +79,24 @@ async def test_get_exchange_symbol_data_without_creation(exchange_symbols_data):
 
 
 class TestExchangeSymbolsDataInitializeCandlesFromExchangeData:
+    @pytest.mark.asyncio
     async def test_does_nothing_when_no_markets(self, exchange_symbols_data):
         await exchange_symbols_data.initialize_candles_from_exchange_data(_build_exchange_data([]))
         assert exchange_symbols_data.exchange_symbol_data == {}
 
+    @pytest.mark.asyncio
     async def test_skips_market_without_time_frame(self, exchange_symbols_data):
         market = _build_market_details(DEFAULT_SYMBOL, time_frame="")
         await exchange_symbols_data.initialize_candles_from_exchange_data(_build_exchange_data([market]))
         assert DEFAULT_SYMBOL not in exchange_symbols_data.exchange_symbol_data
 
+    @pytest.mark.asyncio
     async def test_skips_market_without_full_candles(self, exchange_symbols_data):
         market = _build_market_details(DEFAULT_SYMBOL, open_=[])
         await exchange_symbols_data.initialize_candles_from_exchange_data(_build_exchange_data([market]))
         assert DEFAULT_SYMBOL not in exchange_symbols_data.exchange_symbol_data
 
+    @pytest.mark.asyncio
     async def test_loads_candles_for_valid_market(self, exchange_symbols_data):
         expected_close = 123.0
         market = _build_market_details(DEFAULT_SYMBOL, close=[expected_close])
@@ -99,6 +105,7 @@ class TestExchangeSymbolsDataInitializeCandlesFromExchangeData:
         candles_manager = symbol_data.symbol_candles[commons_enums.TimeFrames.ONE_HOUR]
         assert candles_manager.close_candles[0] == expected_close
 
+    @pytest.mark.asyncio
     async def test_only_processes_valid_markets_in_mixed_list(self, exchange_symbols_data):
         skipped_market = _build_market_details(DEFAULT_SYMBOL, time_frame="")
         expected_close = 456.0

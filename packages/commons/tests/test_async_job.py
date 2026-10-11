@@ -23,13 +23,14 @@ import pytest
 from octobot_commons.async_job import AsyncJob
 from octobot_commons.asyncio_tools import wait_asyncio_next_cycle
 
-pytestmark = pytest.mark.asyncio
+
 
 
 async def callback():
     pass
 
 
+@pytest.mark.asyncio
 async def test_has_enough_time_elapsed():
     job = AsyncJob(callback)
     if not os.getenv('CYTHON_IGNORE'):
@@ -39,6 +40,7 @@ async def test_has_enough_time_elapsed():
     job.stop()
 
 
+@pytest.mark.asyncio
 async def test_has_enough_time_elapsed_with_delays():
     job = AsyncJob(callback, min_execution_delay=0.2)
     if not os.getenv('CYTHON_IGNORE'):
@@ -50,6 +52,7 @@ async def test_has_enough_time_elapsed_with_delays():
     job.stop()
 
 
+@pytest.mark.asyncio
 async def test_should_run_with_dependencies():
     job2 = AsyncJob(callback)
     job3 = AsyncJob(callback)
@@ -70,6 +73,7 @@ async def test_should_run_with_dependencies():
     job.stop()
 
 
+@pytest.mark.asyncio
 async def test_first_execution_delay():
     callback_mock = AsyncMock(__name__="callback_mock")
     job = AsyncJob(callback_mock, first_execution_delay=0.4, execution_interval_delay=5, min_execution_delay=5)
@@ -84,6 +88,7 @@ async def test_first_execution_delay():
     job.stop()
 
 
+@pytest.mark.asyncio
 async def test_clear():
     job = AsyncJob(callback)
     job.clear()
@@ -93,6 +98,7 @@ async def test_clear():
         assert not job.job_periodic_task
 
 
+@pytest.mark.asyncio
 async def test_run_stop_run():
     job = AsyncJob(callback, execution_interval_delay=0.5, min_execution_delay=0.2)
     if not os.getenv('CYTHON_IGNORE'):
@@ -123,6 +129,7 @@ async def test_run_stop_run():
             assert job.is_stopped()
 
 
+@pytest.mark.asyncio
 async def test_run():
     job = AsyncJob(callback, execution_interval_delay=0.5, min_execution_delay=0.2)
     if not os.getenv('CYTHON_IGNORE'):

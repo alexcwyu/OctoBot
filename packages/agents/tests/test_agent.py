@@ -20,37 +20,37 @@ import octobot_agents.agent.channels.agent as agent_channels
 import octobot_agents.constants as agent_constants
 
 
-class TestAgentChannel(agent_channels.AbstractAgentChannel):
+class AgentChannelFixture(agent_channels.AbstractAgentChannel):
     """Test channel for testing."""
     pass
 
 
-class TestAIAgentProducer(ai_agent_channels.AbstractAIAgentChannelProducer):
+class AIAgentProducerFixture(ai_agent_channels.AbstractAIAgentChannelProducer):
     """Test agent producer for testing."""
-    
-    AGENT_CHANNEL = TestAgentChannel
-    
+
+    AGENT_CHANNEL = AgentChannelFixture
+
     def _get_default_prompt(self) -> str:
         return "You are a test agent."
-    
+
     async def execute(self, input_data, ai_service):
         return {"result": "test"}
 
 
 def test_agent_name_is_class_name():
     """Test that agent.name is set to the class name."""
-    channel = TestAgentChannel()
-    agent = TestAIAgentProducer(channel)
-    
-    assert agent.name == "TestAIAgentProducer"
+    channel = AgentChannelFixture()
+    agent = AIAgentProducerFixture(channel)
+
+    assert agent.name == "AIAgentProducerFixture"
     assert agent.name == agent.__class__.__name__
 
 
 def test_agent_default_values():
     """Test that agent uses default values from constants."""
-    channel = TestAgentChannel()
-    agent = TestAIAgentProducer(channel)
-    
+    channel = AgentChannelFixture()
+    agent = AIAgentProducerFixture(channel)
+
     assert agent.max_tokens == agent_constants.AGENT_DEFAULT_MAX_TOKENS
     assert agent.temperature == agent_constants.AGENT_DEFAULT_TEMPERATURE
     assert agent.MAX_RETRIES == agent_constants.AGENT_DEFAULT_MAX_RETRIES
@@ -58,13 +58,13 @@ def test_agent_default_values():
 
 def test_agent_custom_values():
     """Test that agent can override default values."""
-    channel = TestAgentChannel()
-    agent = TestAIAgentProducer(
+    channel = AgentChannelFixture()
+    agent = AIAgentProducerFixture(
         channel,
         max_tokens=5000,
         temperature=0.7,
     )
-    
+
     assert agent.max_tokens == 5000
     assert agent.temperature == 0.7
-    assert agent.name == "TestAIAgentProducer"
+    assert agent.name == "AIAgentProducerFixture"

@@ -52,7 +52,7 @@ except ImportError as err:
 
 
 # All test coroutines will be treated as marked.
-pytestmark = pytest.mark.asyncio
+
 
 
 EXCHANGE_INTERNAL_NAME = "binanceus"
@@ -406,6 +406,7 @@ class TestOctoBotActionsJob:
     def teardown_method(self):
         octobot_trading.constants.ALLOW_FUNDS_TRANSFER = False
 
+    @pytest.mark.asyncio
     async def test_run_market_order_action(self, market_order_action):
         # step 1: configure the job
         job = octobot_flow_client.OctoBotActionsJob(
@@ -463,6 +464,7 @@ class TestOctoBotActionsJob:
         assert 0.990 < post_deposit_portfolio["ETH"][common_constants.PORTFOLIO_AVAILABLE] <= 0.999
         assert 0.990 < post_deposit_portfolio["ETH"][common_constants.PORTFOLIO_TOTAL] <= 0.999
 
+    @pytest.mark.asyncio
     async def test_run_limit_order_action(self, limit_order_action):
         # step 1: configure the job
         job = octobot_flow_client.OctoBotActionsJob(limit_order_action, [], [], octobot_flow_client.OctoBotActionsJobResult())
@@ -510,6 +512,7 @@ class TestOctoBotActionsJob:
         assert order["side"] == "buy"
         assert result.has_next_actions is False # no more actions to execute
 
+    @pytest.mark.asyncio
     async def test_run_stop_loss_order_action(self, stop_loss_order_action):
         # step 1: configure the job
         job = octobot_flow_client.OctoBotActionsJob(stop_loss_order_action, [], [], octobot_flow_client.OctoBotActionsJobResult())
@@ -562,6 +565,7 @@ class TestOctoBotActionsJob:
             assert order["side"] == "sell"
             assert result.has_next_actions is False # no more actions to execute
 
+    @pytest.mark.asyncio
     async def test_run_cancel_limit_order_after_instant_wait_action(self, create_limit_instant_wait_and_cancel_order_action):
         # step 1: configure the job
         job = octobot_flow_client.OctoBotActionsJob(create_limit_instant_wait_and_cancel_order_action, [], [], octobot_flow_client.OctoBotActionsJobResult())
@@ -629,8 +633,8 @@ class TestOctoBotActionsJob:
         assert isinstance(processed_actions[0], octobot_flow.entities.DSLScriptActionDetails)
         assert processed_actions[0].dsl_script.startswith("wait(")
         # wait is waiting 0 seconds, so it should be executed immediately
-        assert processed_actions[0].executed_at is not None and processed_actions[0].executed_at > 0 
-        
+        assert processed_actions[0].executed_at is not None and processed_actions[0].executed_at > 0
+
         # step 4: run the cancel action
         next_actions_description = result.next_actions_description
         assert next_actions_description is not None
@@ -655,6 +659,7 @@ class TestOctoBotActionsJob:
         assert result.has_next_actions is False # no more actions to execute
 
     @pytest.mark.skip(reason="restore once polymarket is fully supported")
+    @pytest.mark.asyncio
     async def test_polymarket_trade_action(self, polymarket_order_action): # TODO: update once polymarket is fullly supported
         # step 1: configure the job
         job = octobot_flow_client.OctoBotActionsJob(polymarket_order_action, [], [], octobot_flow_client.OctoBotActionsJobResult())
@@ -701,6 +706,7 @@ class TestOctoBotActionsJob:
         assert order["type"] == "market"
         assert order["side"] == "buy"
 
+    @pytest.mark.asyncio
     async def test_run_transfer_blockchain_only_action(self, transfer_blockchain_action):
         # step 1: configure the job
         job = octobot_flow_client.OctoBotActionsJob(transfer_blockchain_action, [], [], octobot_flow_client.OctoBotActionsJobResult())
@@ -751,6 +757,7 @@ class TestOctoBotActionsJob:
 
 
 
+    @pytest.mark.asyncio
     async def test_run_deposit_action(self, deposit_action):
         # step 1: configure the job
         job = octobot_flow_client.OctoBotActionsJob(deposit_action, [], [], octobot_flow_client.OctoBotActionsJobResult())
@@ -798,6 +805,7 @@ class TestOctoBotActionsJob:
             common_constants.PORTFOLIO_TOTAL: pre_deposit_portfolio["BTC"][common_constants.PORTFOLIO_TOTAL] + deposit_action["params"]["BLOCKCHAIN_FROM_AMOUNT"],
         }
 
+    @pytest.mark.asyncio
     async def test_run_withdraw_action(self, withdraw_action):
         # step 1: configure the job
         job = octobot_flow_client.OctoBotActionsJob(withdraw_action, [], [], octobot_flow_client.OctoBotActionsJobResult())
@@ -842,6 +850,7 @@ class TestOctoBotActionsJob:
         post_withdraw_portfolio = job2.after_execution_state.automation.exchange_account_elements.portfolio.content
         assert post_withdraw_portfolio == {}  # portfolio should now be empty
 
+    @pytest.mark.asyncio
     async def test_run_multiple_actions_bundle_no_wait(self, multiple_actions_bundle_no_wait):
         # step 1: configure the job
         job = octobot_flow_client.OctoBotActionsJob(multiple_actions_bundle_no_wait, [], [], octobot_flow_client.OctoBotActionsJobResult())
@@ -927,6 +936,7 @@ class TestOctoBotActionsJob:
         # created a buy order but not executed: locked BTC in portfolio
         assert post_deposit_portfolio["BTC"][common_constants.PORTFOLIO_AVAILABLE] < post_deposit_portfolio["BTC"][common_constants.PORTFOLIO_TOTAL]
 
+    @pytest.mark.asyncio
     async def test_trade_and_loop_until_order_closed_jitter_emits_max_retry_interval(
         self, trade_and_loop_until_order_closed_with_jitter
     ):
@@ -937,6 +947,7 @@ class TestOctoBotActionsJob:
         assert "max_retry_interval=70" in loop_dsl
         assert "3.0, max_retry_interval=70.0, timeout=10.0, max_attempts=4, return_remaining_time=True)" in loop_dsl
 
+    @pytest.mark.asyncio
     async def test_run_trade_and_loop_until_order_closed(self, trade_and_loop_until_order_closed):
         # Step 1 — Apply automation config (ACTIONS: trade, loop_until_order_closed).
         # The only runnable action is init/APPLY_CONFIGURATION; portfolio is seeded (e.g. BTC for the later market buy).
@@ -1087,6 +1098,7 @@ class TestOctoBotActionsJob:
         assert result.next_actions_description
         assert result.has_next_actions is False
 
+    @pytest.mark.asyncio
     async def test_run_trade_transfer_and_check_balance_actions_bundle_no_wait(self, trade_transfer_and_check_balance_actions_bundle_no_wait):
         # step 1: configure the job (ACTIONS: trade, blockchain_wallet_init, transfer, loop_until_blockchain_balance)
         origin_create_wallet_descriptor_specific_config = blockchain_wallet_simulator.BlockchainWalletSimulator.create_wallet_descriptor_specific_config
@@ -1318,6 +1330,7 @@ class TestOctoBotActionsJob:
         assert result.next_actions_description
         assert result.has_next_actions is False
 
+    @pytest.mark.asyncio
     async def test_run_trade_wallet_init_trade_without_if_error_on_failure(
         self, trade_wallet_init_trade_if_error_cleanup_bundle
     ):
@@ -1442,6 +1455,7 @@ class TestOctoBotActionsJob:
         assert result.has_next_actions is False
 
 
+    @pytest.mark.asyncio
     async def test_run_multiple_actions_bundle_with_wait(self, multiple_action_bundle_with_wait):
         # step 1: configure the job
         job = octobot_flow_client.OctoBotActionsJob(multiple_action_bundle_with_wait, [], [], octobot_flow_client.OctoBotActionsJobResult())
@@ -1543,7 +1557,7 @@ class TestOctoBotActionsJob:
         assert len(processed_actions) == 1
         assert isinstance(processed_actions[0], octobot_flow.entities.DSLScriptActionDetails)
         assert processed_actions[0].dsl_script.startswith("wait(")
-        assert processed_actions[0].executed_at is not None and processed_actions[0].executed_at > 0 
+        assert processed_actions[0].executed_at is not None and processed_actions[0].executed_at > 0
 
         next_actions_description = result.next_actions_description
         parsed_state = octobot_flow.entities.AutomationState.from_dict(next_actions_description.state)
@@ -1614,7 +1628,7 @@ class TestOctoBotActionsJob:
         processed_actions = result.processed_actions
         assert isinstance(processed_actions[0], octobot_flow.entities.DSLScriptActionDetails)
         assert processed_actions[0].dsl_script.startswith("wait(")
-        assert processed_actions[0].executed_at is not None and processed_actions[0].executed_at > 0 
+        assert processed_actions[0].executed_at is not None and processed_actions[0].executed_at > 0
 
 
 
@@ -1652,6 +1666,7 @@ class TestOctoBotActionsJob:
 
 
 class TestOctoBotActionsJobRunLogging:
+    @pytest.mark.asyncio
     @pytest.mark.asyncio
     async def test_logs_executed_actions_not_input_priority_actions(self):
         if message := misses_required_octobot_flow_client_import():

@@ -34,9 +34,10 @@ import octobot_tentacles_manager.constants as constants
 from octobot_tentacles_manager.loaders.tentacle_loading import reload_tentacle_by_tentacle_class
 
 # All test coroutines will be treated as marked.
-pytestmark = pytest.mark.asyncio
 
 
+
+@pytest.mark.asyncio
 async def test_get_config():
     _cleanup()
     async with aiohttp.ClientSession() as session:
@@ -52,6 +53,7 @@ async def test_get_config():
     _cleanup()
 
 
+@pytest.mark.asyncio
 async def test_update_config():
     async with aiohttp.ClientSession() as session:
         await api.install_all_tentacles(_tentacles_local_path(), aiohttp_session=session)
@@ -70,6 +72,7 @@ async def test_update_config():
     _cleanup()
 
 
+@pytest.mark.asyncio
 async def test_keep_existing_update_config():
     async with aiohttp.ClientSession() as session:
         await api.install_all_tentacles(_tentacles_local_path(), aiohttp_session=session)
@@ -102,7 +105,7 @@ async def test_keep_existing_update_config():
             }
         }
     }
-    
+
     # test keep existing option
     config_update = {
         "nested_thing": {
@@ -200,7 +203,7 @@ async def test_keep_existing_update_config():
             }
         }
     }
-    
+
     # test keep existing false
     config_update = {
         "nested_thing": {
@@ -223,6 +226,7 @@ async def test_keep_existing_update_config():
     _cleanup()
 
 
+@pytest.mark.asyncio
 async def test_factory_reset_config():
     async with aiohttp.ClientSession() as session:
         await api.install_all_tentacles(_tentacles_local_path(), aiohttp_session=session)
@@ -242,6 +246,7 @@ async def test_factory_reset_config():
     _cleanup()
 
 
+@pytest.mark.asyncio
 async def test_fill_tentacle_config():
     async with aiohttp.ClientSession() as session:
         await api.install_all_tentacles(_tentacles_local_path(), aiohttp_session=session)
@@ -272,6 +277,7 @@ async def test_fill_tentacle_config():
     _cleanup()
 
 
+@pytest.mark.asyncio
 async def test_get_config_schema_path():
     async with aiohttp.ClientSession() as session:
         await api.install_all_tentacles(_tentacles_local_path(), aiohttp_session=session)
@@ -383,4 +389,3 @@ def _cleanup():
     ref_tent = user_root_folder_provider.get_user_reference_tentacle_config_path()
     if path.exists(ref_tent):
         rmtree(ref_tent)
-

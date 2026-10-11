@@ -26,7 +26,7 @@ import octobot_backtesting.api as backtesting_api
 import octobot_backtesting.constants as constants
 import octobot_backtesting.enums as enums
 
-pytestmark = pytest.mark.asyncio
+
 
 EXCHANGE = "binance"
 SYMBOLS = ["ETH/BTC", "BTC/USDT"]
@@ -353,6 +353,7 @@ class TestDescriptionMatches:
         assert not self.comparator.description_matches(desc)
 
 
+@pytest.mark.asyncio
 async def test_find_matching_data_file_exchange_match():
     with _exchange_data_dir() as tmpdir:
         comparator = DataComparator(data_path=tmpdir)
@@ -363,6 +364,7 @@ async def test_find_matching_data_file_exchange_match():
         assert result == "ExchangeHistoryDataCollector_test.data"
 
 
+@pytest.mark.asyncio
 async def test_find_matching_data_file_exchange_no_match_exchange():
     with _exchange_data_dir() as tmpdir:
         comparator = DataComparator(data_path=tmpdir)
@@ -373,6 +375,7 @@ async def test_find_matching_data_file_exchange_no_match_exchange():
         assert result is None
 
 
+@pytest.mark.asyncio
 async def test_find_matching_data_file_exchange_no_match_symbols():
     with _exchange_data_dir() as tmpdir:
         comparator = DataComparator(data_path=tmpdir)
@@ -383,6 +386,7 @@ async def test_find_matching_data_file_exchange_no_match_symbols():
         assert result is None
 
 
+@pytest.mark.asyncio
 async def test_find_matching_data_file_exchange_no_match_time_frames():
     with _exchange_data_dir() as tmpdir:
         comparator = DataComparator(data_path=tmpdir)
@@ -393,6 +397,7 @@ async def test_find_matching_data_file_exchange_no_match_time_frames():
         assert result is None
 
 
+@pytest.mark.asyncio
 async def test_find_matching_data_file_exchange_no_match_timestamps():
     with _exchange_data_dir() as tmpdir:
         comparator = DataComparator(data_path=tmpdir)
@@ -403,6 +408,7 @@ async def test_find_matching_data_file_exchange_no_match_timestamps():
         assert result is None
 
 
+@pytest.mark.asyncio
 async def test_find_matching_data_file_exchange_empty_dir():
     with tempfile.TemporaryDirectory() as tmpdir:
         comparator = DataComparator(data_path=tmpdir)
@@ -413,6 +419,7 @@ async def test_find_matching_data_file_exchange_empty_dir():
         assert result is None
 
 
+@pytest.mark.asyncio
 async def test_find_matching_data_file_social_match():
     with _social_data_dir() as tmpdir:
         comparator = DataComparator(data_path=tmpdir)
@@ -423,6 +430,7 @@ async def test_find_matching_data_file_social_match():
         assert result == "SocialHistoryDataCollector_test.data"
 
 
+@pytest.mark.asyncio
 async def test_find_matching_data_file_social_no_match_services():
     with _social_data_dir() as tmpdir:
         comparator = DataComparator(data_path=tmpdir)
@@ -433,6 +441,7 @@ async def test_find_matching_data_file_social_no_match_services():
         assert result is None
 
 
+@pytest.mark.asyncio
 async def test_find_matching_data_file_social_match_when_existing_services_is_superset():
     with _social_data_dir(services=["AlternativeMeServiceFeed", "AlternativeMeService"]) as tmpdir:
         comparator = DataComparator(data_path=tmpdir)
@@ -443,6 +452,7 @@ async def test_find_matching_data_file_social_match_when_existing_services_is_su
         assert result == "SocialHistoryDataCollector_test.data"
 
 
+@pytest.mark.asyncio
 async def test_find_matching_data_file_social_match_when_existing_is_all_symbols():
     with _social_data_dir(symbols=[]) as tmpdir:
         comparator = DataComparator(data_path=tmpdir)
@@ -453,6 +463,7 @@ async def test_find_matching_data_file_social_match_when_existing_is_all_symbols
         assert result == "SocialHistoryDataCollector_test.data"
 
 
+@pytest.mark.asyncio
 async def test_find_matching_data_file_social_no_match_timestamps():
     with _social_data_dir() as tmpdir:
         comparator = DataComparator(data_path=tmpdir)
@@ -463,6 +474,7 @@ async def test_find_matching_data_file_social_no_match_timestamps():
         assert result is None
 
 
+@pytest.mark.asyncio
 async def test_find_matching_data_file_social_empty_dir():
     with tempfile.TemporaryDirectory() as tmpdir:
         comparator = DataComparator(data_path=tmpdir)
@@ -473,6 +485,7 @@ async def test_find_matching_data_file_social_empty_dir():
         assert result is None
 
 
+@pytest.mark.asyncio
 async def test_api_find_matching_data_file_exchange():
     with _exchange_data_dir() as tmpdir:
         result = await backtesting_api.find_matching_data_file(
@@ -483,6 +496,7 @@ async def test_api_find_matching_data_file_exchange():
         assert result == "ExchangeHistoryDataCollector_test.data"
 
 
+@pytest.mark.asyncio
 async def test_api_find_matching_data_file_exchange_no_match():
     with _exchange_data_dir() as tmpdir:
         result = await backtesting_api.find_matching_data_file(
@@ -493,6 +507,7 @@ async def test_api_find_matching_data_file_exchange_no_match():
         assert result is None
 
 
+@pytest.mark.asyncio
 async def test_api_find_matching_data_file_social():
     with _social_data_dir() as tmpdir:
         result = await backtesting_api.find_matching_data_file(
@@ -503,6 +518,7 @@ async def test_api_find_matching_data_file_social():
         assert result == "SocialHistoryDataCollector_test.data"
 
 
+@pytest.mark.asyncio
 async def test_api_find_matching_data_file_social_no_match():
     with _social_data_dir() as tmpdir:
         result = await backtesting_api.find_matching_data_file(

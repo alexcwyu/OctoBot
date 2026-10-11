@@ -12,10 +12,11 @@ import octobot_trading.personal_data as trading_personal_data
 import octobot_flow.entities
 import octobot_flow.repositories.exchange.portfolio_repository as portfolio_repository_module
 
-pytestmark = pytest.mark.asyncio
+
 
 
 class TestPortfolioRepositoryEnsureTemporaryBalanceChannel:
+    @pytest.mark.asyncio
     async def test_delegates_to_channel_producer_ensure(self):
         exchange_manager = mock.Mock()
         with mock.patch.object(
@@ -33,6 +34,7 @@ class TestPortfolioRepositoryEnsureTemporaryBalanceChannel:
 
 
 class TestFetchAndApplyPortfolio:
+    @pytest.mark.asyncio
     async def test_applies_decimal_balance_to_portfolio_manager(self):
         balance_content = {
             "USDT": {

@@ -31,9 +31,10 @@ from tests.exchanges import backtesting_trader, backtesting_config, backtesting_
 from tests import event_loop
 
 # All test coroutines will be treated as marked.
-pytestmark = pytest.mark.asyncio
 
 
+
+@pytest.mark.asyncio
 async def test_get_assets_requiring_extra_price_data_to_convert(backtesting_trader):
     config, exchange_manager, trader = backtesting_trader
     assert modes_util.get_assets_requiring_extra_price_data_to_convert(exchange_manager, [], "USDT") == set()
@@ -66,6 +67,7 @@ async def test_get_assets_requiring_extra_price_data_to_convert(backtesting_trad
            == set()
 
 
+@pytest.mark.asyncio
 async def test_convert_assets_to_target_asset():
     trading_mode = mock.Mock()
     sellable_assets = ["USDT", "PLOP"]
@@ -137,6 +139,7 @@ async def test_convert_assets_to_target_asset():
             }
 
 
+@pytest.mark.asyncio
 async def test_convert_asset_to_target_asset(backtesting_trader):
     config, exchange_manager, trader = backtesting_trader
     trading_mode = _get_trading_mode(exchange_manager)
@@ -399,35 +402,36 @@ async def test_convert_asset_to_target_asset(backtesting_trader):
         trading_mode.create_order.reset_mock()
 
 
+@pytest.mark.asyncio
 async def test_enabled_trader_only(backtesting_trader):
     config, exchange_manager, trader = backtesting_trader
-    
+
     # Create a mock trading mode class with decorated method
     class TestTradingMode:
         def __init__(self, exchange_manager):
             self.exchange_manager = exchange_manager
             self.logger = mock.Mock()
-        
+
         @modes_util.enabled_trader_only()
         async def default_decorated_method(self, arg1, arg2=None):
             return f"executed with {arg1} and {arg2}"
-        
+
         @modes_util.enabled_trader_only(raise_when_disabled=True)
         async def raise_when_disabled_method(self, arg1):
             return f"executed with {arg1}"
-        
+
         @modes_util.enabled_trader_only(disabled_return_value="custom_return")
         async def custom_return_method(self):
             return "executed"
-    
+
     trading_mode = TestTradingMode(exchange_manager)
-    
+
     # Test 1: Trader enabled - function should execute normally
     trader.set_is_enabled(True)
     result = await trading_mode.default_decorated_method("test", arg2="value")
     assert result == "executed with test and value"
     trading_mode.logger.warning.assert_not_called()
-    
+
     # Test 2: Trader disabled with default decorator - should log warning and return None
     trader.set_is_enabled(False)
     result = await trading_mode.default_decorated_method("test", arg2="value")
@@ -439,20 +443,20 @@ async def test_enabled_trader_only(backtesting_trader):
     assert "skipping TestTradingMode execution" in warning_message
     assert exchange_manager.exchange_name in warning_message
     trading_mode.logger.warning.reset_mock()
-    
+
     # Test 3: Trader disabled with raise_when_disabled=True - should raise TraderDisabledError
     trader.set_is_enabled(False)
     with pytest.raises(errors.TraderDisabledError, match="has been paused"):
         await trading_mode.raise_when_disabled_method("test")
     trading_mode.logger.warning.assert_not_called()
-    
+
     # Test 4: Trader disabled with custom disabled_return_value - should return custom value
     trader.set_is_enabled(False)
     result = await trading_mode.custom_return_method()
     assert result == "custom_return"
     trading_mode.logger.warning.assert_called_once()
     trading_mode.logger.warning.reset_mock()
-    
+
     # Test 5: Trader enabled with custom_return_method - should execute normally
     trader.set_is_enabled(True)
     result = await trading_mode.custom_return_method()
@@ -470,5 +474,3 @@ def _get_trading_mode(exchange_manager):
         exchange_manager=exchange_manager,
         create_order=mock.AsyncMock(side_effect=_create_order)
     )
-
-
