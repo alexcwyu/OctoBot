@@ -1,0 +1,830 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>OctoBot Development Guide</title><style>
+:root{color-scheme:light dark;--bg:#f6f8fa;--paper:#fff;--fg:#182332;--muted:#526274;--line:#d9e0e7;--accent:#1769aa}
+@media(prefers-color-scheme:dark){:root{--bg:#111820;--paper:#192330;--fg:#e6edf3;--muted:#a0b3c5;--line:#344354;--accent:#71b7ee}}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--fg);font:16px/1.7 system-ui,-apple-system,sans-serif}
+header{border-bottom:1px solid var(--line);padding:16px max(24px,calc((100vw - 1120px)/2));background:var(--paper);font-size:14px}
+main{max-width:1120px;margin:32px auto;padding:40px 48px;background:var(--paper);border:1px solid var(--line);border-radius:12px}
+h1,h2,h3,h4{line-height:1.3;scroll-margin-top:24px}h1{font-size:2.1rem}h2{margin-top:2.5em;border-bottom:1px solid var(--line);padding-bottom:.35em}h3{margin-top:1.8em}
+a{color:var(--accent);text-underline-offset:3px}code{font:14px/1.6 ui-monospace,SFMono-Regular,Menlo,monospace;background:var(--bg);border-radius:4px;padding:2px 5px}pre{overflow:auto;border:1px solid var(--line);background:var(--bg);padding:16px;border-radius:7px}pre code{padding:0;background:none}
+table{border-collapse:collapse;width:100%;display:block;overflow-x:auto;font-size:14px}th,td{border:1px solid var(--line);padding:9px 12px;text-align:left}th{background:var(--bg)}blockquote{border-left:4px solid var(--accent);margin:16px 0;padding:4px 20px;color:var(--muted)}
+.diagram{overflow-x:auto;margin:24px 0;padding:20px;border:1px solid var(--line);border-radius:8px;background:#fff;color:#182332}.mermaid{border:0;background:none;text-align:center}.mermaid svg{height:auto;max-width:100%}details{font-size:13px;color:#526274}.headerlink{margin-left:.4em;font-size:.7em;text-decoration:none;color:var(--muted)}
+main{min-width:0;overflow-wrap:anywhere}table,pre{max-width:100%}.diagram svg{display:block}
+th,td{min-width:120px;overflow-wrap:normal}
+@media(max-width:740px){main{margin:0;padding:24px 18px;border:0;border-radius:0}h1{font-size:1.7rem}.diagram{padding:8px}}
+@media print{header,details,.headerlink{display:none}body,main{background:#fff;color:#000;border:0;margin:0;padding:0}a{color:#000}.diagram,pre{break-inside:avoid}}
+</style></head><body><header>Engineering documentation · <a href="development.md">Markdown source</a></header><main><hr />
+<p>title: Development
+description: Reproducible uv development workflow.
+sidebar_position: 901</p>
+<hr />
+<h1 id="octobot-development-guide">OctoBot Development Guide<a class="headerlink" href="#octobot-development-guide" title="Permanent link">&para;</a></h1>
+<h2 id="development-setup">Development Setup<a class="headerlink" href="#development-setup" title="Permanent link">&para;</a></h2>
+<h3 id="prerequisites">Prerequisites<a class="headerlink" href="#prerequisites" title="Permanent link">&para;</a></h3>
+<ul>
+<li>Python 3.13+</li>
+<li><code>uv</code> 0.13.0 or newer</li>
+<li>Git</li>
+</ul>
+<h3 id="installation">Installation<a class="headerlink" href="#installation" title="Permanent link">&para;</a></h3>
+<pre><code class="language-bash"># Clone the repository
+git clone https://github.com/Drakkar-Software/OctoBot.git
+cd OctoBot
+
+# Install with uv (recommended)
+uv sync --all-extras --dev --python 3.14.8
+
+# Install default tentacles
+python start.py tentacles --install --all
+</code></pre>
+<h3 id="running-octobot">Running OctoBot<a class="headerlink" href="#running-octobot" title="Permanent link">&para;</a></h3>
+<pre><code class="language-bash"># Standard start (creates config on first run)
+python start.py
+
+# Start in simulation mode
+python start.py --simulate
+
+# Start with backtesting
+python start.py --backtesting --backtesting-files path/to/data.json
+
+# Start without web interface
+python start.py --no_web
+
+# Start without telegram
+python start.py --no-telegram
+
+# Start strategy optimizer
+python start.py -o TechnicalAnalysisStrategyEvaluator
+
+# Show version
+python start.py --version
+
+# Encrypt exchange API keys
+python start.py --encrypter
+
+# Start in node mode (distributed)
+python start.py node --master --port 8000
+
+# Start sync server
+python start.py sync --host 0.0.0.0 --port 3000
+</code></pre>
+<h3 id="configuration">Configuration<a class="headerlink" href="#configuration" title="Permanent link">&para;</a></h3>
+<p>Configuration is stored in the <code>user/</code> directory:</p>
+<pre><code>user/
+  config.json              # Main bot configuration
+  profiles/
+    default/
+      profile.json         # Profile settings
+      tentacles_config.json   # Tentacle activation
+      specific_config/     # Per-tentacle configuration
+    custom_profile/
+      ...
+</code></pre>
+<p>Key configuration areas:
+- <strong>Exchanges</strong>: API keys, enabled/disabled, exchange type (spot/futures)
+- <strong>Trader</strong>: Real trader or simulator toggle, risk level (0-1)
+- <strong>Crypto Currencies</strong>: Trading pairs and associated exchanges
+- <strong>Trading</strong>: Reference market, risk settings</p>
+<h2 id="project-structure">Project Structure<a class="headerlink" href="#project-structure" title="Permanent link">&para;</a></h2>
+<pre><code>OctoBot/
+  src/octobot/
+    __init__.py                  # VERSION, PROJECT_NAME, AUTHOR
+    octobot.py                   # Main OctoBot class
+    cli.py                       # CLI argument parsing and startup
+    commands.py                  # Bot control commands (start, stop, restart)
+    constants.py                 # All constants, URLs, env vars
+    enums.py                     # Enumerations (distributions, optimizer modes)
+    errors.py                    # Custom exception classes
+    configuration_manager.py     # Config state management
+    initializer.py               # Bot initialization sequence
+    task_manager.py              # Async loop and thread management
+    octobot_channel_consumer.py  # Global channel event routing
+    octobot_api.py               # Public API for external access
+    octobot_backtesting_factory.py # Backtesting entry point
+    octobot_node.py              # Node distribution mode
+    logger.py                    # Logging setup
+    limits.py                    # Config limit enforcement
+    disclaimer.py                # Terms of service text
+    databases_util.py            # Database helper utilities
+
+    api/                         # Public API modules
+      __init__.py
+      backtesting.py             # Backtesting API
+      strategy_optimizer.py      # Optimizer API
+      updater.py                 # Update API
+
+    automation/                  # Automation framework
+      automation.py              # Automation engine
+      bases/
+        automation_step.py       # Base class for all steps
+        abstract_trigger_event.py   # Trigger event base
+        abstract_condition.py    # Condition base
+        abstract_action.py       # Action base
+        abstract_channel_based_trigger_event.py  # Channel trigger
+        execution_details.py     # Execution context
+
+    backtesting/                 # Backtesting engine
+      octobot_backtesting.py     # Core backtesting orchestrator
+      independent_backtesting.py # Standalone backtesting
+      abstract_backtesting_test.py  # Test base class
+      minimal_data_importer.py   # Minimal data import
+
+    channels/                    # Channel definitions
+      octobot_channel.py         # OctoBotChannel, Producer, Consumer
+
+    community/                   # Community integration
+      authentication.py          # Supabase auth with JWT
+      community_manager.py       # Metrics and bot registration
+      community_analysis.py      # Community data analysis
+      community_bot.py           # Community bot operations
+      identifiers_provider.py    # Environment-aware identifiers
+      tentacles_packages.py      # Community tentacle packages
+      graphql_requests.py        # GraphQL query definitions
+      errors.py                  # Community-specific errors
+      feeds/                     # MQTT/WebSocket feeds
+      supabase_backend/          # Supabase database operations
+      wallet_backend/            # Wallet operations
+      history_backend/           # Clickhouse/Iceberg backends
+      models/                    # Data models
+
+    config/                      # Default configuration files
+      default_config.json
+      config_schema.json
+      profile_schema.json
+      logging_config.ini
+
+    producers/                   # OctoBotChannel producers
+      exchange_producer.py       # Exchange lifecycle
+      evaluator_producer.py      # Evaluator matrix setup
+      interface_producer.py      # Interface/notifier creation
+      service_feed_producer.py   # Service feed management
+
+    storage/                     # Data storage
+      trading_metadata.py        # Run metadata storage
+      db_databases_pruning.py    # Database size management
+
+    strategy_optimizer/          # Strategy optimization
+      strategy_optimizer.py      # Brute-force optimizer
+      strategy_design_optimizer.py     # Genetic algorithm optimizer
+      strategy_design_optimizer_factory.py  # Optimizer creation
+      strategy_test_suite.py     # Test suite runner
+      test_suite_result.py       # Result formatting
+      scored_run_result.py       # Scoring system
+      fitness_parameter.py       # Fitness parameters
+      optimizer_filter.py        # Result filters
+      optimizer_constraint.py    # Optimization constraints
+      optimizer_settings.py      # Optimizer configuration
+
+    updater/                     # Bot update mechanisms
+
+  tests/                         # Test suite
+  additional_tests/              # Extended tests
+  docker/                        # Docker configuration
+  Dockerfile                     # Production Docker image
+  docker-compose.yml             # Docker Compose setup
+  pyproject.toml                 # Build configuration
+</code></pre>
+<h2 id="tentacle-development-guide">Tentacle Development Guide<a class="headerlink" href="#tentacle-development-guide" title="Permanent link">&para;</a></h2>
+<p>Tentacles are the primary extension mechanism. All evaluators, trading modes, services, and interfaces are tentacles.</p>
+<h3 id="tentacle-directory-structure">Tentacle Directory Structure<a class="headerlink" href="#tentacle-directory-structure" title="Permanent link">&para;</a></h3>
+<p>Installed tentacles live in the <code>tentacles/</code> directory:</p>
+<pre><code>tentacles/
+  Evaluator/
+    TA/                    # Technical Analysis evaluators
+      MyRSIEvaluator/
+        __init__.py
+        my_rsi_evaluator.py
+    Strategies/            # Strategy evaluators
+    Social/                # Social evaluators
+    RealTime/              # Real-time evaluators
+  Trading/
+    Mode/                  # Trading modes
+  Services/
+    Interfaces/            # Web, Telegram interfaces
+    Notifiers/             # Notification services
+    Services_bases/        # Base service implementations
+  Automation/
+    trigger_events/        # Automation triggers
+    conditions/            # Automation conditions
+    actions/               # Automation actions
+</code></pre>
+<h3 id="creating-a-custom-ta-evaluator">Creating a Custom TA Evaluator<a class="headerlink" href="#creating-a-custom-ta-evaluator" title="Permanent link">&para;</a></h3>
+<pre><code class="language-python"># tentacles/Evaluator/TA/my_evaluator/my_evaluator.py
+
+import octobot_evaluators.evaluators as evaluators
+import octobot_commons.enums as enums
+
+
+class MyCustomEvaluator(evaluators.TAEvaluator):
+    &quot;&quot;&quot;
+    Custom Technical Analysis Evaluator
+
+    Evaluates price action using a custom indicator.
+    Output: value in [-1, +1] range written to the evaluator matrix.
+    &quot;&quot;&quot;
+
+    def init_user_inputs(self, inputs: dict) -&gt; None:
+        &quot;&quot;&quot;Define configurable parameters for this evaluator.&quot;&quot;&quot;
+        self.period = self.UI.user_input(
+            &quot;period&quot;, enums.UserInputTypes.INT,
+            14, inputs,
+            min_val=2, max_val=200,
+            title=&quot;Indicator period&quot;
+        )
+        self.threshold = self.UI.user_input(
+            &quot;threshold&quot;, enums.UserInputTypes.FLOAT,
+            0.5, inputs,
+            min_val=0.0, max_val=1.0,
+            title=&quot;Signal threshold&quot;
+        )
+
+    async def ohlcv_callback(
+        self,
+        exchange: str,
+        exchange_id: str,
+        cryptocurrency: str,
+        symbol: str,
+        time_frame: str,
+        candle: dict,
+        init_call: bool = False,
+    ):
+        &quot;&quot;&quot;Called when new OHLCV data is available.&quot;&quot;&quot;
+        # Skip initialization calls
+        if init_call:
+            return
+
+        # Get historical candle data
+        candles = self.get_symbol_candles(exchange, exchange_id, symbol, time_frame)
+        close_prices = candles.get_symbol_close_candles()
+
+        if len(close_prices) &lt; self.period:
+            # Not enough data yet
+            self.eval_note = 0
+        else:
+            # Calculate your custom indicator
+            indicator_value = self._calculate_indicator(close_prices)
+
+            # Map to [-1, +1] range
+            if indicator_value &gt; self.threshold:
+                self.eval_note = min(1.0, indicator_value)  # Buy signal
+            elif indicator_value &lt; -self.threshold:
+                self.eval_note = max(-1.0, indicator_value)  # Sell signal
+            else:
+                self.eval_note = 0  # Neutral
+
+        # Write evaluation to the matrix
+        await self.evaluation_completed(
+            cryptocurrency, symbol, time_frame,
+            eval_time=candle.get(enums.PriceIndexes.IND_PRICE_TIME.value, None)
+        )
+
+    def _calculate_indicator(self, close_prices):
+        &quot;&quot;&quot;Custom indicator calculation.&quot;&quot;&quot;
+        # Your indicator logic here
+        recent = close_prices[-self.period:]
+        sma = sum(recent) / len(recent)
+        current = close_prices[-1]
+        return (current - sma) / sma  # Normalized deviation
+
+    @classmethod
+    def get_is_symbol_wildcard(cls) -&gt; bool:
+        &quot;&quot;&quot;Return True if this evaluator applies to all symbols.&quot;&quot;&quot;
+        return False
+</code></pre>
+<h3 id="key-evaluator-methods">Key Evaluator Methods<a class="headerlink" href="#key-evaluator-methods" title="Permanent link">&para;</a></h3>
+<table>
+<thead>
+<tr>
+<th>Method</th>
+<th>Purpose</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>init_user_inputs(inputs)</code></td>
+<td>Define configurable parameters</td>
+</tr>
+<tr>
+<td><code>ohlcv_callback(...)</code></td>
+<td>Called on new candle data (TA evaluators)</td>
+</tr>
+<tr>
+<td><code>evaluation_completed(...)</code></td>
+<td>Write evaluation to matrix and notify</td>
+</tr>
+<tr>
+<td><code>get_symbol_candles(...)</code></td>
+<td>Access historical candle data</td>
+</tr>
+<tr>
+<td><code>get_is_symbol_wildcard()</code></td>
+<td>Whether evaluator runs on all symbols</td>
+</tr>
+<tr>
+<td><code>get_is_time_frame_wildcard()</code></td>
+<td>Whether evaluator runs on all time frames</td>
+</tr>
+</tbody>
+</table>
+<h3 id="evaluator-output-convention">Evaluator Output Convention<a class="headerlink" href="#evaluator-output-convention" title="Permanent link">&para;</a></h3>
+<ul>
+<li>Write to <code>self.eval_note</code> (float in [-1, +1])</li>
+<li>Call <code>await self.evaluation_completed(...)</code> to push to matrix</li>
+<li>The strategy evaluator reads these values and combines them</li>
+</ul>
+<h2 id="evaluator-development">Evaluator Development<a class="headerlink" href="#evaluator-development" title="Permanent link">&para;</a></h2>
+<h3 id="strategy-evaluator">Strategy Evaluator<a class="headerlink" href="#strategy-evaluator" title="Permanent link">&para;</a></h3>
+<p>Strategy evaluators combine signals from multiple evaluators:</p>
+<pre><code class="language-python">import octobot_evaluators.evaluators as evaluators
+import octobot_commons.enums as enums
+
+
+class MyStrategyEvaluator(evaluators.StrategyEvaluator):
+    &quot;&quot;&quot;Combines TA and Social evaluator signals.&quot;&quot;&quot;
+
+    def init_user_inputs(self, inputs: dict) -&gt; None:
+        self.ta_weight = self.UI.user_input(
+            &quot;ta_weight&quot;, enums.UserInputTypes.FLOAT,
+            0.7, inputs, min_val=0, max_val=1,
+            title=&quot;Weight for TA evaluators&quot;
+        )
+
+    async def matrix_callback(
+        self,
+        matrix_id,
+        evaluator_name,
+        evaluator_type,
+        eval_note,
+        eval_note_type,
+        exchange_name,
+        cryptocurrency,
+        symbol,
+        time_frame,
+    ):
+        &quot;&quot;&quot;Called when any evaluator updates the matrix.&quot;&quot;&quot;
+        # Read all evaluator values from the matrix
+        ta_values = self.get_evaluator_values(
+            matrix_id, exchange_name, symbol, time_frame,
+            evaluator_type=&quot;TA&quot;
+        )
+        social_values = self.get_evaluator_values(
+            matrix_id, exchange_name, symbol, time_frame,
+            evaluator_type=&quot;SOCIAL&quot;
+        )
+
+        # Combine with weights
+        ta_avg = sum(ta_values) / len(ta_values) if ta_values else 0
+        social_avg = sum(social_values) / len(social_values) if social_values else 0
+
+        self.eval_note = (
+            self.ta_weight * ta_avg +
+            (1 - self.ta_weight) * social_avg
+        )
+
+        await self.evaluation_completed(
+            cryptocurrency, symbol, time_frame
+        )
+
+    @classmethod
+    def get_required_time_frames(cls, config, tentacles_setup_config):
+        &quot;&quot;&quot;Return required time frames for this strategy.&quot;&quot;&quot;
+        return [enums.TimeFrames.ONE_HOUR, enums.TimeFrames.FOUR_HOURS]
+</code></pre>
+<h2 id="trading-mode-development">Trading Mode Development<a class="headerlink" href="#trading-mode-development" title="Permanent link">&para;</a></h2>
+<p>Trading modes translate strategy signals into orders:</p>
+<pre><code class="language-python">import octobot_trading.modes as trading_modes
+
+
+class MyTradingMode(trading_modes.AbstractTradingMode):
+    &quot;&quot;&quot;Custom trading mode that creates orders based on strategy signals.&quot;&quot;&quot;
+
+    def init_user_inputs(self, inputs: dict) -&gt; None:
+        self.buy_threshold = self.UI.user_input(
+            &quot;buy_threshold&quot;, enums.UserInputTypes.FLOAT,
+            0.5, inputs, min_val=0, max_val=1,
+            title=&quot;Minimum signal strength to buy&quot;
+        )
+        self.position_size_pct = self.UI.user_input(
+            &quot;position_size&quot;, enums.UserInputTypes.FLOAT,
+            10.0, inputs, min_val=1, max_val=100,
+            title=&quot;Position size (% of portfolio)&quot;
+        )
+
+    async def on_matrix_callback(self, matrix_id, **kwargs):
+        &quot;&quot;&quot;Called when strategy evaluation updates.&quot;&quot;&quot;
+        # Read the strategy signal
+        signal = self.get_signal(matrix_id, **kwargs)
+
+        if abs(signal) &lt; self.buy_threshold:
+            return  # Signal too weak
+
+        if signal &gt; 0:
+            # Buy signal
+            await self.create_buy_order(signal, **kwargs)
+        else:
+            # Sell signal
+            await self.create_sell_order(signal, **kwargs)
+</code></pre>
+<h2 id="automation-development">Automation Development<a class="headerlink" href="#automation-development" title="Permanent link">&para;</a></h2>
+<h3 id="custom-trigger-event">Custom Trigger Event<a class="headerlink" href="#custom-trigger-event" title="Permanent link">&para;</a></h3>
+<pre><code class="language-python">import octobot.automation.bases.abstract_trigger_event as abstract_trigger_event
+
+
+class MyTriggerEvent(abstract_trigger_event.AbstractTriggerEvent):
+    &quot;&quot;&quot;Triggers automation based on custom condition.&quot;&quot;&quot;
+
+    async def _get_next_event(self):
+        &quot;&quot;&quot;Wait for and return the next event description.&quot;&quot;&quot;
+        # Wait for your condition (e.g., poll every 60 seconds)
+        await asyncio.sleep(60)
+        if self._check_my_condition():
+            return &quot;My condition was met&quot;
+        return None  # No event, will loop again
+</code></pre>
+<h3 id="custom-action">Custom Action<a class="headerlink" href="#custom-action" title="Permanent link">&para;</a></h3>
+<pre><code class="language-python">import octobot.automation.bases.abstract_action as abstract_action
+
+
+class MyAction(abstract_action.AbstractAction):
+    &quot;&quot;&quot;Custom automation action.&quot;&quot;&quot;
+
+    async def process(self, execution_details):
+        &quot;&quot;&quot;Execute the action.&quot;&quot;&quot;
+        # Access bot API via execution_details
+        # Perform your custom action
+        pass
+</code></pre>
+<h2 id="testing-patterns">Testing Patterns<a class="headerlink" href="#testing-patterns" title="Permanent link">&para;</a></h2>
+<h3 id="running-tests">Running Tests<a class="headerlink" href="#running-tests" title="Permanent link">&para;</a></h3>
+<pre><code class="language-bash"># Run all tests
+pytest tests/
+
+# Run specific test file
+pytest tests/test_octobot.py
+
+# Run with coverage
+pytest --cov=octobot tests/
+
+# Run backtesting tests
+pytest tests/backtesting/
+</code></pre>
+<h3 id="writing-tests">Writing Tests<a class="headerlink" href="#writing-tests" title="Permanent link">&para;</a></h3>
+<pre><code class="language-python">import pytest
+import asyncio
+from unittest.mock import MagicMock, AsyncMock, patch
+
+import octobot.octobot as octobot_module
+
+
+class TestMyEvaluator:
+    &quot;&quot;&quot;Tests for custom evaluator.&quot;&quot;&quot;
+
+    @pytest.fixture
+    def evaluator(self):
+        &quot;&quot;&quot;Create evaluator instance for testing.&quot;&quot;&quot;
+        evaluator = MyCustomEvaluator()
+        evaluator.period = 14
+        evaluator.threshold = 0.5
+        return evaluator
+
+    def test_indicator_calculation(self, evaluator):
+        &quot;&quot;&quot;Test indicator produces expected values.&quot;&quot;&quot;
+        prices = [100, 101, 102, 103, 104, 105, 106, 107,
+                  108, 109, 110, 111, 112, 113, 114]
+        result = evaluator._calculate_indicator(prices)
+        assert -1.0 &lt;= result &lt;= 1.0
+
+    @pytest.mark.asyncio
+    async def test_ohlcv_callback(self, evaluator):
+        &quot;&quot;&quot;Test evaluation on candle data.&quot;&quot;&quot;
+        # Mock the required dependencies
+        evaluator.get_symbol_candles = MagicMock()
+        evaluator.evaluation_completed = AsyncMock()
+
+        await evaluator.ohlcv_callback(
+            exchange=&quot;binance&quot;,
+            exchange_id=&quot;test-id&quot;,
+            cryptocurrency=&quot;Bitcoin&quot;,
+            symbol=&quot;BTC/USDT&quot;,
+            time_frame=&quot;1h&quot;,
+            candle={},
+            init_call=False,
+        )
+
+        evaluator.evaluation_completed.assert_called_once()
+</code></pre>
+<h3 id="backtesting-tests">Backtesting Tests<a class="headerlink" href="#backtesting-tests" title="Permanent link">&para;</a></h3>
+<pre><code class="language-python">import pytest
+from octobot.backtesting.abstract_backtesting_test import AbstractBacktestingTest
+
+
+class TestMyStrategy(AbstractBacktestingTest):
+    &quot;&quot;&quot;Backtesting tests for custom strategy.&quot;&quot;&quot;
+
+    @pytest.mark.asyncio
+    async def test_strategy_profitability(self):
+        &quot;&quot;&quot;Ensure strategy is profitable on test data.&quot;&quot;&quot;
+        result = await self.run_backtesting(
+            data_files=[&quot;tests/data/btc_usdt_1h.json&quot;],
+            symbols={&quot;binance&quot;: [&quot;BTC/USDT&quot;]},
+        )
+        assert result.profitability &gt; 0
+</code></pre>
+<h3 id="development-tips">Development Tips<a class="headerlink" href="#development-tips" title="Permanent link">&para;</a></h3>
+<ol>
+<li><strong>Always test with backtesting first</strong> before running with real money</li>
+<li><strong>Use simulation mode</strong> (<code>--simulate</code>) for live testing without real trades</li>
+<li><strong>Check tentacle activation</strong> -- ensure your tentacle is enabled in the profile's tentacle config</li>
+<li><strong>Watch the logs</strong> -- OctoBot logs extensively; check <code>logs/OctoBot.log</code></li>
+<li><strong>Use user inputs</strong> -- Make parameters configurable rather than hardcoded</li>
+<li><strong>Respect the [-1, +1] range</strong> -- Evaluator outputs must be normalized</li>
+<li><strong>Handle init_call</strong> -- Skip processing during initialization callbacks</li>
+<li><strong>Test edge cases</strong> -- Insufficient data, exchange errors, empty order books</li>
+</ol>
+<h2 id="configuration-reference">Configuration Reference<a class="headerlink" href="#configuration-reference" title="Permanent link">&para;</a></h2>
+<p>OctoBot's main configuration lives in <code>user/config.json</code>. The schema is defined in <code>src/octobot/config/config_schema.json</code>.</p>
+<table>
+<thead>
+<tr>
+<th>Parameter</th>
+<th>Type</th>
+<th>Default</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>exchanges</code></td>
+<td><code>object</code></td>
+<td><code>{}</code></td>
+<td>Exchange configurations (keyed by exchange name). Each entry contains API keys, enabled status, and exchange type.</td>
+</tr>
+<tr>
+<td><code>exchanges.&lt;name&gt;.api-key</code></td>
+<td><code>string</code></td>
+<td><code>""</code></td>
+<td>Exchange API key (encrypt with <code>--encrypter</code>)</td>
+</tr>
+<tr>
+<td><code>exchanges.&lt;name&gt;.api-secret</code></td>
+<td><code>string</code></td>
+<td><code>""</code></td>
+<td>Exchange API secret (encrypt with <code>--encrypter</code>)</td>
+</tr>
+<tr>
+<td><code>exchanges.&lt;name&gt;.api-password</code></td>
+<td><code>string</code></td>
+<td><code>""</code></td>
+<td>Exchange API passphrase (for exchanges that require it)</td>
+</tr>
+<tr>
+<td><code>exchanges.&lt;name&gt;.enabled</code></td>
+<td><code>boolean</code></td>
+<td><code>true</code></td>
+<td>Whether this exchange is active</td>
+</tr>
+<tr>
+<td><code>exchanges.&lt;name&gt;.exchange-type</code></td>
+<td><code>string</code></td>
+<td><code>"spot"</code></td>
+<td>Exchange type: <code>"spot"</code>, <code>"margin"</code>, <code>"future"</code></td>
+</tr>
+<tr>
+<td><code>backtesting.files</code></td>
+<td><code>array[string]</code></td>
+<td><code>[]</code></td>
+<td>Paths to backtesting data files</td>
+</tr>
+<tr>
+<td><code>services</code></td>
+<td><code>object</code></td>
+<td><code>{}</code></td>
+<td>Service-specific configuration (web, telegram, etc.)</td>
+</tr>
+<tr>
+<td><code>services.web.auto-open-in-web-browser</code></td>
+<td><code>boolean</code></td>
+<td><code>true</code></td>
+<td>Auto-open web UI on startup</td>
+</tr>
+<tr>
+<td><code>notification.global-info</code></td>
+<td><code>boolean</code></td>
+<td><code>true</code></td>
+<td>Enable global info notifications</td>
+</tr>
+<tr>
+<td><code>notification.price-alerts</code></td>
+<td><code>boolean</code></td>
+<td><code>true</code></td>
+<td>Enable price alert notifications</td>
+</tr>
+<tr>
+<td><code>notification.trades</code></td>
+<td><code>boolean</code></td>
+<td><code>true</code></td>
+<td>Enable trade notifications</td>
+</tr>
+<tr>
+<td><code>notification.trading-script-alerts</code></td>
+<td><code>boolean</code></td>
+<td><code>true</code></td>
+<td>Enable trading script alert notifications</td>
+</tr>
+<tr>
+<td><code>notification.other</code></td>
+<td><code>boolean</code></td>
+<td><code>true</code></td>
+<td>Enable other notifications</td>
+</tr>
+<tr>
+<td><code>notification.notification-type</code></td>
+<td><code>array[string]</code></td>
+<td><code>["web"]</code></td>
+<td>Notification channels: <code>"web"</code>, <code>"telegram"</code>, <code>"email"</code></td>
+</tr>
+<tr>
+<td><code>profile</code></td>
+<td><code>string</code></td>
+<td><code>"default"</code></td>
+<td>Active profile name (maps to <code>user/profiles/&lt;name&gt;/</code>)</td>
+</tr>
+<tr>
+<td><code>accepted_terms</code></td>
+<td><code>boolean</code></td>
+<td><code>false</code></td>
+<td>Whether the user has accepted the disclaimer</td>
+</tr>
+<tr>
+<td><code>distribution</code></td>
+<td><code>string</code></td>
+<td><code>"default"</code></td>
+<td>Bot distribution mode: <code>"default"</code>, <code>"market_making"</code>, <code>"prediction_market"</code>, <code>"node"</code>, <code>"sync"</code></td>
+</tr>
+<tr>
+<td><code>DEBUG</code></td>
+<td><code>boolean</code></td>
+<td><code>false</code></td>
+<td>Enable debug mode</td>
+</tr>
+<tr>
+<td><code>DEV-MODE</code></td>
+<td><code>boolean</code></td>
+<td><code>false</code></td>
+<td>Enable developer mode</td>
+</tr>
+<tr>
+<td><code>SAVE_EVALUATIONS</code></td>
+<td><code>boolean</code></td>
+<td><code>false</code></td>
+<td>Save evaluator outputs to database</td>
+</tr>
+<tr>
+<td><code>metrics.enabled</code></td>
+<td><code>boolean</code></td>
+<td><code>false</code></td>
+<td>Enable anonymous usage metrics</td>
+</tr>
+<tr>
+<td><code>metrics.metrics-bot-id</code></td>
+<td><code>string</code></td>
+<td><code>""</code></td>
+<td>Bot ID for metrics reporting</td>
+</tr>
+<tr>
+<td><code>community-token</code></td>
+<td><code>string</code></td>
+<td><code>""</code></td>
+<td>OctoBot Cloud community authentication token</td>
+</tr>
+<tr>
+<td><code>watched_symbols</code></td>
+<td><code>array[string]</code></td>
+<td><code>[]</code></td>
+<td>Symbols to watch without trading</td>
+</tr>
+</tbody>
+</table>
+<p>Profile configuration (<code>user/profiles/&lt;name&gt;/profile.json</code>) controls tentacle activation and per-tentacle settings via <code>tentacles_config.json</code> and <code>specific_config/</code> files.</p>
+<h2 id="troubleshooting">Troubleshooting<a class="headerlink" href="#troubleshooting" title="Permanent link">&para;</a></h2>
+<h3 id="1-importerror-no-module-named-octobot_trading-or-other-octobot_-package">1. <code>ImportError: No module named 'octobot_trading'</code> (or other <code>octobot_*</code> package)<a class="headerlink" href="#1-importerror-no-module-named-octobot_trading-or-other-octobot_-package" title="Permanent link">&para;</a></h3>
+<p>OctoBot depends on several companion packages. Install with the full extra:</p>
+<pre><code class="language-bash">uv sync --all-extras
+</code></pre>
+<h3 id="2-tentacles-not-found-or-no-tentacle-to-install">2. Tentacles not found or <code>No tentacle to install</code><a class="headerlink" href="#2-tentacles-not-found-or-no-tentacle-to-install" title="Permanent link">&para;</a></h3>
+<p>Tentacles must be installed separately after the main package:</p>
+<pre><code class="language-bash">python start.py tentacles --install --all
+</code></pre>
+<p>If tentacles become corrupted, delete the <code>tentacles/</code> directory and reinstall.</p>
+<h3 id="3-exchange-connection-fails-with-authentication-errors">3. Exchange connection fails with authentication errors<a class="headerlink" href="#3-exchange-connection-fails-with-authentication-errors" title="Permanent link">&para;</a></h3>
+<ul>
+<li>Ensure API keys are encrypted: <code>python start.py --encrypter</code></li>
+<li>Verify the exchange name in <code>config.json</code> matches exactly (case-sensitive, e.g., <code>"binance"</code> not <code>"Binance"</code>)</li>
+<li>Check that API key permissions include trading (read-only keys will fail order placement)</li>
+<li>Some exchanges require an API passphrase in addition to key/secret</li>
+</ul>
+<h3 id="4-backtesting-data-not-found">4. Backtesting data not found<a class="headerlink" href="#4-backtesting-data-not-found" title="Permanent link">&para;</a></h3>
+<p>Backtesting requires pre-collected data files. Collect data through the web interface (Data Collector tab) or specify paths explicitly:</p>
+<pre><code class="language-bash">python start.py --backtesting --backtesting-files user/data/binance_BTC_USDT_1h.data
+</code></pre>
+<h3 id="5-web-interface-not-loading-port-5001">5. Web interface not loading (port 5001)<a class="headerlink" href="#5-web-interface-not-loading-port-5001" title="Permanent link">&para;</a></h3>
+<ul>
+<li>Check if the port is already in use: <code>lsof -i :5001</code></li>
+<li>Try starting without the web: <code>python start.py --no_web</code> to verify the bot itself works</li>
+<li>Check <code>logs/OctoBot.log</code> for startup errors</li>
+</ul>
+<h3 id="6-asyncio-event-loop-errors">6. <code>asyncio</code> event loop errors<a class="headerlink" href="#6-asyncio-event-loop-errors" title="Permanent link">&para;</a></h3>
+<p>OctoBot is heavily async. If you see <code>RuntimeError: This event loop is already running</code>:
+- Do not call <code>asyncio.run()</code> inside tentacle code -- use <code>await</code> directly
+- Use <code>api.run_in_main_asyncio_loop(coroutine)</code> from synchronous contexts</p>
+<h3 id="7-evaluator-always-returns-0-no-trades-generated">7. Evaluator always returns 0 / no trades generated<a class="headerlink" href="#7-evaluator-always-returns-0-no-trades-generated" title="Permanent link">&para;</a></h3>
+<ul>
+<li>Check that your evaluator tentacle is <strong>activated</strong> in the profile's <code>tentacles_config.json</code></li>
+<li>Verify <code>self.eval_note</code> is set and <code>await self.evaluation_completed(...)</code> is called</li>
+<li>Ensure the strategy evaluator's required time frames match what the exchange provides</li>
+<li>Check that the signal exceeds the trading mode's threshold</li>
+</ul>
+<h3 id="8-memory-issues-during-long-backtesting-runs">8. Memory issues during long backtesting runs<a class="headerlink" href="#8-memory-issues-during-long-backtesting-runs" title="Permanent link">&para;</a></h3>
+<p>OctoBot includes a memory leak detector. Enable backtesting timeout to prevent runaway tests:</p>
+<pre><code class="language-bash">python start.py --backtesting --enable-backtesting-timeout --backtesting-files data.json
+</code></pre>
+<h3 id="9-docker-container-exits-immediately">9. Docker container exits immediately<a class="headerlink" href="#9-docker-container-exits-immediately" title="Permanent link">&para;</a></h3>
+<p>Check logs with <code>docker logs &lt;container&gt;</code>. Common causes:
+- Missing <code>user/config.json</code> -- mount the config volume correctly
+- Missing tentacles -- run tentacle install inside the container first
+- Port conflicts -- ensure <code>-p 5001:5001</code> is mapped</p>
+<h3 id="10-profile-importexport-fails">10. Profile import/export fails<a class="headerlink" href="#10-profile-importexport-fails" title="Permanent link">&para;</a></h3>
+<p>Profiles must match the schema defined in <code>src/octobot/config/profile_schema.json</code>. Ensure the profile directory contains both <code>profile.json</code> and <code>tentacles_config.json</code>.</p>
+<h2 id="security-considerations">Security Considerations<a class="headerlink" href="#security-considerations" title="Permanent link">&para;</a></h2>
+<h3 id="api-key-management">API Key Management<a class="headerlink" href="#api-key-management" title="Permanent link">&para;</a></h3>
+<ul>
+<li><strong>Always encrypt API keys</strong> -- Use the built-in encrypter before storing keys in <code>config.json</code>:
+  <code>bash
+  python start.py --encrypter</code>
+  This encrypts keys so they are not stored as plaintext in the configuration file.</li>
+<li><strong>Restrict API key permissions</strong> -- On your exchange, create API keys with only the permissions OctoBot needs (typically: read account, place/cancel orders). Disable withdrawal permissions.</li>
+<li><strong>Never share <code>config.json</code></strong> -- It contains encrypted exchange credentials. Add <code>user/</code> to <code>.gitignore</code>.</li>
+</ul>
+<h3 id="credential-storage">Credential Storage<a class="headerlink" href="#credential-storage" title="Permanent link">&para;</a></h3>
+<ul>
+<li>Exchange credentials in <code>config.json</code> are encrypted by the encrypter, but the encryption key is local to the machine. Moving <code>config.json</code> to another machine requires re-encryption.</li>
+<li>Community authentication tokens (<code>community-token</code>, <code>supabase.auth.token</code>) are stored in <code>config.json</code>. Treat this file as sensitive.</li>
+<li>The <code>.env</code> file (if used) can contain <code>COMMUNITY_BACKEND_KEY</code> and other tokens -- restrict file permissions:
+  <code>bash
+  chmod 600 .env user/config.json</code></li>
+</ul>
+<h3 id="network-security">Network Security<a class="headerlink" href="#network-security" title="Permanent link">&para;</a></h3>
+<ul>
+<li><strong>Web interface</strong> -- By default, the web UI binds to <code>0.0.0.0:5001</code> with no authentication. In production:</li>
+<li>Place behind a reverse proxy (nginx/caddy) with TLS and basic auth</li>
+<li>Or bind to localhost only and use SSH tunneling</li>
+<li><strong>Telegram bot</strong> -- The Telegram interface exposes bot control commands. Ensure only trusted users have the bot token.</li>
+<li><strong>Community/Cloud connections</strong> -- OctoBot connects to <code>octobot.cloud</code> for profiles, signals, and updates. Connections use HTTPS/TLS (Supabase backend). Disable with <code>DISABLE_COMMUNITY_EXTENSIONS_CHECK=true</code>.</li>
+<li><strong>MQTT feeds</strong> -- Community signal feeds use MQTT (iot.fr-par.scw.cloud). Traffic is encrypted but the feed URL is configurable via <code>COMMUNITY_FEED_URL</code> environment variable.</li>
+<li><strong>Docker</strong> -- Use the official Docker image and avoid running as root. Map only necessary ports (<code>5001</code> for web).</li>
+</ul>
+<h3 id="data-privacy">Data Privacy<a class="headerlink" href="#data-privacy" title="Permanent link">&para;</a></h3>
+<ul>
+<li>Anonymous usage metrics can be sent to OctoBot Cloud if <code>metrics.enabled</code> is <code>true</code>. Disable this in <code>config.json</code> if you prefer not to share usage data.</li>
+<li>Backtesting results and trade history are stored locally in the <code>user/</code> directory.</li>
+<li>Webhook URLs (TradingView integration) should be treated as secrets -- anyone with the URL can send signals to your bot.</li>
+</ul>
+<hr />
+<h2 id="see-also">See Also<a class="headerlink" href="#see-also" title="Permanent link">&para;</a></h2>
+<ul>
+<li><a href="README.md">README</a> — Project overview and quick start</li>
+<li><a href="architecture.md">Architecture</a> — System design and components</li>
+<li><a href="workflow.md">Workflow</a> — Event flows and processing pipelines</li>
+<li><a href="state-management.md">State Management</a> — State lifecycle and data models</li>
+</ul>
+<h2 id="uv-maintenance-workflow-2026-10-12">uv maintenance workflow (2026-10-12)<a class="headerlink" href="#uv-maintenance-workflow-2026-10-12" title="Permanent link">&para;</a></h2>
+<p>Selected complete environment: Python 3.14.8; build backend <code>hatchling.build</code>. The workspace uses uv 0.13.0. Python 3.15 was attempted before any fallback; the actual failure and selected runtime are recorded in <a href="validation.md">validation</a>.</p>
+<pre><code class="language-sh">export UV_PYTHON_PREFERENCE=only-managed
+uv python install 3.14.8
+uv lock --upgrade
+uv sync --all-extras --python 3.14.8
+uv build --python 3.14.8
+uv run --frozen --all-extras python -m compileall -q src/octobot
+uv run --frozen --all-extras python -m pytest tests
+</code></pre>
+<p>Provision generated plugins before core/plugin tests: <code>ALLOW_UNSIGNED_TENTACLES=true uv run OctoBot tentacles -d packages/tentacles -p any_platform.zip</code>, then <code>ALLOW_UNSIGNED_TENTACLES=true uv run OctoBot tentacles --install --location output/any_platform.zip --all</code>. Run each packages/* test suite from its package directory with the root environment, as required by AGENTS.md. Run the extended linter against origin/master. Do not edit or commit generated root tentacles files.</p>
+<p>Keep source resources inside their package and preserve the repository's existing src layout. Rebuild after source/native/asset changes. Use the locked environment for final verification. Commands above are the standard workflow, not a promise that every existing suite currently passes; consult validation for exact outcomes and unresolved compatibility issues.</p>
+<h2 id="exchange-source-provenance">Exchange source provenance<a class="headerlink" href="#exchange-source-provenance" title="Permanent link">&para;</a></h2>
+<p>The published <code>octobot-ccxt</code> 0.0.6 lacks the CoinRabbit connector required by the current host's existing functional tests. The uv source uses the <a href="https://github.com/Drakkar-Software/ccxt/tree/791e42d60faaa27306405919c27918dc056466f7">official MIT-licensed fork</a>, commit <code>791e42d60faaa27306405919c27918dc056466f7</code>, version 4.5.68. Its complete exchange implementation is built through the upstream backend; no connector is fabricated in the tests. The transitive <code>multidict</code> override selects its current fixed release instead of the fork's older exact pin.</p>
+<h2 id="javascript-packages">JavaScript packages<a class="headerlink" href="#javascript-packages" title="Permanent link">&para;</a></h2>
+<p>Use the committed npm lockfiles with Node 26 and npm 11. The embedded Node interface uses TypeScript 7.0.2, Vite 8.3.4, Vitest 5.0.3 and TanStack Table 9.2.8. Its tables declare their filtering, sorting, visibility and sizing features through the <a href="https://tanstack.com/table/latest/docs/framework/react/guide/migrating">current Table 9 API</a>. TypeScript path aliases use explicit relative targets after removal of <code>baseUrl</code>.</p>
+<pre><code class="language-sh">npm --prefix packages/tentacles/Services/Interfaces/node_web_interface ci
+npm --prefix packages/tentacles/Services/Interfaces/node_web_interface run generate-client
+npm --prefix packages/tentacles/Services/Interfaces/node_web_interface run build
+npm --prefix packages/tentacles/Services/Interfaces/node_web_interface test -- --run
+npm --prefix packages/client/octobot_client_ts ci
+npm --prefix packages/client/octobot_client_ts run build
+npm --prefix packages/client/octobot_client_ts test
+npm --prefix packages/protocol ci
+npm --prefix packages/protocol run test:postprocess
+npm --prefix packages/protocol run test:postprocess:codegen
+</code></pre>
+<p>The pairing-code distribution fixture still samples 4,000 freshly generated random codes and signs each code. It reuses a real identity and its fixed KEM certificate for that statistical case, avoiding thousands of unrelated expensive key generations while preserving the sample size, frequency assertions and existing five-second timeout. Other identity, signature and pairing tests continue to generate their own keys.</p>
+<p>The frontend compiles with the native TypeScript 7.0.2 package installed as <code>typescript-native</code>. Its API generator imports the JavaScript compiler API, so <code>typescript</code> supplies the newest compatible 6.0.3 API instead. Hey API 0.99 was attempted but removed the legacy Axios/CancelablePromise generator required by the existing client contract; the locked 0.86.12 release is the newest compatible release before the <a href="https://heyapi.dev/docs/openapi/typescript/migrating#v0870">documented removal in 0.87</a>. Both generation and compilation are verified by the full tentacle exporter/linter hook, using the selected uv environment through a local <code>.cursor/env.sh</code>.</p></main>
+</body></html>
