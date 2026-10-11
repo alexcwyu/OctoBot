@@ -207,12 +207,18 @@ class RequestCounter:
 
 
 class _CounterSessionType(type):
+    # Preserve the public isinstance(..., CounterClientSession) contract while
+    # returning a genuine aiohttp session, without subclassing its lifecycle.
     def __instancecheck__(cls, instance):
         return isinstance(instance, aiohttp.ClientSession) and getattr(instance, "_octobot_request_counter", False)
 
 
 class CounterClientSession(metaclass=_CounterSessionType):
-    """Create a standard aiohttp session with periodic request statistics."""
+    """Create a standard aiohttp session with periodic request statistics.
+
+    The identifier belongs to this factory; remaining arguments pass unchanged
+    to aiohttp.ClientSession, including its normal validation and lifecycle.
+    """
 
     def __new__(cls, identifier: str, *args, **kwargs):
         counter = object.__new__(cls)

@@ -739,3 +739,5 @@ npm --prefix packages/protocol run test:postprocess:codegen
 ```
 
 The pairing-code distribution fixture still samples 4,000 freshly generated random codes and signs each code. It reuses a real identity and its fixed KEM certificate for that statistical case, avoiding thousands of unrelated expensive key generations while preserving the sample size, frequency assertions and existing five-second timeout. Other identity, signature and pairing tests continue to generate their own keys.
+
+The frontend compiles with the native TypeScript 7.0.2 package installed as `typescript-native`. Its API generator imports the JavaScript compiler API, so `typescript` supplies the newest compatible 6.0.3 API instead. Hey API 0.99 was attempted but removed the legacy Axios/CancelablePromise generator required by the existing client contract; the locked 0.86.12 release is the newest compatible release before the [documented removal in 0.87](https://heyapi.dev/docs/openapi/typescript/migrating#v0870). Both generation and compilation are verified by the full tentacle exporter/linter hook, using the selected uv environment through a local `.cursor/env.sh`.
