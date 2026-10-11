@@ -728,6 +728,7 @@ Use the committed npm lockfiles with Node 26 and npm 11. The embedded Node inter
 
 ```sh
 npm --prefix packages/tentacles/Services/Interfaces/node_web_interface ci
+npm --prefix packages/tentacles/Services/Interfaces/node_web_interface run generate-client
 npm --prefix packages/tentacles/Services/Interfaces/node_web_interface run build
 npm --prefix packages/tentacles/Services/Interfaces/node_web_interface test -- --run
 npm --prefix packages/client/octobot_client_ts ci
