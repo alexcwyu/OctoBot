@@ -28,13 +28,16 @@ class AutomationValidationError(ConfigurationError):
     """raise when an automation configuration or state is invalid"""
 
 
+class WalletNotInitializedError(ConfigurationError):
+    """raise when a wallet is not initialized"""
+
+
 class UnsupportedActionTypeError(AutomationActionError):
     """raise when an unsupported action type is encountered"""
 
 
 class UnsupportedConfiguredActionTypeError(UnsupportedActionTypeError):
     """raise when an unsupported configured action type is encountered"""
-
 
 
 class InvalidAutomationActionError(ConfigurationError):
@@ -61,6 +64,10 @@ class CommunityAuthenticationRequiredError(CommunityError):
     """raise when community authentication is required"""
 
 
+class CommunityTradingSignalError(CommunityError):
+    """an error related to the trading signal of the bot"""
+
+
 class UnresolvedDSLScriptError(AutomationActionError):
     """raise when a DSL script is not resolved"""
 
@@ -73,9 +80,25 @@ class AutomationDAGResetError(AutomationActionError):
     """raise when a DAG reset fails"""
 
 
+class SynchronizedExchangeConflictError(AutomationActionError):
+    """raise when external exchange snapshots and a live exchange manager would both apply in one pass"""
+
+
 class ActionDependencyNotFoundError(ActionDependencyError):
     """raise when an action dependency is not found"""
 
 
 class MissingDSLExecutorDependencyError(DSLExecutorError):
     """raise when a DSL executor dependency is missing"""
+
+
+class PriorityActionError(AutomationActionError):
+    """raise when a priority action error occurs"""
+
+
+class PendingPriorityActionsSkippedError(PriorityActionError):
+    """raise when supplied priority actions were not executed and DAG actions would run instead"""
+
+
+class GlobalViewUnsupportedAccountError(ConfigurationError):
+    """raise when global view refresh cannot run for an account type"""

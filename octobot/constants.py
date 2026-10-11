@@ -95,34 +95,16 @@ CLICKHOUSE_PORT = os.getenv("CLICKHOUSE_PORT")
 CLICKHOUSE_USERNAME = os.getenv("CLICKHOUSE_USERNAME")
 CLICKHOUSE_PASSWORD = os.getenv("CLICKHOUSE_PASSWORD")
 
-ICEBERG_CATALOG_NAMESPACE = os.getenv("ICEBERG_CATALOG_NAMESPACE")
-ICEBERG_CATALOG_NAME = os.getenv("ICEBERG_CATALOG_NAME")
-ICEBERG_CATALOG_WAREHOUSE = os.getenv("ICEBERG_CATALOG_WAREHOUSE")
-ICEBERG_OHLCV_HISTORY_TABLE = os.getenv("ICEBERG_OHLCV_HISTORY_TABLE")
-ICEBERG_CATALOG_URI = os.getenv("ICEBERG_CATALOG_URI")
-ICEBERG_CATALOG_TOKEN = os.getenv("ICEBERG_CATALOG_TOKEN")
-ICEBERG_S3_ACCESS_KEY = os.getenv("ICEBERG_S3_ACCESS_KEY")
-ICEBERG_S3_SECRET_KEY = os.getenv("ICEBERG_S3_SECRET_KEY")
-ICEBERG_S3_REGION = os.getenv("ICEBERG_S3_REGION")
-ICEBERG_S3_ENDPOINT = os.getenv("ICEBERG_S3_ENDPOINT")
-CREATE_ICEBERG_DB_IF_MISSING = os_util.parse_boolean_environment_var("CREATE_ICEBERG_DB_IF_MISSING", "false")
-
 OCTOBOT_MARKET_MAKING_URL = os.getenv("OCTOBOT_MARKET_MAKING_URL", "https://market-making.octobot.cloud")
 
 # sync server
-SYNC_SERVER_URL = os.getenv("SYNC_SERVER_URL", "https://sync.octobot.cloud")
-STAGING_SYNC_SERVER_URL = os.getenv("SYNC_SERVER_URL", "https://sync-beta.octobot.cloud")
+# Bare origin: octobot_sync.client/mirror.writer append SYNC_MOUNT_PATH ("sync") themselves.
+SYNC_SERVER_URL = os.getenv("SYNC_SERVER_URL", "https://prod-sync.drakkar.software")
+STAGING_SYNC_SERVER_URL = os.getenv("SYNC_SERVER_URL", "https://beta-sync.drakkar.software")
+SYNC_NAMESPACE=os.getenv("SYNC_NAMESPACE", "dk")
 SYNC_CHAIN_ID = os.getenv("SYNC_CHAIN_ID", "evm:8453")
-ENABLE_REPLICA_SERVER = os_util.parse_boolean_environment_var(
-    "ENABLE_REPLICA_SERVER",
-    os.getenv("ENABLE_LOCAL_SYNC_SERVER", "false"),  # backward compat
-)
-REPLICA_SERVER_PORT = int(os.getenv("REPLICA_SERVER_PORT", os.getenv("LOCAL_SYNC_PORT", "3000")))
-REPLICA_WRITE_MODE = os.getenv("REPLICA_WRITE_MODE", "bidirectional")
-REPLICA_SYNC_INTERVAL_MS = int(os.getenv("REPLICA_SYNC_INTERVAL_MS", "60000"))
-REPLICA_DATA_DIR = os.getenv("REPLICA_DATA_DIR", "")
 
-ERROR_TRACKER_DSN = os.getenv("ERROR_TRACKER_DSN")
+ERROR_TRACKER_DSN = os.getenv("ERROR_TRACKER_DSN")  # Sentry error reporting only; unset disables Sentry
 
 CONFIG_COMMUNITY = "community"
 CONFIG_COMMUNITY_BOT_ID = "bot_id"
@@ -133,6 +115,18 @@ CONFIG_COMMUNITY_PACKAGE_URLS = "package_urls"
 CONFIG_COMMUNITY_ENVIRONMENT = "environment"
 CONFIG_COMMUNITY_LOCAL_DATA_IDENTIFIER = "local_data_identifier"
 CONFIG_COMMUNITY_WALLETS = "wallets"
+CHAIN_TYPE, CHAIN_NETWORK = SYNC_CHAIN_ID.split(":", 1)
+# Wallet storage backend: "config" (default, inside config.json),
+# "file" (dedicated wallets.json), or "env" (read-only env var injection)
+WALLET_STORAGE_BACKEND = os.getenv("OCTOBOT_WALLET_STORAGE_BACKEND", "config")
+WALLET_FILE_PATH = os.getenv(
+    "OCTOBOT_WALLET_FILE_PATH",
+    f"{octobot_commons.constants.USER_FOLDER}/wallets.json",
+)
+WALLET_ENV_VAR = "OCTOBOT_NODE_WALLETS"
+WALLET_AES_KEY = os.getenv("OCTOBOT_WALLET_AES_KEY", "")
+# 32-byte key for AES-256-GCM envelope encryption of the wallet list at rest.
+# Provide as 64 hex chars or base64. Empty = no envelope encryption.
 USE_BETA_EARLY_ACCESS = os_util.parse_boolean_environment_var("USE_BETA_EARLY_ACCESS", "false")
 USER_ACCOUNT_EMAIL = os.getenv("USER_ACCOUNT_EMAIL", "")
 USER_PASSWORD_TOKEN = os.getenv("USER_PASSWORD_TOKEN", None)
@@ -145,6 +139,7 @@ DEFAULT_NEW_DEPLOYMENT_TIMEOUT = 2 * octobot_commons.constants.MINUTE_TO_SECONDS
 USE_FETCHED_BOT_CONFIG = os_util.parse_boolean_environment_var("USE_FETCHED_BOT_CONFIG", "false")
 SHOULD_CHECK_TENTACLES = os_util.parse_boolean_environment_var("SHOULD_CHECK_TENTACLES", "true")
 CAN_INSTALL_TENTACLES = os_util.parse_boolean_environment_var("CAN_INSTALL_TENTACLES", str(not IS_CLOUD_ENV))
+INSTALL_DEFAULT_TENTACLES = os_util.parse_boolean_environment_var("INSTALL_DEFAULT_TENTACLES", "true")
 PH_TRACKING_ID = os.getenv("PH_TRACKING_ID", "phc_QSuFy6zqOXXKT7zAYboYS4nJShfKovpB172aa8X9nXf")
 # Profiles download urls to import at startup if missing, split by ","
 TO_DOWNLOAD_PROFILES = os.getenv("TO_DOWNLOAD_PROFILES", None)
@@ -201,11 +196,26 @@ DEFAULT_TENTACLES_PACKAGE_NAME = "OctoBot-Default-Tentacles"
 # logs
 DEFAULT_LOGS_FOLDER = "logs"
 LOGS_FOLDER = os.getenv("LOGS_FOLDER", DEFAULT_LOGS_FOLDER)
+
+# support
+OCTOCHAT_SUPPORT_DESK_REQUEST_LINK=os.getenv("OCTOCHAT_SUPPORT_DESK_REQUEST_LINK", "https://chat.drakkar.software/request?s=sp-48521ba952b06d7eb960b96655d9f1ee#WyJodHRwczovL2NoYXQuZHJha2thci5zb2Z0d2FyZSIsInJlcXVlc3QiLHsidiI6Miwib3duZXJJZCI6Ijg1ZGJlYzQ4ZWY0YmUyZTFlNmVhZTcwYWE3ODc5YTBlIiwicHNldWRvIjoiSGVya2xvcyIsImVkUHViIjoiYTRmZjQ3NDQ4NDY1OTNmMzgyMjcxNWNjYmVhOWM4MWNiMThmYmM1NzNlOWZiYjAyNWJjNDlmYTBhODYwNTFlNyIsImtlbVB1YiI6IjAwNzQ0MjZlN2IzZTMzNDdkNmI5ZWEwMGIwYWFhMzFmM2UyZjRjNDQ5ZjFmODc3Y2JjOTg1YzEyNDExNDlhMTAiLCJrZW1TaWciOiJhYmVmZTgzZTgzYjJjZDk0NGZiMjdjZmQxODQyOTQwZDdlYzEyYTJlNGRjZmZkNGU1NWIwNzk1NWJmMGFiY2FjNGUxNjFiN2VkOTg0MDFjN2U4NmUwNDdkMTc1ZmNjYzJjMTYxY2MyZjE2M2ZiYzJkZGQ5MjFlN2U5YTY5OWIwZCJ9XQ")
+OCTOCHAT_WEB_BASE = os.getenv("OCTOCHAT_WEB_BASE", None)
+
+# Process bot state JSON next to user config (--dump-state); liveness for run_octobot_process
+PROCESS_BOT_STATE_FILE_NAME = "process_bot_state.json"
+ENV_PROCESS_BOT_STATE_DUMP_INTERVAL_SECONDS = "OCTOBOT_PROCESS_BOT_STATE_DUMP_INTERVAL_SECONDS"
+ENV_PROCESS_BOT_SYNC_USER_ID = "OCTOBOT_PROCESS_BOT_SYNC_USER_ID"
+PROCESS_BOT_SYNC_USER_ID = os.environ.get(ENV_PROCESS_BOT_SYNC_USER_ID, "").strip()
+
+PROCESS_BOT_STATE_DUMP_INTERVAL_SECONDS = float(
+    os.getenv(ENV_PROCESS_BOT_STATE_DUMP_INTERVAL_SECONDS, "30")
+)
 FORCED_LOG_LEVEL = os.getenv("FORCED_LOG_LEVEL", "")
 ENV_TRADING_ENABLE_DEBUG_LOGS = os_util.parse_boolean_environment_var("ENV_TRADING_ENABLE_DEBUG_LOGS", "False")
 
 # distribution
 FORCED_DISTRIBUTION = os.getenv("DISTRIBUTION")
+FORCE_OCTOBOT_STANDALONE = os_util.parse_boolean_environment_var("FORCE_OCTOBOT_STANDALONE", "False")
 
 # system
 ENABLE_CLOCK_SYNCH = os_util.parse_boolean_environment_var("ENABLE_CLOCK_SYNCH", "True")
@@ -222,6 +232,9 @@ DEFAULT_METRICS_ID = "UNSET"
 CLOUD_FIRST_METRICS_UPDATE_TIME = float(
     os.getenv("CLOUD_FIRST_METRICS_UPDATE_TIME", 5)
 )
+
+# Metrics — onboarding funnel
+METRICS_GENERIC_EXCHANGE_NAME = "generic"
 
 # config types keys
 CONFIG_KEY = "config"
@@ -274,6 +287,15 @@ OPTIMIZER_DEFAULT_DB_UPDATE_PERIOD = 15
 DEFAULT_MAX_TOTAL_RUN_DATABASES_SIZE = 1000000000   # 1GB
 ENABLE_RUN_DATABASE_LIMIT = os_util.parse_boolean_environment_var("ENABLE_RUN_DATABASE_LIMIT", "True")
 MAX_TOTAL_RUN_DATABASES_SIZE = int(os.getenv("MAX_TOTAL_RUN_DATABASES_SIZE", DEFAULT_MAX_TOTAL_RUN_DATABASES_SIZE))
+
+# Managed child OctoBot processes (run_octobot_process)
+MANAGED_CHILD_GRACEFUL_STOP_TIMEOUT_SECONDS = float(
+    os.getenv("OCTOBOT_MANAGED_CHILD_STOP_TIMEOUT", "10.0")
+)
+
+OCTOBOT_STOP_TIMEOUT_SECONDS = float(
+    os.getenv("OCTOBOT_STOP_TIMEOUT_SECONDS", "30.0")
+)
 
 # Channel
 OCTOBOT_CHANNEL = "OctoBot"

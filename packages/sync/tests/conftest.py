@@ -16,47 +16,51 @@
 
 """Shared test fixtures."""
 
-import time
+import os
+import sys
 
 import pytest
 
-import octobot_sync.auth as auth
-import octobot_sync.chain as chain
-import octobot_sync.constants as constants
-import tests.mock_chain as mock_chain_module
+_OCTOBOT_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", ".."))
+_TESTS_ROOT = os.path.join(_OCTOBOT_ROOT, "tests")
+if _TESTS_ROOT not in sys.path:
+    sys.path.insert(0, _TESTS_ROOT)
+
+from test_utils.journal_integration_fixtures import (
+    isolated_journal_environment_context,
+    journal_persisted_state,
+    journal_user_root,
+    surface_journal_errors_context,
+)
+from test_utils.journal_test_support import (
+    disabled_node_journal_environment,
+    enabled_node_journal_environment,
+)
 
 
-
-TEST_PUBKEY = "0xTestPubkey1234567890abcdef"
-TEST_ADMIN_PUBKEY = "0xAdminPubkey1234567890abcdef"
-TEST_CHAIN_ID = "mock"
+def _is_sync_journal_integration_test(request) -> bool:
+    return request.node.path.name.endswith("_journal.py")
 
 
+@pytest.fixture(autouse=True)
+def disable_node_journal(request):
+    if _is_sync_journal_integration_test(request):
+        yield
+        return
+    with disabled_node_journal_environment():
+        yield
 
 
-@pytest.fixture
-def memory_storage():
-    return auth.MemoryStorageAdapter()
-
-
-@pytest.fixture
-def nonce_store(memory_storage):
-    return auth.NonceStore(memory_storage)
-
-
-@pytest.fixture
-def mock_chain():
-    return mock_chain_module.MockChain(TEST_CHAIN_ID)
-
-
-@pytest.fixture
-def chain_registry(mock_chain):
-    registry = chain.ChainRegistry()
-    registry.register(mock_chain)
-    return registry
-
-
-
+@pytest.fixture(autouse=True)
+def sync_journal_integration_autouse(request):
+    if not _is_sync_journal_integration_test(request):
+        yield
+        return
+    journal_user_root = request.getfixturevalue("journal_user_root")
+    with enabled_node_journal_environment():
+        with isolated_journal_environment_context(str(journal_user_root)):
+            with surface_journal_errors_context():
+                yield
 
 
 class MemoryObjectStore:
@@ -89,36 +93,3 @@ class MemoryObjectStore:
     async def delete_many(self, keys: list[str]) -> None:
         for k in keys:
             self._store.pop(k, None)
-
-
-@pytest.fixture
-def memory_object_store():
-    return MemoryObjectStore()
-
-
-
-
-def make_auth_headers(
-    mock_chain: mock_chain_module.MockChain,
-    pubkey: str = TEST_PUBKEY,
-    method: str = "GET",
-    path: str = "/",
-    body: str = "",
-    chain_id: str = TEST_CHAIN_ID,
-) -> dict[str, str]:
-    """Create valid auth headers and configure the mock chain to accept them."""
-    ts = str(int(time.time() * 1000))
-    nonce = f"test-nonce-{time.time()}"
-    body_hash = auth.hash_body(body)
-    canonical = auth.build_canonical(method, path, ts, nonce, body_hash)
-    signature = f"sig-{ts}"
-
-    mock_chain.set_signature_valid(canonical, signature, pubkey, True)
-
-    return {
-        constants.HEADER_PUBKEY: pubkey,
-        constants.HEADER_SIGNATURE: signature,
-        constants.HEADER_TIMESTAMP: ts,
-        constants.HEADER_NONCE: nonce,
-        constants.HEADER_CHAIN: chain_id,
-    }

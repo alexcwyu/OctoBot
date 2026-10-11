@@ -74,24 +74,27 @@ class Portfolio:
         """
         self.portfolio = {}
 
-    def update_portfolio_from_balance(self, balance, force_replace=True):
+    def update_portfolio_from_balance(self, balance, force_replace=True, should_log_update=True):
         """
         Update portfolio from a balance dict
         :param balance: the portfolio dict
         :param force_replace: force to update portfolio. Should be False when using deltas
+        :param should_log_update: when False, skip portfolio update debug logs (temporary exchanges)
         :return: True if the portfolio has been updated
         """
         if force_replace:
             self.portfolio = {
                 currency: self._parse_raw_currency_asset(currency=currency, raw_currency_balance=balance[currency])
                 for currency in balance}
-            self.logger.debug(f"Portfolio updated | {constants.CURRENT_PORTFOLIO_STRING} {self}")
+            if should_log_update:
+                self.logger.debug(f"Portfolio updated | {constants.CURRENT_PORTFOLIO_STRING} {logging.get_private_placeholder_if_necessary(self)}")
             return True
         if any(
                 self._update_raw_currency_asset(currency=currency, raw_currency_balance=balance[currency])
                 for currency in balance
         ):
-            self.logger.debug(f"Portfolio partially updated | {constants.CURRENT_PORTFOLIO_STRING} {self}")
+            if should_log_update:
+                self.logger.debug(f"Portfolio partially updated | {constants.CURRENT_PORTFOLIO_STRING} {logging.get_private_placeholder_if_necessary(self)}")
             return True
         return False
 
@@ -296,8 +299,8 @@ class Portfolio:
             currency_portfolio_num = -order.filled_quantity
             market_portfolio_num = order.filled_quantity * order.filled_price - order.get_total_fees(order.market)
 
-        self.logger.debug(f"Portfolio updated from order | {order.currency} {currency_portfolio_num} | {order.market} "
-                          f"{market_portfolio_num} | {constants.CURRENT_PORTFOLIO_STRING} {self.portfolio}")
+        self.logger.debug(f"Portfolio updated from order | {order.currency} {logging.get_private_placeholder_if_necessary(currency_portfolio_num)} | {order.market} "
+                          f"{market_portfolio_num} | {constants.CURRENT_PORTFOLIO_STRING} {logging.get_private_placeholder_if_necessary(self.portfolio)}")
 
     def log_portfolio_update_from_withdrawal(self, amount, currency):
         """
@@ -305,8 +308,8 @@ class Portfolio:
         :param amount: withdraw quantity
         :param currency: withdraw currency
         """
-        self.logger.debug(f"Portfolio updated from withdraw | {currency} -{amount}"
-                          f" | {constants.CURRENT_PORTFOLIO_STRING} {self.portfolio}")
+        self.logger.debug(f"Portfolio updated from withdraw | {currency} -{logging.get_private_placeholder_if_necessary(amount)}"
+                          f" | {constants.CURRENT_PORTFOLIO_STRING} {logging.get_private_placeholder_if_necessary(self.portfolio)}")
 
     def log_portfolio_update_from_deposit(self, amount, currency):
         """
@@ -314,8 +317,8 @@ class Portfolio:
         :param amount: deposit quantity
         :param currency: deposit currency
         """
-        self.logger.debug(f"Portfolio updated from deposit | {currency} {amount}"
-                          f" | {constants.CURRENT_PORTFOLIO_STRING} {self.portfolio}")
+        self.logger.debug(f"Portfolio updated from deposit | {currency} {logging.get_private_placeholder_if_necessary(amount)}"
+                          f" | {constants.CURRENT_PORTFOLIO_STRING} {logging.get_private_placeholder_if_necessary(self.portfolio)}")
 
 def _should_reduce_available_assets_on_fill(order):
     """

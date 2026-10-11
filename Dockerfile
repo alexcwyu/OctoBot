@@ -1,4 +1,4 @@
-FROM python:3.13-slim-bullseye AS base
+FROM python:3.13-slim-trixie AS base
 
 WORKDIR /tmp
 
@@ -14,7 +14,7 @@ RUN apt-get update \
         libxslt1-dev \
         libxslt-dev \
         libjpeg62-turbo-dev \
-        libatlas-base-dev \
+        libopenblas-dev \
         zlib1g-dev \
     && rm -rf /var/lib/apt/lists/*
 
@@ -22,12 +22,14 @@ RUN apt-get update \
 ENV CRYPTOGRAPHY_DONT_BUILD_RUST=1
 
 COPY dist/octobot-*.whl /tmp/
+COPY extra_requirements.txt /tmp/
 RUN python -m venv /opt/venv \
     && . /opt/venv/bin/activate \
     && pip install --no-cache-dir --upgrade pip setuptools wheel \
-    && pip install --no-cache-dir /tmp/octobot-*.whl
+    && pip install --no-cache-dir /tmp/octobot-*.whl \
+    && pip install --no-cache-dir -r /tmp/extra_requirements.txt
 
-FROM python:3.13-slim-bullseye
+FROM python:3.13-slim-trixie
 
 ARG TENTACLES_URL_TAG=""
 ARG VERSION=""
@@ -42,6 +44,7 @@ WORKDIR /octobot
 
 COPY --from=base /opt/venv /opt/venv
 COPY octobot/config /octobot/octobot/config
+COPY start.py /octobot/
 COPY docker/* /octobot/
 
 SHELL ["/bin/bash", "-o", "pipefail", "-c"]
@@ -54,7 +57,7 @@ RUN apt-get update \
         zlib1g-dev \
         libblas-dev \
         liblapack-dev \
-        libatlas-base-dev \
+        libopenblas-dev \
         libopenjp2-7 \
         libtiff-dev \
     && rm -rf /var/lib/apt/lists/* \
@@ -68,7 +71,10 @@ VOLUME /octobot/logs
 VOLUME /octobot/tentacles
 VOLUME /octobot/user
 
-EXPOSE 5001
+# Node API (OctoBot node mode)
+EXPOSE 8000
+# Standalone web UI (5001) + up to 10 spawned process-bot web interfaces (5001-5010)
+EXPOSE 5001-5010
 
 HEALTHCHECK --interval=15s --timeout=10s --retries=5 \
     CMD curl -sS http://127.0.0.1:5001 || exit 1

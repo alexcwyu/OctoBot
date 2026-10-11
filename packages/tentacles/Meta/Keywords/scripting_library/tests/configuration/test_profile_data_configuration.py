@@ -14,11 +14,21 @@
 #  You should have received a copy of the GNU Lesser General Public
 #  License along with this library.
 import tentacles.Trading.Mode.index_trading_mode.index_trading as index_trading
+import octobot_copy.enums as rebalancer_enums
 
 import octobot_commons.constants as commons_constants
 import octobot_commons.profiles.profile_data as commons_profile_data
 import tentacles.Meta.Keywords.scripting_library as scripting_library
 
+
+
+def test_get_traded_coins_includes_qualified_symbol_legs():
+    profile = scripting_library.minimal_profile_data()
+    profile.trading.reference_market = "USDT@ETH"
+    scripting_library.add_traded_symbols(profile, ["BTC@BTC/USDT@ETH"])
+    coins = scripting_library.get_traded_coins(profile, include_stablecoins=False)
+    assert "USDT@ETH" in coins
+    assert "BTC@BTC" in coins
 
 
 def test_register_historical_configs_adds_traded_pairs():
@@ -31,10 +41,10 @@ def test_register_historical_configs_adds_traded_pairs():
     historical.tentacles = [commons_profile_data.TentaclesData(name=tentacle_name, config={})]
     scripting_library.add_traded_symbols(historical, ["BTC/USDT"])
     historicals = {1000.0: historical}
-    assert [] == scripting_library.get_traded_symbols(master)
+    assert [] == master.get_traded_symbols()
     scripting_library.register_historical_configs(master, historicals, True, False)
     # Master should now have the traded pair
-    assert ["BTC/USDT"] == scripting_library.get_traded_symbols(master)
+    assert ["BTC/USDT"] == master.get_traded_symbols()
 
 
 def test_register_historical_configs_registers_historical_tentacle_config():
@@ -78,7 +88,7 @@ def test_register_historical_configs_applies_master_edits():
                 index_trading.IndexTradingModeProducer.REBALANCE_TRIGGER_PROFILE_MIN_PERCENT: 20
             }
         ], 
-        index_trading.IndexTradingModeProducer.SYNCHRONIZATION_POLICY: index_trading.SynchronizationPolicy.SELL_REMOVED_INDEX_COINS_ON_RATIO_REBALANCE.value
+        index_trading.IndexTradingModeProducer.SYNCHRONIZATION_POLICY: rebalancer_enums.SynchronizationPolicy.SELL_REMOVED_INDEX_COINS_ON_RATIO_REBALANCE.value
     }
     master.tentacles = [commons_profile_data.TentaclesData(name=tentacle_name, config=master_config)]
     historical_1 = scripting_library.minimal_profile_data()
@@ -112,7 +122,7 @@ def test_register_historical_configs_applies_master_edits():
                 index_trading.IndexTradingModeProducer.REBALANCE_TRIGGER_PROFILE_MIN_PERCENT: 20
             }
         ], 
-        index_trading.IndexTradingModeProducer.SYNCHRONIZATION_POLICY: index_trading.SynchronizationPolicy.SELL_REMOVED_INDEX_COINS_ON_RATIO_REBALANCE.value
+        index_trading.IndexTradingModeProducer.SYNCHRONIZATION_POLICY: rebalancer_enums.SynchronizationPolicy.SELL_REMOVED_INDEX_COINS_ON_RATIO_REBALANCE.value
     }
     assert hist_config_2 == {
         special_key: 1, 
@@ -127,5 +137,5 @@ def test_register_historical_configs_applies_master_edits():
                 index_trading.IndexTradingModeProducer.REBALANCE_TRIGGER_PROFILE_MIN_PERCENT: 20
             }
         ], 
-        index_trading.IndexTradingModeProducer.SYNCHRONIZATION_POLICY: index_trading.SynchronizationPolicy.SELL_REMOVED_INDEX_COINS_ON_RATIO_REBALANCE.value
+        index_trading.IndexTradingModeProducer.SYNCHRONIZATION_POLICY: rebalancer_enums.SynchronizationPolicy.SELL_REMOVED_INDEX_COINS_ON_RATIO_REBALANCE.value
     }

@@ -61,7 +61,9 @@ def create_order_instance_from_raw(
     except Exception as err:
         # log unparsable order to fix it
         logging.get_logger(__name__).exception(
-            err, True, f"Unexpected {err} ({err.__class__.__name__}) error when parsing row order {raw_order}"
+            err, True, 
+            f"Unexpected {err} ({err.__class__.__name__}) error when parsing row order "
+            f"{logging.get_private_minimized_message_if_necessary(raw_order)}"
         )
         raise
 
@@ -95,7 +97,7 @@ def create_order_instance(
     side: typing.Optional[enums.TradeOrderSide] = None,
     trigger_above: typing.Optional[bool] = None,
     fees_currency_side: typing.Optional[str] = None,
-    group: typing.Optional[str] = None,
+    group: typing.Optional["personal_data.OrderGroup"] = None,
     tag: typing.Optional[str] = None,
     reduce_only: typing.Optional[bool] = None,
     quantity_currency: typing.Optional[str] = None,
@@ -273,11 +275,11 @@ class OrderFactory:
                 )
         return quantities_and_prices
 
-    async def _get_computed_price(self, ctx: script_keywords.Context, order_price: str) -> decimal.Decimal:
+    async def _get_computed_price(self, ctx: "script_keywords.Context", order_price: str) -> decimal.Decimal:
         return await script_keywords.get_price_with_offset(ctx, order_price, use_delta_type_as_flat_value=True)
 
     async def _get_computed_quantity(
-        self, ctx: script_keywords.Context, input_amount: str, 
+        self, ctx: "script_keywords.Context", input_amount: str, 
         side: enums.TradeOrderSide, target_price: decimal.Decimal, 
         reduce_only: bool, allow_holdings_adaptation: bool
     ):
@@ -296,14 +298,15 @@ class OrderFactory:
         )
 
     def _ensure_supported_order_type(self, order_type: enums.TraderOrderType):
-        if not self.exchange_manager.exchange.is_supported_order_type(order_type):
+        trade_order_type = personal_data.get_trade_order_type(order_type)
+        if not self.exchange_manager.exchange.supports_order_type(trade_order_type):
             raise trading_errors.NotSupportedOrderTypeError(
                 f"{order_type.name} orders are not supported on {self.exchange_manager.exchange_name}", 
                 order_type
             )
 
     async def _create_stop_orders(
-        self, ctx: script_keywords.Context,
+        self, ctx: "script_keywords.Context",
         base_order: "personal_data.Order",
         symbol_market: dict,
         params: dict, chained_orders: list["personal_data.Order"],
@@ -330,7 +333,7 @@ class OrderFactory:
 
     async def _create_take_profit_orders(
         self,
-        ctx: script_keywords.Context,
+        ctx: "script_keywords.Context",
         base_order: "personal_data.Order",
         symbol_market: dict,
         params: dict,
@@ -393,7 +396,7 @@ class OrderFactory:
     async def _create_base_order_associated_elements(
         self,
         base_order: "personal_data.Order",
-        ctx: script_keywords.Context,
+        ctx: "script_keywords.Context",
         symbol_market: dict,
         stop_loss_price: typing.Optional[decimal.Decimal] = None,
         take_profit_prices: typing.Optional[list[decimal.Decimal]] = None,
@@ -470,7 +473,7 @@ class OrderFactory:
         current_price = await personal_data.get_up_to_date_price(
             self.exchange_manager, symbol=symbol, timeout=constants.ORDER_DATA_FETCHING_TIMEOUT
         )
-        symbol_market = self.exchange_manager.exchange.get_market_status(symbol, with_fixer=False)
+        symbol_market = await self.exchange_manager.exchange.get_market_status_including_lazy_load(symbol, with_fixer=False)
         ctx = script_keywords.get_base_context_from_exchange_manager(self.exchange_manager, symbol)
             # market orders have no price
         computed_price = current_price if price is None else await self._get_computed_price(ctx, price)
@@ -482,7 +485,7 @@ class OrderFactory:
         )
         base_orders = []
         for valid_amount, valid_price in valid_amount_and_prices:
-            base_order = personal_data.create_order_instance(
+            base_order = create_order_instance(
                 trader=self.exchange_manager.trader,
                 order_type=order_type,
                 symbol=symbol,

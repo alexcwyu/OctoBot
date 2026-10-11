@@ -22,6 +22,7 @@ import mock
 
 import octobot.community as community
 import octobot.community.authentication
+import octobot.community.models.community_user_account as community_user_account
 import octobot.constants as constants
 import octobot_commons.authentication as authentication
 import octobot_commons.configuration
@@ -31,6 +32,7 @@ import octobot_commons.profiles.profile_data
 pytestmark = pytest.mark.asyncio
 
 AUTH_URL = "https://oh.fake/auth"
+_TEST_SYNC_URL = "https://test-sync.example"
 AUTH_RETURN = {
     "access_token": "1",
     "refresh_token": "2",
@@ -83,6 +85,24 @@ def test_constructor():
         login_mock.assert_not_called()
         assert not auth.user_account.supports.is_supporting()
         assert auth.initialized_event is None
+
+
+class Test_update:
+    def test_sets_config_to_match_storage_configuration(self):
+        original_config = octobot_commons.configuration.Configuration("", "")
+        edited_config = octobot_commons.configuration.Configuration("", "")
+        with mock.patch.object(
+            community.CommunityAuthentication,
+            "_create_client",
+            return_value=mock.Mock(),
+        ):
+            auth = community.CommunityAuthentication(
+                config=original_config,
+                use_as_singleton=False,
+            )
+        auth.update(edited_config)
+        assert auth.config is edited_config
+        assert auth.configuration_storage.sync_storage._configuration is edited_config
 
 
 @pytest.mark.asyncio
@@ -506,3 +526,403 @@ async def test_stop(auth):
     await auth.stop()
     auth.supabase_client.aclose.assert_awaited_once()
     auth._fetch_account_task.cancel.assert_called_once()
+
+
+class TestCommunityAuthenticationStopLogging:
+    async def test_non_singleton_stop_does_not_log_lifecycle(self):
+        auth = community.CommunityAuthentication.__new__(community.CommunityAuthentication)
+        # __init__ is skipped via __new__; assign attributes normally set in __init__
+        auth._use_as_singleton = False
+        auth._dk_sessions = {}
+        auth.logger = mock.Mock()
+        auth._fetch_account_task = None
+        auth.supabase_client = mock.Mock(aclose=mock.AsyncMock())
+        auth._community_feed = None
+        auth.community_bot = mock.Mock(clear=mock.Mock())
+        auth._sync_client = None
+
+        await auth.stop()
+
+        logged_messages = [call.args[0] for call in auth.logger.debug.call_args_list]
+        assert "Stopping ..." not in logged_messages
+        assert "Stopped" not in logged_messages
+
+    async def test_singleton_stop_logs_lifecycle(self):
+        auth = community.CommunityAuthentication.__new__(community.CommunityAuthentication)
+        # __init__ is skipped via __new__; assign attributes normally set in __init__
+        auth._use_as_singleton = True
+        auth._dk_sessions = {}
+        auth.logger = mock.Mock()
+        auth._fetch_account_task = None
+        auth.supabase_client = mock.Mock(aclose=mock.AsyncMock())
+        auth._community_feed = None
+        auth.community_bot = mock.Mock(clear=mock.Mock())
+        auth._sync_client = None
+
+        await auth.stop()
+
+        auth.logger.debug.assert_any_call("Stopping ...")
+        auth.logger.debug.assert_any_call("Stopped")
+
+
+def test_is_node_wallet_configured(auth):
+    auth._wallet_backend = mock.Mock()
+    auth._wallet_backend.list_wallets.return_value = []
+    assert auth.is_node_wallet_configured() is False
+
+    auth._wallet_backend.list_wallets.return_value = [mock.Mock()]
+    assert auth.is_node_wallet_configured() is True
+
+
+class TestGetWalletSyncStorageMasterConfigRead:
+    def test_reads_master_config_without_activating_profile(self):
+        auth = community.CommunityAuthentication.__new__(community.CommunityAuthentication)
+        master_config = mock.Mock()
+        sync_storage = mock.Mock()
+        with mock.patch(
+            "octobot.community.authentication.user_root_folder_provider.get_sync_data_root",
+            mock.Mock(return_value="/master/user"),
+        ), mock.patch(
+            "octobot.community.authentication.user_root_folder_provider.get_user_root_folder",
+            mock.Mock(return_value="/child/automation"),
+        ), mock.patch(
+            "octobot.community.authentication.os.path.isfile",
+            mock.Mock(return_value=True),
+        ), mock.patch(
+            "octobot.community.authentication.commons_configuration.Configuration",
+            mock.Mock(return_value=master_config),
+        ) as configuration_cls_mock, mock.patch(
+            "octobot.community.authentication.supabase_backend.SyncConfigurationStorage",
+            mock.Mock(return_value=sync_storage),
+        ) as sync_storage_cls_mock:
+            result = auth._get_wallet_sync_storage()
+        configuration_cls_mock.assert_called_once()
+        master_config.read.assert_called_once_with(should_raise=False, activate_profile=False)
+        sync_storage_cls_mock.assert_called_once_with(master_config)
+        assert result is sync_storage
+
+
+class TestClearLocalDataIfNecessary:
+    def test_noop_on_cloud_environment(self, auth):
+        with mock.patch.object(constants, "IS_CLOUD_ENV", True), mock.patch.object(
+            auth, "_clear_bot_scoped_config", mock.Mock()
+        ) as clear_mock:
+            auth.clear_local_data_if_necessary()
+        clear_mock.assert_not_called()
+
+    def test_clears_bot_scoped_data_when_config_path_binding_is_stale(self, tmp_path):
+        config_path = tmp_path / "config.json"
+        config_path.write_text("{}", encoding="utf-8")
+        config = octobot_commons.configuration.Configuration(
+            str(config_path),
+            str(tmp_path / "profiles"),
+        )
+        config.config = {
+            constants.CONFIG_COMMUNITY: {
+                constants.CONFIG_COMMUNITY_LOCAL_DATA_IDENTIFIER: "old-identifier",
+            }
+        }
+        with mock.patch.object(
+            community.CommunityAuthentication,
+            "_create_client",
+            return_value=mock.Mock(),
+        ):
+            auth = community.CommunityAuthentication(config=config, use_as_singleton=False)
+        with mock.patch.object(
+            octobot_commons.configuration.Configuration, "save", mock.Mock()
+        ), mock.patch.object(auth, "_clear_bot_scoped_config", mock.Mock()) as clear_mock:
+            auth.clear_local_data_if_necessary()
+        clear_mock.assert_called_once()
+
+    def test_keeps_bot_scoped_data_when_config_path_binding_matches(self, tmp_path):
+        config_path = tmp_path / "config.json"
+        config_path.write_text("{}", encoding="utf-8")
+        import octobot.community.config_path_binding as config_path_binding
+        fingerprint = config_path_binding.fingerprint_config_path(str(config_path))
+        config = octobot_commons.configuration.Configuration(
+            str(config_path),
+            str(tmp_path / "profiles"),
+        )
+        config.config = {
+            constants.CONFIG_COMMUNITY: {
+                constants.CONFIG_COMMUNITY_LOCAL_DATA_IDENTIFIER: fingerprint,
+            }
+        }
+        with mock.patch.object(
+            community.CommunityAuthentication,
+            "_create_client",
+            return_value=mock.Mock(),
+        ):
+            auth = community.CommunityAuthentication(config=config, use_as_singleton=False)
+        with mock.patch.object(auth, "_clear_bot_scoped_config", mock.Mock()) as clear_mock:
+            auth.clear_local_data_if_necessary()
+        clear_mock.assert_not_called()
+
+
+class TestClearBotScopedConfig:
+    def test_clears_bot_scoped_local_data(self, tmp_path):
+        config_path = tmp_path / "config.json"
+        config_path.write_text("{}", encoding="utf-8")
+        config = octobot_commons.configuration.Configuration(
+            str(config_path),
+            str(tmp_path / "profiles"),
+        )
+        config.config = {
+            constants.CONFIG_COMMUNITY: {
+                constants.CONFIG_COMMUNITY_BOT_ID: "cloud-bot-id",
+            },
+        }
+        with mock.patch.object(
+            community.CommunityAuthentication,
+            "_create_client",
+            return_value=mock.Mock(),
+        ):
+            auth = community.CommunityAuthentication(config=config, use_as_singleton=False)
+        with mock.patch.object(auth, "_save_bot_id", mock.Mock()) as save_bot_id_mock, \
+                mock.patch.object(auth, "save_tradingview_email", mock.Mock()) as save_email_mock, \
+                mock.patch.object(auth, "_save_mqtt_device_uuid", mock.Mock()) as save_mqtt_mock, \
+                mock.patch.object(
+                    auth, "save_tradingview_email_confirmed", mock.Mock()
+                ) as save_email_confirmed_mock:
+            auth._clear_bot_scoped_config()
+        save_bot_id_mock.assert_called_once_with("")
+        save_email_mock.assert_called_once_with("")
+        save_mqtt_mock.assert_called_once_with("")
+        save_email_confirmed_mock.assert_called_once_with(False)
+
+
+class TestFetchPrivateData:
+    async def test_process_child_sets_pending_flag_with_install_only(self):
+        config = mock.Mock()
+        config.uses_shared_reference_tentacles.return_value = True
+        config.get_tentacles_setup_config_for_package_operations.return_value = mock.Mock()
+        auth = community.CommunityAuthentication.__new__(community.CommunityAuthentication)
+        auth.logger = mock.Mock()
+        auth.config = config
+        auth.user_account = community_user_account.CommunityUserAccount()
+        auth.user_account.community_package_urls = []
+        auth.is_logged_in = mock.Mock(return_value=True)
+        auth.get_saved_mqtt_device_uuid = mock.Mock(return_value="mqtt-uuid")
+        auth._fetch_extensions_details = mock.AsyncMock(
+            return_value=(["premium"], ["https://premium.example/pkg.zip"], "mqtt-uuid", "tv@example.com")
+        )
+        auth.save_installed_package_urls = mock.Mock()
+        auth.save_tradingview_email = mock.Mock()
+        auth._save_mqtt_device_uuid = mock.Mock()
+        auth.has_open_source_package = mock.Mock(return_value=False)
+        auth._refresh_products = mock.AsyncMock()
+        auth._fetched_private_data = None
+        with mock.patch.object(
+            constants,
+            "DISABLE_COMMUNITY_EXTENSIONS_CHECK",
+            False,
+        ), mock.patch(
+            "octobot.community.tentacles_packages.has_tentacles_to_install_and_uninstall_tentacles_if_necessary",
+            new_callable=mock.AsyncMock,
+            return_value=True,
+        ) as has_tentacles_mock:
+            await auth.fetch_private_data()
+        has_tentacles_mock.assert_awaited_once_with(auth, install_only=True)
+        assert auth.user_account.has_pending_packages_to_install is True
+
+    async def test_sync_profile_fetch_private_data_does_not_use_profile_tentacles_path(self):
+        config = mock.Mock()
+        config.uses_shared_reference_tentacles.return_value = False
+        config.profile = mock.Mock()
+        config.profile.is_profile_data_tentacle_backed.return_value = True
+        setup_config = mock.Mock()
+        config.get_tentacles_setup_config_for_package_operations.return_value = setup_config
+        auth = community.CommunityAuthentication.__new__(community.CommunityAuthentication)
+        auth.logger = mock.Mock()
+        auth.config = config
+        auth.user_account = community_user_account.CommunityUserAccount()
+        auth.user_account.community_package_urls = []
+        auth.is_logged_in = mock.Mock(return_value=True)
+        auth.get_saved_mqtt_device_uuid = mock.Mock(return_value="mqtt-uuid")
+        auth._fetch_extensions_details = mock.AsyncMock(
+            return_value=(["premium"], ["https://premium.example/pkg.zip"], "mqtt-uuid", "tv@example.com")
+        )
+        auth.save_installed_package_urls = mock.Mock()
+        auth.save_tradingview_email = mock.Mock()
+        auth._save_mqtt_device_uuid = mock.Mock()
+        auth.has_open_source_package = mock.Mock(return_value=False)
+        auth._refresh_products = mock.AsyncMock()
+        auth._fetched_private_data = None
+        with mock.patch.object(
+            constants,
+            "DISABLE_COMMUNITY_EXTENSIONS_CHECK",
+            False,
+        ), mock.patch(
+            "octobot.community.tentacles_packages.get_to_install_and_remove_tentacles",
+            return_value=([], [], False),
+        ):
+            await auth.fetch_private_data()
+        config.get_tentacles_config_path.assert_not_called()
+        config.get_tentacles_setup_config_for_package_operations.assert_called()
+
+    async def test_non_process_child_sets_pending_flag_only(self):
+        config = mock.Mock()
+        config.uses_shared_reference_tentacles.return_value = False
+        auth = community.CommunityAuthentication.__new__(community.CommunityAuthentication)
+        auth.logger = mock.Mock()
+        auth.config = config
+        auth.user_account = community_user_account.CommunityUserAccount()
+        auth.user_account.community_package_urls = []
+        auth.is_logged_in = mock.Mock(return_value=True)
+        auth.get_saved_mqtt_device_uuid = mock.Mock(return_value="mqtt-uuid")
+        auth._fetch_extensions_details = mock.AsyncMock(
+            return_value=(["premium"], ["https://premium.example/pkg.zip"], "mqtt-uuid", "tv@example.com")
+        )
+        auth.save_installed_package_urls = mock.Mock()
+        auth.save_tradingview_email = mock.Mock()
+        auth._save_mqtt_device_uuid = mock.Mock()
+        auth.has_open_source_package = mock.Mock(return_value=False)
+        auth._refresh_products = mock.AsyncMock()
+        auth._fetched_private_data = None
+        with mock.patch.object(
+            constants,
+            "DISABLE_COMMUNITY_EXTENSIONS_CHECK",
+            False,
+        ), mock.patch(
+            "octobot.community.tentacles_packages.has_tentacles_to_install_and_uninstall_tentacles_if_necessary",
+            new_callable=mock.AsyncMock,
+            return_value=True,
+        ) as has_tentacles_mock:
+            await auth.fetch_private_data()
+        has_tentacles_mock.assert_awaited_once_with(auth, install_only=False)
+        assert auth.user_account.has_pending_packages_to_install is True
+
+
+def test_sync_server_url_is_a_bare_origin():
+    # octobot_sync.client/mirror.writer append SYNC_MOUNT_PATH themselves; a pre-suffixed
+    # default here doubles the "/sync" segment and 404s before reaching the sync server.
+    assert not constants.SYNC_SERVER_URL.rstrip("/").endswith("/sync")
+    assert not constants.STAGING_SYNC_SERVER_URL.rstrip("/").endswith("/sync")
+
+
+def _new_auth_for_signal_session_tests():
+    auth = community.CommunityAuthentication.__new__(community.CommunityAuthentication)
+    # __init__ is skipped via __new__; assign attributes normally set in __init__
+    auth._dk_sessions = {}
+    auth._dk_session_lock = asyncio.Lock()
+    return auth
+
+
+class TestGetSessionForAddress:
+    async def test_returns_the_same_session_on_a_second_call_for_the_same_address(self):
+        auth = _new_auth_for_signal_session_tests()
+        auth.get_wallet = mock.Mock(return_value=mock.Mock(private_key="pk"))
+        sentinel_session = mock.Mock()
+        with (
+            mock.patch.object(
+                octobot.community.authentication.identifiers_provider.IdentifiersProvider,
+                "SYNC_SERVER_URL",
+                _TEST_SYNC_URL,
+            ),
+            mock.patch.object(
+                octobot.community.authentication.sync_session_writer,
+                "derived_identity_for_mirror",
+                return_value="derived-identity",
+            ),
+            mock.patch.object(
+                octobot.community.authentication.sync_session_writer,
+                "build_mirror_session",
+                mock.AsyncMock(return_value=sentinel_session),
+            ) as mock_build_mirror_session,
+        ):
+            first = await auth.get_session_for_address("0xabc")
+            second = await auth.get_session_for_address("0xabc")
+
+        assert first is sentinel_session
+        assert second is sentinel_session
+        mock_build_mirror_session.assert_awaited_once()
+
+    async def test_raises_wallet_error_when_sync_server_url_is_not_configured(self):
+        auth = _new_auth_for_signal_session_tests()
+        with mock.patch.object(
+            octobot.community.authentication.identifiers_provider.IdentifiersProvider,
+            "SYNC_SERVER_URL",
+            "",
+        ):
+            with pytest.raises(octobot.community.wallet_backend.WalletError):
+                await auth.get_session_for_address("0xabc")
+
+    async def test_builds_the_session_with_the_bare_sync_url_and_signal_name(self):
+        auth = _new_auth_for_signal_session_tests()
+        auth.get_wallet = mock.Mock(return_value=mock.Mock(private_key="pk"))
+        with (
+            mock.patch.object(
+                octobot.community.authentication.identifiers_provider.IdentifiersProvider,
+                "SYNC_SERVER_URL",
+                _TEST_SYNC_URL,
+            ),
+            mock.patch.object(
+                octobot.community.authentication.sync_session_writer,
+                "derived_identity_for_mirror",
+                return_value="derived-identity",
+            ) as mock_derive,
+            mock.patch.object(
+                octobot.community.authentication.sync_session_writer,
+                "build_mirror_session",
+                mock.AsyncMock(return_value=mock.Mock()),
+            ) as mock_build_mirror_session,
+        ):
+            await auth.get_session_for_address("0xabc")
+
+        mock_derive.assert_called_once_with("pk")
+        mock_build_mirror_session.assert_awaited_once_with(
+            "derived-identity", _TEST_SYNC_URL, name="octobot-signals"
+        )
+
+    async def test_distinct_addresses_get_distinct_sessions(self):
+        auth = _new_auth_for_signal_session_tests()
+        auth.get_wallet = mock.Mock(return_value=mock.Mock(private_key="pk"))
+        sessions = [mock.Mock(), mock.Mock()]
+        with (
+            mock.patch.object(
+                octobot.community.authentication.identifiers_provider.IdentifiersProvider,
+                "SYNC_SERVER_URL",
+                _TEST_SYNC_URL,
+            ),
+            mock.patch.object(
+                octobot.community.authentication.sync_session_writer,
+                "derived_identity_for_mirror",
+                return_value="derived-identity",
+            ),
+            mock.patch.object(
+                octobot.community.authentication.sync_session_writer,
+                "build_mirror_session",
+                mock.AsyncMock(side_effect=sessions),
+            ),
+        ):
+            first = await auth.get_session_for_address("0xabc")
+            second = await auth.get_session_for_address("0xdef")
+
+        assert first is sessions[0]
+        assert second is sessions[1]
+        assert first is not second
+
+
+class TestStopClosesCachedDkSessions:
+    async def test_stop_closes_and_clears_cached_dk_sessions(self):
+        auth = community.CommunityAuthentication.__new__(community.CommunityAuthentication)
+        # __init__ is skipped via __new__; assign attributes normally set in __init__
+        auth._use_as_singleton = False
+        auth.logger = mock.Mock()
+        auth._fetch_account_task = None
+        auth.supabase_client = mock.Mock(aclose=mock.AsyncMock())
+        auth._community_feed = None
+        auth.community_bot = None
+        auth._sync_client = None
+        cached_session = mock.Mock(
+            content_client=mock.Mock(close=mock.AsyncMock()),
+            account_client=mock.Mock(close=mock.AsyncMock()),
+        )
+        auth._dk_sessions = {"0xabc": cached_session}
+
+        await auth.stop()
+
+        cached_session.content_client.close.assert_awaited_once()
+        cached_session.account_client.close.assert_awaited_once()
+        assert auth._dk_sessions == {}
+

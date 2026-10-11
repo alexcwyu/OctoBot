@@ -15,26 +15,29 @@
 #  License along with OctoBot. If not, see <https://www.gnu.org/licenses/>.
 
 import asyncio
-import logging
 import typing
 import uuid
 
 import dbos
+import octobot_commons.logging as octobot_commons_logging
+import octobot_protocol.models as protocol_models
 
 import octobot_node.config
 import octobot_node.constants
+import octobot_node.enums
 import octobot_node.models
 import octobot_node.scheduler
+import octobot_node.scheduler.workflows_util as workflows_util
 
-logger = logging.getLogger(__name__)
+logger = octobot_commons_logging.get_logger("scheduler_api")
 
 
 def get_node_status() -> dict[str, str | int | None | uuid.UUID]:
     consumer_running = (
-        octobot_node.scheduler.SCHEDULER.INSTANCE 
+        octobot_node.scheduler.SCHEDULER.INSTANCE
         and octobot_node.scheduler.SCHEDULER.INSTANCE._launched
     )
-    is_running = octobot_node.config.settings.IS_MASTER_MODE or consumer_running
+    is_running = octobot_node.config.settings.IS_MASTER_MODE or bool(consumer_running)
     status = "running" if is_running else "stopped"
 
     backend_type = "postgres" if octobot_node.config.settings.SCHEDULER_POSTGRES_URL else "sqlite"
@@ -59,26 +62,48 @@ def get_node_status() -> dict[str, str | int | None | uuid.UUID]:
     }
 
 
-async def get_task_metrics() -> dict[str, int]:
+async def get_automation_states(
+    user_id: typing.Optional[str],
+    statuses: typing.Optional[list[dbos.WorkflowStatusString]] = None,
+) -> list[protocol_models.AutomationState]:
+    return await octobot_node.scheduler.SCHEDULER.get_automation_states(user_id, statuses)
+
+
+async def list_user_actions(user_id: typing.Optional[str], active_only: bool) -> list[protocol_models.UserAction]:
+    return await octobot_node.scheduler.SCHEDULER.list_user_actions(user_id, active_only)
+
+
+async def get_task_metrics(
+    user_id: typing.Optional[str] = None,
+) -> dict[str, int]:
+    scheduler = octobot_node.scheduler.SCHEDULER
+    if not scheduler.INSTANCE:
+        return {"pending": 0, "scheduled": 0, "results": 0}
     try:
-        instance = octobot_node.scheduler.SCHEDULER.INSTANCE
-        if instance is None:
-            logger.warning("Scheduler instance not initialized")
-            pending, completed, periodic = [], [], []
-        else:
-            pending, completed, periodic = await asyncio.gather(
-                instance.list_workflows_async(status=[
-                    dbos.WorkflowStatusString.ENQUEUED.value, dbos.WorkflowStatusString.PENDING.value
-                ]),
-                instance.list_workflows_async(status=[
-                    dbos.WorkflowStatusString.SUCCESS.value, dbos.WorkflowStatusString.ERROR.value
-                ]),
-                octobot_node.scheduler.SCHEDULER.get_periodic_tasks()
-            )
+        wallet_scoped_metrics = user_id is not None
+        pending_statuses, result_statuses = await asyncio.gather(
+            workflows_util.list_scheduler_workflows_async(
+                scheduler.INSTANCE,
+                octobot_node.enums.SchedulerWorkflowNames.EXECUTE_AUTOMATION,
+                None,
+                user_id,
+                load_output=False,
+                load_input=wallet_scoped_metrics,
+                queues_only=True,
+            ),
+            workflows_util.list_scheduler_workflows_async(
+                scheduler.INSTANCE,
+                octobot_node.enums.SchedulerWorkflowNames.EXECUTE_AUTOMATION,
+                list(workflows_util.DBOS_TERMINAL_WORKFLOW_STATUSES),
+                user_id,
+                load_output=False,
+                load_input=wallet_scoped_metrics,
+            ),
+        )
         return {
-            "pending": len(pending),
-            "scheduled": len(periodic),
-            "results": len(completed),
+            "pending": len(pending_statuses or []),
+            "scheduled": 0,
+            "results": len(result_statuses or []),
         }
     except Exception as e:
         logger.error(f"Failed to retrieve task metrics from scheduler: {e}")
@@ -98,6 +123,35 @@ def _get_active_execution(
     return dated[-1] if dated else (executions[-1] if executions else None)
 
 
+def _task_recency_sort_key(task: octobot_node.models.Task) -> tuple[int, str, str]:
+    active_execution = _get_active_execution(task.executions or [])
+    if active_execution is None:
+        return (0, "", task.id or "")
+    sort_at = active_execution.completed_at or active_execution.scheduled_at
+    if sort_at is None:
+        return (0, "", task.id or "")
+    return (1, sort_at.isoformat(), task.id or "")
+
+
+def sort_tasks_by_recency(
+    tasks: list[octobot_node.models.Task],
+) -> list[octobot_node.models.Task]:
+    return sorted(tasks, key=_task_recency_sort_key, reverse=True)
+
+
+def paginate_tasks(
+    tasks: list[octobot_node.models.Task],
+    page: int,
+    limit: int,
+) -> list[octobot_node.models.Task]:
+    page = max(1, page)
+    max_limit = octobot_node.constants.TASKS_LIST_MAX_PAGE_LIMIT
+    limit = max(1, min(limit, max_limit))
+    sorted_tasks = sort_tasks_by_recency(tasks)
+    start_idx = (page - 1) * limit
+    return sorted_tasks[start_idx:start_idx + limit]
+
+
 def _build_tasks_from_executions(
     executions: list[octobot_node.models.Execution],
 ) -> list[octobot_node.models.Task]:
@@ -109,23 +163,81 @@ def _build_tasks_from_executions(
     tasks = []
     for parent_id, group in grouped.items():
         active = _get_active_execution(group)
+        active_name = active.name if active else None
+        active_content = active.actions if active else None
+        error = active.error if active else None
+        active_wallet = active.user_id if active else None
+        is_encrypted = any(e.is_encrypted for e in group)
+        for execution in group:
+            execution.name = None
+            if active is None or execution.id != active.id:
+                execution.result_metadata = None
         tasks.append(octobot_node.models.Task(
             id=parent_id,
-            name=active.name if active else None,
-            content=active.actions if active else None,
+            name=active_name,
+            content=active_content,
+            is_encrypted=is_encrypted,
             executions=group,
+            error=error,
+            user_id=active_wallet,
         ))
     return tasks
 
 
-async def get_all_tasks() -> list[octobot_node.models.Task]:
+async def _enrich_tasks_with_child_octobot_process(
+    tasks: list[octobot_node.models.Task],
+    user_id: typing.Optional[str],
+) -> None:
+    active_task_statuses = {
+        octobot_node.models.TaskStatus.PENDING,
+        octobot_node.models.TaskStatus.RUNNING,
+        octobot_node.models.TaskStatus.SCHEDULED,
+        octobot_node.models.TaskStatus.PERIODIC,
+    }
+    active_task_ids = {
+        task.id
+        for task in tasks
+        if task.id is not None
+        and (active_execution := _get_active_execution(task.executions)) is not None
+        and active_execution.status in active_task_statuses
+    }
+    if not active_task_ids:
+        return
+    try:
+        automation_states = await octobot_node.scheduler.SCHEDULER.get_automation_states(
+            user_id,
+            statuses=[
+                dbos.WorkflowStatusString.ENQUEUED,
+                dbos.WorkflowStatusString.PENDING,
+            ],
+        )
+        child_process_by_automation_id = {
+            automation_state.id: automation_state.child_octobot_process
+            for automation_state in automation_states
+            if automation_state.child_octobot_process is not None
+            and automation_state.id in active_task_ids
+        }
+        for task in tasks:
+            if task.id in child_process_by_automation_id:
+                if task.metadata is None:
+                    task.metadata = octobot_node.models.TaskMetadata()
+                task.metadata.child_octobot_process = child_process_by_automation_id[task.id]
+    except Exception as enrich_error:
+        logger.exception(
+            enrich_error, True, "Failed to enrich tasks with child_octobot_process: %s", enrich_error
+        )
+
+
+async def get_all_tasks(
+    user_id: typing.Optional[str] = None,
+) -> list[octobot_node.models.Task]:
     executions: list[octobot_node.models.Execution] = []
     try:
         periodic, pending, scheduled, results = await asyncio.gather(
-            octobot_node.scheduler.SCHEDULER.get_periodic_tasks(),
-            octobot_node.scheduler.SCHEDULER.get_pending_tasks(),
-            octobot_node.scheduler.SCHEDULER.get_scheduled_tasks(),
-            octobot_node.scheduler.SCHEDULER.get_results(),
+            octobot_node.scheduler.SCHEDULER.get_periodic_tasks(user_id=user_id),
+            octobot_node.scheduler.SCHEDULER.get_pending_tasks(user_id=user_id),
+            octobot_node.scheduler.SCHEDULER.get_scheduled_tasks(user_id=user_id),
+            octobot_node.scheduler.SCHEDULER.get_results(user_id=user_id),
         )
         executions.extend(periodic)
         executions.extend(pending)
@@ -136,18 +248,47 @@ async def get_all_tasks() -> list[octobot_node.models.Task]:
         return []
 
     tasks = _build_tasks_from_executions(executions)
+    await _enrich_tasks_with_child_octobot_process(tasks, user_id)
     logger.debug("Returning %d total tasks from %d executions", len(tasks), len(executions))
     return tasks
 
 
-async def delete_task(task_id: str) -> str:
-    await octobot_node.scheduler.SCHEDULER.delete_workflows([task_id])
-    return task_id
+async def get_tasks_export_results(
+    task_ids: list[str],
+    user_id: typing.Optional[str],
+    user_rsa_public_key: typing.Optional[str] = None,
+) -> dict[str, dict[str, str]]:
+    if not task_ids:
+        return {}
+    return await octobot_node.scheduler.SCHEDULER.get_workflows_export_results(
+        task_ids, user_id, user_rsa_public_key=user_rsa_public_key
+    )
+
+
+async def delete_tasks(task_ids: list[str]) -> list[str]:
+    await octobot_node.scheduler.SCHEDULER.delete_workflows(task_ids)
+    return task_ids
+
+
+async def cancel_tasks(task_ids: list[str]) -> list[str]:
+    return await octobot_node.scheduler.SCHEDULER.cancel_workflows(task_ids)
+
+
+async def retrieve_workflow_handle(workflow_id: str):
+    return await octobot_node.scheduler.SCHEDULER.INSTANCE.retrieve_workflow_async(workflow_id)
+
+
+async def await_workflow_result_from_id(workflow_id: str) -> typing.Any:
+    workflow_handle = await retrieve_workflow_handle(workflow_id)
+    return await asyncio.wait_for(
+        workflow_handle.get_result(),
+        timeout=octobot_node.constants.USER_ACTION_WORKFLOW_RESULT_TIMEOUT_SECONDS,
+    )
 
 
 async def get_task_result(task_id: str):
     try:
-        handle = await octobot_node.scheduler.SCHEDULER.INSTANCE.retrieve_workflow_async(task_id)
+        handle = await retrieve_workflow_handle(task_id)
     except Exception:
         return {"error": "task not found"}
 
@@ -162,9 +303,11 @@ async def get_task_result(task_id: str):
         if wf_status == "ERROR":
             try:
                 result_data = await handle.get_result()
-            except Exception as e:
-                result_data = {"error": str(e)}
+            except Exception as error:
+                result_data = {"error": str(error)}
             return {"status": "completed", "data": result_data}
-    except Exception as e:
-        logger.debug(f"Workflow {task_id} not yet complete: {e}")
+        if wf_status == "CANCELLED":
+            return {"status": "cancelled", "data": None}
+    except Exception as error:
+        logger.debug(f"Workflow {task_id} not yet complete: {error}")
     return {"status": "pending or running"}

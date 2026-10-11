@@ -17,8 +17,12 @@
 import math
 import time
 
+import octobot_commons.constants as commons_constants
+import octobot_commons.enums as commons_enums
 import octobot_commons.errors
 import octobot_commons.dsl_interpreter as dsl_interpreter
+import octobot_commons.json_util as json_util
+
 
 
 class MinOperator(dsl_interpreter.CallOperator):
@@ -26,10 +30,18 @@ class MinOperator(dsl_interpreter.CallOperator):
     NAME = "min"
     DESCRIPTION = "Returns the minimum value from the given operands."
     EXAMPLE = "min(1, 2, 3)"
+    CATEGORY = commons_enums.DslKeywordCategory.LOGIC.value
 
     @staticmethod
     def get_name() -> str:
         return "min"
+
+    @classmethod
+    def get_return_values(cls) -> list[dsl_interpreter.OperatorParameter]:
+        return cls.result_return_value(
+            commons_enums.DslValueType.NUMBER.value,
+            description="Minimum of the operands",
+        )
 
     def compute(self) -> dsl_interpreter.ComputedOperatorParameterType:
         operands = self.get_computed_parameters()
@@ -41,10 +53,18 @@ class MaxOperator(dsl_interpreter.CallOperator):
     NAME = "max"
     DESCRIPTION = "Returns the maximum value from the given operands."
     EXAMPLE = "max(1, 2, 3)"
+    CATEGORY = commons_enums.DslKeywordCategory.LOGIC.value
 
     @staticmethod
     def get_name() -> str:
         return "max"
+
+    @classmethod
+    def get_return_values(cls) -> list[dsl_interpreter.OperatorParameter]:
+        return cls.result_return_value(
+            commons_enums.DslValueType.NUMBER.value,
+            description="Maximum of the operands",
+        )
 
     def compute(self) -> dsl_interpreter.ComputedOperatorParameterType:
         operands = self.get_computed_parameters()
@@ -56,10 +76,18 @@ class MeanOperator(dsl_interpreter.CallOperator):
     NAME = "mean"
     DESCRIPTION = "Returns the arithmetic mean (average) of the given numeric operands."
     EXAMPLE = "mean(1, 2, 3, 4)"
+    CATEGORY = commons_enums.DslKeywordCategory.LOGIC.value
 
     @staticmethod
     def get_name() -> str:
         return "mean"
+
+    @classmethod
+    def get_return_values(cls) -> list[dsl_interpreter.OperatorParameter]:
+        return cls.result_return_value(
+            commons_enums.DslValueType.NUMBER.value,
+            description="Arithmetic mean of the operands",
+        )
 
     def compute(self) -> dsl_interpreter.ComputedOperatorParameterType:
         operands = self.get_computed_parameters()
@@ -81,10 +109,18 @@ class SqrtOperator(dsl_interpreter.CallOperator):
     NAME = "sqrt"
     DESCRIPTION = "Returns the square root of the given numeric operand."
     EXAMPLE = "sqrt(16)"
+    CATEGORY = commons_enums.DslKeywordCategory.LOGIC.value
 
     @staticmethod
     def get_name() -> str:
         return "sqrt"
+
+    @classmethod
+    def get_return_values(cls) -> list[dsl_interpreter.OperatorParameter]:
+        return cls.result_return_value(
+            commons_enums.DslValueType.NUMBER.value,
+            description="Square root of the operand",
+        )
 
     def compute(self) -> dsl_interpreter.ComputedOperatorParameterType:
         computed_parameters = self.get_computed_parameters()
@@ -102,10 +138,18 @@ class AbsOperator(dsl_interpreter.CallOperator):
     NAME = "abs"
     DESCRIPTION = "Returns the absolute value of the given operand."
     EXAMPLE = "abs(-5)"
+    CATEGORY = commons_enums.DslKeywordCategory.LOGIC.value
 
     @staticmethod
     def get_name() -> str:
         return "abs"
+
+    @classmethod
+    def get_return_values(cls) -> list[dsl_interpreter.OperatorParameter]:
+        return cls.result_return_value(
+            commons_enums.DslValueType.NUMBER.value,
+            description="Absolute value of the operand",
+        )
 
     def compute(self) -> dsl_interpreter.ComputedOperatorParameterType:
         computed_parameters = self.get_computed_parameters()
@@ -117,6 +161,7 @@ class RoundOperator(dsl_interpreter.CallOperator):
     NAME = "round"
     DESCRIPTION = "Rounds the given numeric value to the specified number of decimal digits. If digits is not provided, rounds to the nearest integer."
     EXAMPLE = "round(3.14159, 2)"
+    CATEGORY = commons_enums.DslKeywordCategory.LOGIC.value
 
     @staticmethod
     def get_name() -> str:
@@ -125,9 +170,24 @@ class RoundOperator(dsl_interpreter.CallOperator):
     @classmethod
     def get_parameters(cls) -> list[dsl_interpreter.OperatorParameter]:
         return [
-            dsl_interpreter.OperatorParameter(name="value", description="the value to round", required=True, type=list),
-            dsl_interpreter.OperatorParameter(name="digits", description="the number of digits to round to", required=False, type=int),
+            dsl_interpreter.OperatorParameter(
+                name="value",
+                description="the value to round",
+                required=True,
+                type=commons_enums.DslValueType.NUMBER.value),
+            dsl_interpreter.OperatorParameter(
+                name="digits",
+                description="the number of digits to round to",
+                required=False,
+                type=commons_enums.DslValueType.NUMBER.value),
         ]
+
+    @classmethod
+    def get_return_values(cls) -> list[dsl_interpreter.OperatorParameter]:
+        return cls.result_return_value(
+            commons_enums.DslValueType.NUMBER.value,
+            description="Rounded numeric value",
+        )
 
     def compute(self) -> dsl_interpreter.ComputedOperatorParameterType:
         computed_parameters = self.get_computed_parameters()
@@ -146,10 +206,18 @@ class FloorOperator(dsl_interpreter.CallOperator):
     NAME = "floor"
     DESCRIPTION = "Returns the floor of the given numeric operand (largest integer less than or equal to the value)."
     EXAMPLE = "floor(3.7)"
+    CATEGORY = commons_enums.DslKeywordCategory.LOGIC.value
 
     @staticmethod
     def get_name() -> str:
         return "floor"
+
+    @classmethod
+    def get_return_values(cls) -> list[dsl_interpreter.OperatorParameter]:
+        return cls.result_return_value(
+            commons_enums.DslValueType.NUMBER.value,
+            description="Floor of the operand",
+        )
 
     def compute(self) -> dsl_interpreter.ComputedOperatorParameterType:
         computed_parameters = self.get_computed_parameters()
@@ -167,10 +235,18 @@ class CeilOperator(dsl_interpreter.CallOperator):
     NAME = "ceil"
     DESCRIPTION = "Returns the ceiling of the given numeric operand (smallest integer greater than or equal to the value)."
     EXAMPLE = "ceil(3.2)"
+    CATEGORY = commons_enums.DslKeywordCategory.LOGIC.value
 
     @staticmethod
     def get_name() -> str:
         return "ceil"
+
+    @classmethod
+    def get_return_values(cls) -> list[dsl_interpreter.OperatorParameter]:
+        return cls.result_return_value(
+            commons_enums.DslValueType.NUMBER.value,
+            description="Ceiling of the operand",
+        )
 
     def compute(self) -> dsl_interpreter.ComputedOperatorParameterType:
         computed_parameters = self.get_computed_parameters()
@@ -188,10 +264,18 @@ class SinOperator(dsl_interpreter.CallOperator):
     NAME = "sin"
     DESCRIPTION = "Returns the sine of the given numeric operand (in radians)."
     EXAMPLE = "sin(1.23)"
+    CATEGORY = commons_enums.DslKeywordCategory.LOGIC.value
 
     @staticmethod
     def get_name() -> str:
         return "sin"
+
+    @classmethod
+    def get_return_values(cls) -> list[dsl_interpreter.OperatorParameter]:
+        return cls.result_return_value(
+            commons_enums.DslValueType.NUMBER.value,
+            description="Sine of the operand",
+        )
 
     def compute(self) -> dsl_interpreter.ComputedOperatorParameterType:
         computed_parameters = self.get_computed_parameters()
@@ -209,10 +293,18 @@ class CosOperator(dsl_interpreter.CallOperator):
     NAME = "cos"
     DESCRIPTION = "Returns the cosine of the given numeric operand (in radians)."
     EXAMPLE = "cos(1.23)"
+    CATEGORY = commons_enums.DslKeywordCategory.LOGIC.value
 
     @staticmethod
     def get_name() -> str:
         return "cos"
+
+    @classmethod
+    def get_return_values(cls) -> list[dsl_interpreter.OperatorParameter]:
+        return cls.result_return_value(
+            commons_enums.DslValueType.NUMBER.value,
+            description="Cosine of the operand",
+        )
 
     def compute(self) -> dsl_interpreter.ComputedOperatorParameterType:
         computed_parameters = self.get_computed_parameters()
@@ -230,10 +322,18 @@ class OscillatorOperator(dsl_interpreter.CallOperator):
     NAME = "oscillate"
     DESCRIPTION = "Returns the base value with a time-based oscillating component added. The oscillation uses a sine wave with the specified maximum percentage of the base value and period in minutes."
     EXAMPLE = "oscillate(100, 10, 60)"
+    CATEGORY = commons_enums.DslKeywordCategory.SOURCE.value
 
     @staticmethod
     def get_name() -> str:
         return "oscillate"
+
+    @classmethod
+    def get_return_values(cls) -> list[dsl_interpreter.OperatorParameter]:
+        return cls.result_return_value(
+            commons_enums.DslValueType.NUMBER.value,
+            description="Base value with oscillation applied",
+        )
 
     def compute(self) -> dsl_interpreter.ComputedOperatorParameterType:
         computed_parameters = self.get_computed_parameters()
@@ -264,14 +364,183 @@ class OscillatorOperator(dsl_interpreter.CallOperator):
         return base_value + oscillation_value
 
 
+class GetOperator(dsl_interpreter.CallOperator):
+    MIN_PARAMS = 3
+    MAX_PARAMS = 3
+    NAME = "get"
+    DESCRIPTION = (
+        "Returns element.get(key, default) for mapping-like objects. "
+        "On TypeError or AttributeError, returns default."
+    )
+    EXAMPLE = 'get(dict_var, "color", "blue")'
+    CATEGORY = commons_enums.DslKeywordCategory.LOGIC.value
+
+    @staticmethod
+    def get_name() -> str:
+        return "get"
+
+    @classmethod
+    def get_return_values(cls) -> list[dsl_interpreter.OperatorParameter]:
+        return cls.result_return_value(
+            commons_enums.DslValueType.ANY.value,
+            description="Value for key, or default",
+        )
+
+    def compute(self) -> dsl_interpreter.ComputedOperatorParameterType:
+        computed_parameters = self.get_computed_parameters()
+        element = computed_parameters[0]
+        key = computed_parameters[1]
+        default = computed_parameters[2]
+        try:
+            return element.get(key, default) # type: ignore
+        except (TypeError, AttributeError):
+            return default
+
+
+class ValueIfOperator(
+    dsl_interpreter.PreComputingCallOperator,
+    dsl_interpreter.NestedInterpretationMixin,
+):
+    NAME = "value_if"
+    DESCRIPTION = (
+        "Returns the computed value if the inner DSL expression evaluates to a truthy result; "
+        "otherwise False. If the condition string contains the LOCAL_VALUE_PLACEHOLDER placeholder, "
+        "that placeholder is replaced by repr(sanitize(value)) and the result is the full inner expression. "
+        "Otherwise the inner expression is repr(value) followed by the condition string (suffix mode)."
+    )
+    EXAMPLE = "value_if(15, ' > 12') or value_if(order, \"get(LOCAL_VALUE_PLACEHOLDER, 'status', 'x') == 'open'\")"
+    CATEGORY = commons_enums.DslKeywordCategory.LOGIC.value
+
+    @staticmethod
+    def get_name() -> str:
+        return "value_if"
+
+    @classmethod
+    def get_parameters(cls) -> list[dsl_interpreter.OperatorParameter]:
+        return [
+            dsl_interpreter.OperatorParameter(
+                name="value",
+                description=(
+                    "the value to compare; used as repr(value) in suffix mode or to replace "
+                    "LOCAL_VALUE_PLACEHOLDER with repr(sanitize(value)) when present"
+                ),
+                required=True,
+                type=commons_enums.DslValueType.ANY.value,
+            ),
+            dsl_interpreter.OperatorParameter(
+                name="condition",
+                description=(
+                    "DSL string: either a suffix appended after repr(value), or a full expression "
+                    "where LOCAL_VALUE_PLACEHOLDER is replaced by repr(sanitize(value))"
+                ),
+                required=True,
+                type=commons_enums.DslValueType.TEXT.value,
+            ),
+        ]
+
+    @classmethod
+    def get_return_values(cls) -> list[dsl_interpreter.OperatorParameter]:
+        return cls.result_return_value(
+            commons_enums.DslValueType.ANY.value,
+            description="Value when condition is truthy, otherwise False",
+        )
+
+    async def pre_compute(self) -> None:
+        await super().pre_compute()
+        param_by_name = self.get_computed_value_by_parameter()
+        computed_value = param_by_name["value"]
+        condition_script = param_by_name["condition"]
+        if not isinstance(condition_script, str):
+            raise octobot_commons.errors.InvalidParametersError(
+                f"value_if() requires condition to be a str, got {type(condition_script).__name__}"
+            )
+        if commons_constants.LOCAL_VALUE_PLACEHOLDER not in condition_script:
+            inner_expression = repr(computed_value) + condition_script
+        else:
+            inner_expression = condition_script.replace(
+                commons_constants.LOCAL_VALUE_PLACEHOLDER,
+                repr(json_util.sanitize(computed_value)),
+            )
+        condition_result = await self.interprete_in_nested_interpreter(inner_expression)
+        self.value = computed_value if bool(condition_result) else False
+
+
+class IfErrorOperator(
+    dsl_interpreter.PreComputingCallOperator,
+    dsl_interpreter.NestedInterpretationMixin,
+):
+    NAME = "if_error"
+    DESCRIPTION = (
+        "Returns the computed value of the base expression when it does not raise. "
+        "If the base raises during pre_compute or compute, interprets the on_error parameter string as a DSL expression "
+        "and returns that result. Pass on_error as a string literal so it is not evaluated eagerly."
+    )
+    EXAMPLE = "if_error(sqrt(-1), \"'fallback'\")"
+    CATEGORY = commons_enums.DslKeywordCategory.LOGIC.value
+
+    @staticmethod
+    def get_name() -> str:
+        return "if_error"
+
+    @classmethod
+    def get_parameters(cls) -> list[dsl_interpreter.OperatorParameter]:
+        return [
+            dsl_interpreter.OperatorParameter(
+                name="value",
+                description="base DSL expression; its computed value is returned when evaluation succeeds",
+                required=True,
+                type=commons_enums.DslValueType.ANY.value),
+            dsl_interpreter.OperatorParameter(
+                name="on_error",
+                description=(
+                    "DSL source string (use a string literal): interpreted only when the base expression raises"
+                ),
+                required=True,
+                type=commons_enums.DslValueType.TEXT.value,
+            ),
+        ]
+
+    @classmethod
+    def get_return_values(cls) -> list[dsl_interpreter.OperatorParameter]:
+        return cls.result_return_value(
+            commons_enums.DslValueType.ANY.value,
+            description="Base value, or on_error expression result when base raises",
+        )
+
+    async def pre_compute(self) -> None:
+        param_by_name = self.get_input_value_by_parameter()
+        value_input = param_by_name["value"]
+        on_error_script = param_by_name["on_error"]
+        if not isinstance(on_error_script, str):
+            raise octobot_commons.errors.InvalidParametersError(
+                f"if_error() requires on_error to be a str, got {type(on_error_script).__name__}"
+            )
+        try:
+            await super().pre_compute()
+            if isinstance(value_input, dsl_interpreter.Operator):
+                self.value = value_input.compute()
+            else:
+                self.value = self._get_computed_parameter(value_input)
+        except Exception:
+            self.value = await self.interprete_in_nested_interpreter(on_error_script)
+
+
 class ErrorOperator(dsl_interpreter.CallOperator):
     NAME = "error"
     DESCRIPTION = "Raises a ErrorStatementEncountered exception with the given parameters."
     EXAMPLE = "error('123-error')"
+    CATEGORY = commons_enums.DslKeywordCategory.ACTION.value
 
     @staticmethod
     def get_name() -> str:
         return "error"
+
+    @classmethod
+    def get_return_values(cls) -> list[dsl_interpreter.OperatorParameter]:
+        return cls.result_return_value(
+            commons_enums.DslValueType.ANY.value,
+            description="Does not return; raises ErrorStatementEncountered",
+        )
 
     def compute(self):
         params = self.get_computed_parameters()

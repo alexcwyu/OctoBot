@@ -18,6 +18,7 @@ import sys
 from typing import TYPE_CHECKING
 
 import octobot_commons.tentacles_management as tentacles_management
+import octobot_commons.user_root_folder_provider as user_root_folder_provider
 
 import octobot_tentacles_manager.api as api
 import octobot_tentacles_manager.configuration as configuration
@@ -26,12 +27,15 @@ import octobot_tentacles_manager.util as util
 import octobot_tentacles_manager.managers as managers
 
 if TYPE_CHECKING:
+    import octobot_commons.profiles.profile_types.profile as profile_module
     from octobot_tentacles_manager.configuration import TentaclesSetupConfiguration
 
 
 async def ensure_setup_configuration(tentacle_path=constants.TENTACLES_PATH, bot_path=constants.DEFAULT_BOT_PATH,
                                      bot_install_dir=constants.DEFAULT_BOT_INSTALL_DIR) -> None:
-    if not path.exists(path.join(bot_path, constants.USER_REFERENCE_TENTACLE_CONFIG_FILE_PATH)):
+    if not path.exists(
+        path.join(bot_path, user_root_folder_provider.get_user_reference_tentacle_config_file_path())
+    ):
         await api.repair_installation(tentacle_path, bot_path, bot_install_dir, verbose=False)
 
 
@@ -61,16 +65,23 @@ def refresh_all_tentacles_setup_configs(
 
 
 def get_tentacles_setup_config(
-    config_path=constants.USER_REFERENCE_TENTACLE_CONFIG_FILE_PATH
+    config_path: str = None,
+    profile: "profile_module.Profile | None" = None,
 ) -> "TentaclesSetupConfiguration":
+    if config_path is None:
+        config_path = user_root_folder_provider.get_user_reference_tentacle_config_file_path()
     setup_config = configuration.TentaclesSetupConfiguration(config_path=config_path)
     setup_config.read_config()
+    if profile is not None:
+        setup_config.profile = profile
     return setup_config
 
 
 def create_tentacles_setup_config_with_tentacles(
-    *tentacles_classes, config_path=constants.USER_REFERENCE_TENTACLE_CONFIG_FILE_PATH
+    *tentacles_classes, config_path: str = None
 ) -> "TentaclesSetupConfiguration":
+    if config_path is None:
+        config_path = user_root_folder_provider.get_user_reference_tentacle_config_file_path()
     setup_config = configuration.TentaclesSetupConfiguration(config_path=config_path)
     setup_config.from_activated_tentacles_classes(*tentacles_classes)
     return setup_config
@@ -107,7 +118,7 @@ def _apply_reference_tentacles_config_registered_tentacles(
     tentacles_setup_config: "TentaclesSetupConfiguration"
 ):
     reference_tentacles_setup_config = get_tentacles_setup_config(
-        constants.USER_REFERENCE_TENTACLE_CONFIG_FILE_PATH
+        user_root_folder_provider.get_user_reference_tentacle_config_file_path()
     )
     tentacles_setup_config.registered_tentacles = reference_tentacles_setup_config.registered_tentacles
 
@@ -188,8 +199,8 @@ def get_tentacle_config(tentacles_setup_config: "TentaclesSetupConfiguration", k
     return configuration.get_config(tentacles_setup_config, klass)
 
 
-def set_tentacle_config_proxy(new_proxy) -> dict:
-    return configuration.set_get_config_proxy(new_proxy)
+def set_tentacle_config_proxy(new_proxy):
+    return configuration.local_get_config_proxy(new_proxy)
 
 
 def local_tentacle_config_proxy(new_proxy):

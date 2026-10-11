@@ -20,8 +20,23 @@ import octobot_commons.enums as enums
 import octobot_commons.dict_util as dict_util
 
 
+USER_INPUT_TYPE_TO_PYTHON_TYPE = {
+    enums.UserInputTypes.INT.value: int,
+    enums.UserInputTypes.FLOAT.value: float,
+    enums.UserInputTypes.BOOLEAN.value: bool,
+    enums.UserInputTypes.TEXT.value: str,
+    enums.UserInputTypes.OBJECT.value: dict,
+    enums.UserInputTypes.OBJECT_ARRAY.value: list,
+    enums.UserInputTypes.STRING_ARRAY.value: list,
+    enums.UserInputTypes.OPTIONS.value: str,
+    enums.UserInputTypes.MULTIPLE_OPTIONS.value: list,
+}
+
+
+MAX_USER_INPUT_ORDER = 9999
+
+
 class UserInput:
-    MAX_ORDER = 9999
 
     def __init__(
         self,
@@ -318,6 +333,10 @@ def _find_parent_config_node(tentacle_config, parent_input_name, array_indexes):
         if found and isinstance(nested_parent, dict):
             return nested_parent
         if found and isinstance(nested_parent, list) and array_indexes:
+            # Nested OBJECT_ARRAY item inputs may create placeholder objects for
+            # schema/default seeding on empty config.
+            while len(nested_parent) <= array_indexes[-1]:
+                nested_parent.append({})
             return nested_parent[array_indexes[-1]]
         # non dict or list with array_indexes nested parents are not supported
         return None

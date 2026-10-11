@@ -14,7 +14,7 @@
 #  You should have received a copy of the GNU Lesser General Public
 #  License along with this library.
 
-"""Shared fixtures for e2e tests."""
+"""Shared fixtures for e2e tests (require S3_ENDPOINT in environment)."""
 
 import os
 from pathlib import Path
@@ -23,14 +23,10 @@ import pytest
 from httpx import AsyncClient, ASGITransport
 
 import octobot_sync.app as sync_app
-import octobot_sync.auth as auth
-import octobot_sync.chain as chain
-import tests.mock_chain as mock_chain_module
 
-ADMIN_PUBKEY = "0xE2eAdminPubkey"
-USER_PUBKEY = "0xE2eUserPubkey"
-OTHER_PUBKEY = "0xE2eOtherPubkey"
-CHAIN_ID = "mock"
+# Well-known Hardhat test key #1 — safe to embed in tests.
+USER_PRIVATE_KEY = "0x59c6995e998f97a5a0044966f0945389dc9e86dae88c7a8412f4603b6b78690d"
+OTHER_PRIVATE_KEY = "0x5de4111afa1a4b94908f83103eb1f1706367c2e68ca870fc3fb9a804cdab365a"
 
 COLLECTIONS_PATH = str(Path(__file__).resolve().parent.parent / "fixtures" / "collections.json")
 
@@ -50,7 +46,7 @@ async def s3_store():
     )
     yield store
     try:
-        for prefix in ("test/", "products/", "users/", "public/", "platform/"):
+        for prefix in ("test/", "users/", "public/"):
             keys = await store.list_keys(prefix)
             if keys:
                 await store.delete_many(keys)
@@ -59,23 +55,12 @@ async def s3_store():
 
 
 @pytest.fixture
-def mock_chain():
-    return mock_chain_module.MockChain(CHAIN_ID)
-
-
-@pytest.fixture
-def app(s3_store, mock_chain, monkeypatch):
-    monkeypatch.setenv("PLATFORM_PUBKEY_EVM", ADMIN_PUBKEY)
-    monkeypatch.setenv("ENCRYPTION_SECRET", "e2e-encryption-secret")
-    monkeypatch.setenv("PLATFORM_ENCRYPTION_SECRET", "e2e-platform-secret")
-    registry = chain.ChainRegistry()
-    registry.register(mock_chain)
-    nonce = auth.NonceStore(auth.MemoryStorageAdapter())
-    return sync_app.create_app(nonce, s3_store, registry, collections_path=COLLECTIONS_PATH)
+def app(s3_store):
+    return sync_app.create_app(s3_store, collections_path=COLLECTIONS_PATH)
 
 
 @pytest.fixture
 async def client(app):
     transport = ASGITransport(app=app)
-    async with AsyncClient(transport=transport, base_url="http://test") as ac:
+    async with AsyncClient(transport=transport, base_url="http://test/sync") as ac:
         yield ac

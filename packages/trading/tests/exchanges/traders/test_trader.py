@@ -35,7 +35,7 @@ from octobot_commons.tests.test_config import load_test_config
 from octobot_trading.personal_data.orders import Order
 import octobot_trading.errors as errors
 from octobot_trading.enums import TraderOrderType, TradeOrderSide, TradeOrderType, OrderStatus, \
-    ExchangeConstantsPositionColumns, PositionMode, MarginType, TakeProfitStopLossMode, ExchangeSupportedElements, \
+    ExchangeConstantsPositionColumns, PositionMode, MarginType, TakeProfitStopLossMode, \
     ExchangeConstantsTransactionColumns
 from octobot_trading.exchanges.exchange_manager import ExchangeManager
 from octobot_trading.personal_data.orders.order_factory import create_order_instance, create_order_instance_from_raw
@@ -417,6 +417,39 @@ class TestTrader:
         finally:
             trader_inst.simulate = True
 
+    async def test_cancel_order_skip_pending_cancel_status(self):
+        _, exchange_manager, trader_inst = await init_default()
+        orders_manager = exchange_manager.exchange_personal_data.orders_manager
+
+        limit_buy = BuyLimitOrder(trader_inst)
+        limit_buy.update(
+            order_type=TraderOrderType.BUY_LIMIT,
+            symbol=self.DEFAULT_SYMBOL,
+            current_price=decimal.Decimal("70"),
+            quantity=decimal.Decimal("10"),
+            price=decimal.Decimal("70"),
+        )
+        assert await trader_inst.create_order(limit_buy)
+        assert limit_buy in orders_manager.get_open_orders()
+
+        try:
+            trader_inst.simulate = False
+            with mock.patch.object(
+                exchange_manager.exchange,
+                "cancel_order",
+                mock.AsyncMock(return_value=OrderStatus.PENDING_CANCEL),
+            ) as cancel_order_mock:
+                assert await trader_inst.cancel_order(
+                    limit_buy,
+                    skip_pending_cancel_status=True,
+                ) is True
+                cancel_order_mock.assert_called_once()
+            assert limit_buy.status is OrderStatus.CANCELED
+            assert limit_buy not in orders_manager.get_open_orders()
+        finally:
+            trader_inst.simulate = True
+
+        await stop(exchange_manager)
 
     async def test_cancel_open_orders_default_symbol(self):
         config, exchange_manager, trader_inst = await init_default()
@@ -1183,11 +1216,16 @@ class TestTrader:
 
         base_order = BuyLimitOrder(trader_inst)
         chained_order = StopLossOrder(trader_inst)
+        chained_order.order_type = TraderOrderType.STOP_LOSS
         # with bundle support
-        exchange_manager.exchange.get_supported_elements(ExchangeSupportedElements.SUPPORTED_BUNDLED_ORDERS)[
-            base_order.order_type] = [chained_order.order_type]
-        assert await trader_inst.bundle_chained_order_with_uncreated_order(base_order, chained_order, False, kw1=1, kw2="hello") \
-               == {}
+        with patch.object(
+            exchange_manager.exchange, "supports_bundled_orders", Mock(return_value=True)
+        ), patch.object(
+            exchange_manager.exchange, "get_bundled_order_parameters", Mock(return_value={})
+        ):
+            assert await trader_inst.bundle_chained_order_with_uncreated_order(
+                base_order, chained_order, False, kw1=1, kw2="hello"
+            ) == {}
         # bundled chained_order to base_order
         assert chained_order in base_order.chained_orders
         assert chained_order.triggered_by is base_order
@@ -1472,7 +1510,12 @@ async def test_create_order(future_trader_simulator_with_default_linear):
         _create_new_order_mock.assert_called_once_with(
             order_mock, {}, True, constants.INDIVIDUAL_ORDER_SYNC_TIMEOUT
         )
-    for err in (errors.MissingFunds, errors.AuthenticationError, errors.ExchangeCompliancyError):
+    for err in (
+        errors.MissingFunds,
+        errors.AuthenticationError,
+        errors.ExchangeCompliancyError,
+        errors.RetriableFailedRequest,
+    ):
         with mock.patch.object(
                 trader_inst, "_create_new_order", mock.AsyncMock(side_effect=err)
         ) as _create_new_order_mock:

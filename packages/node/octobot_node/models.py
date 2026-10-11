@@ -21,6 +21,7 @@ from enum import Enum
 
 from pydantic import BaseModel, Field
 
+import octobot_protocol.models as protocol_models
 
 class UserBase(BaseModel):
     email: str = Field(max_length=255)
@@ -40,6 +41,7 @@ class TaskStatus(str, Enum):
     RUNNING = "running"
     COMPLETED = "completed"
     FAILED = "failed"
+    CANCELLED = "cancelled"
 
 
 class TaskType(str, Enum):
@@ -50,23 +52,35 @@ class Execution(BaseModel):
     name: typing.Optional[str] = None
     description: typing.Optional[str] = None
     actions: typing.Optional[str] = None
+    is_encrypted: bool = False
     type: typing.Optional[str] = None
     status: typing.Optional[TaskStatus] = None
     result: typing.Optional[str] = None
     result_metadata: typing.Optional[str] = None
     scheduled_at: typing.Optional[datetime.datetime] = None
     completed_at: typing.Optional[datetime.datetime] = None
+    error: typing.Optional[str] = None
+    error_message: typing.Optional[str] = None
+    user_id: typing.Optional[str] = None
+
+
+class TaskMetadata(BaseModel):
+    child_octobot_process: typing.Optional[protocol_models.ChildOctoBotProcessState] = None
 
 
 class Task(BaseModel):
-    id: str = str(uuid.uuid4())
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
     name: typing.Optional[str] = None
     content: typing.Optional[str] = None
     content_metadata: typing.Optional[str] = None
+    is_encrypted: bool = False
     type: typing.Optional[str] = None
-    result: typing.Optional[typing.Any] = None
-    result_metadata: typing.Optional[str] = None
     executions: list[Execution] = []
+    error: typing.Optional[str] = None
+    error_message: typing.Optional[str] = None
+    user_ecdsa_public_key: typing.Optional[str] = None
+    user_id: typing.Optional[str] = None
+    metadata: typing.Optional[TaskMetadata] = None
 
 class Node(BaseModel):
     node_type: str

@@ -1,9 +1,9 @@
 from octobot_flow.entities.accounts import (
     PortfolioAssetHolding,
-    ReferenceExchangeAccountElements,
-    ClientExchangeAccountElements,
+    ExchangeAccountElements,
     ExchangeAccountDetails,
     ExchangeAccountPortfolio,
+    ExchangeAccountMetadata,
     AccountElements,
 )
 from octobot_flow.entities.actions import (
@@ -18,6 +18,7 @@ from octobot_flow.entities.automations import (
     FetchedExchangeAccountElements,
     FetchedExchangePublicData,
     FetchedExchangeData,
+    FetchedCopyTradingData,
     AutomationMetadata,
     AutomationDetails,
     AutomationState,
@@ -31,15 +32,28 @@ from octobot_flow.entities.automations import (
     PostIterationActionsDetails,
 )
 from octobot_flow.entities.community import (
-    UserAuthentication
+    UserAuthentication,
+    TradingSignal,
+)
+from octobot_flow.entities.global_view import (
+    GlobalViewAccountContext,
+    ExchangeAccountRefreshResult,
+    GlobalViewAccountRefreshResult,
+)
+from octobot_flow.entities.portfolio_history import (
+    PortfolioHistoryAccountContext,
+    PortfolioHistoryRunResult,
+)
+from octobot_flow.entities.signals import (
+    SignalExchangeContext,
 )
 __all__ = [
     "AccountElements",
-    "ReferenceExchangeAccountElements",
-    "ClientExchangeAccountElements",
+    "ExchangeAccountElements",
     "PortfolioAssetHolding",
     "ExchangeAccountDetails",
     "ExchangeAccountPortfolio",
+    "ExchangeAccountMetadata",
     "ActionDependency",
     "AbstractActionDetails",
     "DSLScriptActionDetails",
@@ -52,6 +66,7 @@ __all__ = [
     "FetchedExchangeAccountElements",
     "FetchedExchangePublicData",
     "FetchedExchangeData",
+    "FetchedCopyTradingData",
     "AutomationMetadata",
     "AutomationDetails",
     "AutomationState",
@@ -61,4 +76,11 @@ __all__ = [
     "ExecutionDetails",
     "AdditionalActions",
     "UserAuthentication",
+    "TradingSignal",
+    "GlobalViewAccountContext",
+    "ExchangeAccountRefreshResult",
+    "GlobalViewAccountRefreshResult",
+    "PortfolioHistoryAccountContext",
+    "PortfolioHistoryRunResult",
+    "SignalExchangeContext",
 ]

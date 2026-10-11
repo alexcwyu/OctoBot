@@ -25,7 +25,9 @@ import octobot_commons.html_util as html_util
 import octobot_trading.exchanges as exchanges
 import octobot_trading.errors as errors
 import octobot_tentacles_manager.api
+import octobot_protocol.models as protocol_models
 from ..hollaex.hollaex_exchange import hollaex
+from .hollaex_exchanges import _CUSTOM_EXCHANGE_AVAILABILITIES
 
 
 _EXCHANGE_REMOTE_CONFIG_BY_EXCHANGE_KIT_URL: dict[str, dict] = {}
@@ -36,6 +38,13 @@ _REFRESHED_EXCHANGE_REMOTE_CONFIG_BY_EXCHANGE_KIT_URL : cachetools.TTLCache[str,
 
 class HollaexAutofilled(hollaex):
     HAS_FETCHED_DETAILS = True
+
+    @classmethod
+    def get_exchange_availabilities(cls) -> list[protocol_models.ExchangeAvailability]:
+        return [
+            availability.to_exchange_availability()
+            for availability in _CUSTOM_EXCHANGE_AVAILABILITIES
+        ]
 
     URL_KEY = "url"
     AUTO_FILLED_KEY = "auto_filled"
@@ -166,7 +175,10 @@ class HollaexAutofilled(hollaex):
 
     @classmethod
     def _get_autofilled_config(cls, tentacle_config, exchange_name):
-        return tentacle_config[cls.AUTO_FILLED_KEY][exchange_name]
+        try:
+            return tentacle_config[cls.AUTO_FILLED_KEY][exchange_name]
+        except KeyError as err:
+            raise KeyError(f"{exchange_name} not in {tentacle_config[cls.AUTO_FILLED_KEY].keys()}") from err
 
     @classmethod
     def get_exchange_details(cls, tentacle_config, exchange_name) -> typing.Optional[exchanges.ExchangeDetails]:
@@ -315,6 +327,10 @@ class HollaexAutofilled(hollaex):
 
     @classmethod
     def get_rest_name(cls, exchange_manager):
+        return hollaex.get_name()
+
+    @classmethod
+    def get_connector_id(cls) -> str:
         return hollaex.get_name()
 
     def get_associated_websocket_exchange_name(self):

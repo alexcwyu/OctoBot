@@ -13,6 +13,7 @@
 #
 #  You should have received a copy of the GNU Lesser General Public
 #  License along with this library.
+import os
 
 # Config
 CONFIG_CATEGORY_SERVICES = "services"
@@ -61,10 +62,11 @@ ENV_WEB_PORT = "WEB_PORT"
 ENV_WEB_ADDRESS = "WEB_ADDRESS"
 ENV_CORS_ALLOWED_ORIGINS = "CORS_ALLOWED_ORIGINS"
 ENV_BACKEND_CORS_ALLOWED_ORIGINS = "BACKEND_CORS_ALLOWED_ORIGINS"
+ENV_BACKEND_CORS_ORIGIN_REGEX = "BACKEND_CORS_ORIGIN_REGEX"
 ENV_AUTO_OPEN_IN_WEB_BROWSER = "AUTO_OPEN_IN_WEB_BROWSER"
 DEFAULT_SERVER_IP = '0.0.0.0'
 DEFAULT_SERVER_PORT = 5001
-DEFAULT_BACKEND_CORS_ALLOWED_ORIGINS = "http://localhost,http://localhost:5173,http://localhost:8000,https://localhost,https://localhost:5173"
+DEFAULT_BACKEND_CORS_ALLOWED_ORIGINS = ""
 
 # Node API service
 CONFIG_NODE_API = "node-api"
@@ -72,6 +74,7 @@ CONFIG_NODE_API_IP = "ip"
 CONFIG_NODE_API_PORT = "port"
 ENV_NODE_API_PORT = "NODE_API_PORT"
 ENV_NODE_API_ADDRESS = "NODE_API_ADDRESS"
+ENV_ENABLE_NODE_API = "ENABLE_NODE_API"
 DEFAULT_NODE_API_IP = DEFAULT_SERVER_IP
 DEFAULT_NODE_API_PORT = 8000
 
@@ -84,8 +87,32 @@ NODE_API_URL = "node-api-url"
 NODE_SQLITE_FILE = "node-sqlite-file"
 NODE_REDIS_URL = "node-redis-url"
 BACKEND_CORS_ALLOWED_ORIGINS = "backend-cors-allowed-origins"
-ENV_NODE_SQLITE_FILE = "ENV_NODE_SQLITE_FILE"
+NODE_EXTERNAL_HOST = "node-external-host"
+ENV_NODE_SQLITE_FILE = "SCHEDULER_SQLITE_FILE" # aligned with node config
 ENV_NODE_POSTGRES_URL = "ENV_NODE_POSTGRES_URL"
+ENV_NODE_EXTERNAL_HOST = "NODE_EXTERNAL_HOST"
+
+# Space-mirror cloud E2E-encrypted sync: off by default, opt-in, required for any
+# third-party (website-pairing) integration. See node_api.py's get/set pair for the
+# persisted-config pattern this follows (same as NODE_EXTERNAL_HOST above).
+CLOUD_SYNC_ENABLED = "cloud-sync-enabled"
+CLOUD_SYNC_COLLECTIONS = "cloud-sync-collections"
+# Node sync collections (see octobot_sync.enums.Collections/TemporaryCollections) the
+# space-mirror can offer by default when cloud sync is first enabled. Deliberately
+# excludes CLOUD_SYNC_FORBIDDEN_COLLECTION (credentials) — that collection is never a
+# configurable option at any layer, not even off-by-default. Also excludes "user-data":
+# octobot_sync.mirror.node_collections.read_node_collection has no wired local reader
+# for it yet (raises NotImplementedError) — see that module's docstring. Add it back
+# once a reader exists; until then defaulting it on breaks the whole sync cycle for
+# every node that just accepts the defaults.
+DEFAULT_CLOUD_SYNC_COLLECTIONS = ["user-accounts", "user-strategies"]
+# octobot_sync.enums.Collections.USER_ACCOUNTS_AUTH's wire value, duplicated here as a
+# literal rather than imported: this module (octobot_services) has no existing
+# dependency on octobot_sync, and every other cloud-sync collection id above is
+# already a bare wire-format string, not an enum reference, for the same reason.
+# tests/wireContract-style pinning belongs in octobot_sync's own test suite if this
+# ever needs cross-checking against the enum.
+CLOUD_SYNC_FORBIDDEN_COLLECTION = "user-accounts-auth"
 
 # Webhook
 CONFIG_WEBHOOK = "webhook"
@@ -251,3 +278,5 @@ PAID_FEES_STR = "Paid fees"
 # external resources
 EXTERNAL_RESOURCE_CURRENT_USER_FORM = "current-user-feedback-form"
 EXTERNAL_RESOURCE_PUBLIC_ANNOUNCEMENTS = "public-announcements"
+
+SERVICE_STOP_TIMEOUT_SECONDS = float(os.getenv("OCTOBOT_SERVICE_STOP_TIMEOUT_SECONDS", "5.0"))

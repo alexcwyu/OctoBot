@@ -20,42 +20,126 @@ import octobot_commons.constants as commons_constants
 import octobot_commons.logging as logging
 
 from starfish_server.config.loader import load_config_file
-from starfish_server.config.schema import SyncConfig, CollectionConfig, RemoteConfig, WriteMode, SyncTrigger
+from starfish_server.config.schema import (
+    SyncConfig,
+    CollectionConfig,
+    NamespaceConfig,
+    AppendOnlyConfig,
+)
 
 import octobot_sync.constants as constants
+import octobot_sync.enums as enums
 
-logger = logging.get_logger("SyncCollections")
+logger = logging.get_logger("Collections")
 
 DEFAULT_SYNC_CONFIG = SyncConfig(
     version=1,
-    collections=[
-        CollectionConfig(
-            name="bots",
-            storagePath="users/{identity}",
-            bundle="user-data",
-            readRoles=["self"],
-            writeRoles=["self"],
-            encryption="identity",
-            maxBodyBytes=constants.MAX_BODY_SIZE_PRIVATE,
-        ),
-        CollectionConfig(
-            name="accounts",
-            storagePath="users/{identity}",
-            bundle="user-data",
-            readRoles=["self"],
-            writeRoles=["self"],
-            encryption="identity",
-            maxBodyBytes=constants.MAX_BODY_SIZE_PRIVATE,
-        ),
-        CollectionConfig(
-            name="errors",
-            storagePath="users/{identity}/errors/{errorId}",
-            readRoles=["admin"],
-            writeRoles=["user"],
-            encryption="delegated",
-            maxBodyBytes=constants.MAX_BODY_SIZE_SIGNAL,
-        ),
-    ],
+    collections=[],
+    namespaces={
+        constants.SYNC_NAMESPACE: NamespaceConfig(
+            collections=[
+                CollectionConfig(
+                    name=enums.Collections.USER_DATA.value,
+                    storagePath="users/{identity}/data",
+                    readRoles=["self"],
+                    writeRoles=["self"],
+                    encryption="delegated",
+                    maxBodyBytes=constants.MAX_BODY_SIZE_PRIVATE,
+                ),
+                CollectionConfig(
+                    name=enums.Collections.USER_ACCOUNTS.value,
+                    storagePath="users/{identity}/accounts",
+                    readRoles=["self"],
+                    writeRoles=["self"],
+                    encryption="delegated",
+                    maxBodyBytes=constants.MAX_BODY_SIZE_PRIVATE,
+                ),
+                CollectionConfig(
+                    name=enums.Collections.USER_ACCOUNTS_AUTH.value,
+                    storagePath="users/{identity}/accounts/auth",
+                    readRoles=["self"],
+                    writeRoles=["self"],
+                    encryption="delegated",
+                    maxBodyBytes=constants.MAX_BODY_SIZE_PRIVATE,
+                ),
+                CollectionConfig(
+                    name=enums.Collections.USER_ACCOUNTS_TRADING.value,
+                    storagePath="users/{identity}/accounts/{account_id}/trading",
+                    readRoles=["self"],
+                    writeRoles=["self"],
+                    encryption="delegated",
+                    maxBodyBytes=constants.MAX_BODY_SIZE_PRIVATE,
+                ),
+                CollectionConfig(
+                    name=enums.Collections.USER_ACCOUNTS_HISTORY.value,
+                    storagePath="users/{identity}/accounts/{account_id}/history",
+                    readRoles=["self"],
+                    writeRoles=["self"],
+                    encryption="delegated",
+                    maxBodyBytes=constants.MAX_BODY_SIZE_PRIVATE,
+                    pullOnly=True,
+                ),
+                CollectionConfig(
+                    name=enums.Collections.USER_ACCOUNTS_HISTORY_AGGREGATED_REAL.value,
+                    storagePath="users/{identity}/accounts/history/real",
+                    readRoles=["self"],
+                    writeRoles=["self"],
+                    encryption="delegated",
+                    maxBodyBytes=constants.MAX_BODY_SIZE_PRIVATE,
+                    pullOnly=True,
+                ),
+                CollectionConfig(
+                    name=enums.Collections.USER_ACCOUNTS_HISTORY_AGGREGATED_SIMULATED.value,
+                    storagePath="users/{identity}/accounts/history/simulated",
+                    readRoles=["self"],
+                    writeRoles=["self"],
+                    encryption="delegated",
+                    maxBodyBytes=constants.MAX_BODY_SIZE_PRIVATE,
+                    pullOnly=True,
+                ),
+                CollectionConfig(
+                    name=enums.Collections.USER_SETTINGS.value,
+                    storagePath="users/{identity}/settings",
+                    readRoles=["self"],
+                    writeRoles=["self"],
+                    encryption="delegated",
+                    maxBodyBytes=constants.MAX_BODY_SIZE_PRIVATE,
+                ),
+                CollectionConfig(
+                    name=enums.Collections.USER_ACTIONS.value,
+                    storagePath="users/{identity}/actions",
+                    readRoles=["self"],
+                    writeRoles=["self"],
+                    encryption="delegated",
+                    maxBodyBytes=constants.MAX_BODY_SIZE_PRIVATE,
+                    appendOnly=AppendOnlyConfig(
+                        type="by_timestamp",
+                        persist=False,
+                        requireAuthorSignature=False,
+                    ),
+                ),
+                CollectionConfig(
+                    name=enums.Collections.DEBUG.value,
+                    storagePath="users/{identity}/debug",
+                    readRoles=["self"],
+                    writeRoles=["self"],
+                    encryption="delegated",
+                    maxBodyBytes=constants.MAX_BODY_SIZE_PRIVATE,
+                ),
+                # TEMPORARY (see TemporaryCollections.TEMP_USER_STRATEGIES) —
+                # temporary user-strategies collection; remove when strategies storage
+                # is finalized.
+                CollectionConfig(
+                    name=enums.TemporaryCollections.TEMP_USER_STRATEGIES.value,
+                    storagePath="users/{identity}/strategies",
+                    readRoles=["self"],
+                    writeRoles=["self"],
+                    encryption="delegated",
+                    maxBodyBytes=constants.MAX_BODY_SIZE_PRIVATE,
+                ),
+            ]
+        )
+    },
 )
 
 
@@ -65,45 +149,11 @@ def load_sync_config(
     path = collections_path or os.path.join(
         commons_constants.USER_FOLDER, constants.COLLECTIONS_FILE
     )
-    if not os.path.isfile(path):
-        logger.warning(
-            f"Collections file not found at {path}, using default config"
-        )
-        return DEFAULT_SYNC_CONFIG
-    return load_config_file(path)
+    if os.path.isfile(path):
+        logger.warning(f"Using custom collections file at {path}")
+        return load_config_file(path)
+    return DEFAULT_SYNC_CONFIG
 
 
 def is_replicable_collection(col: CollectionConfig) -> bool:
-    """A collection is replicable if its storagePath has no template variables."""
     return "{" not in col.storage_path
-
-
-def make_replica_config(
-    config: SyncConfig,
-    primary_url: str,
-    write_mode: str = "bidirectional",
-    sync_interval_ms: int = 60_000,
-) -> SyncConfig:
-    """Inject RemoteConfig into replicable collections.
-
-    Returns the updated SyncConfig with remote on replicable collections.
-    Non-replicable (templated) collections are kept as-is.
-    """
-    mode = WriteMode(write_mode)
-    updated = []
-    for col in config.collections:
-        if is_replicable_collection(col):
-            col = col.model_copy(
-                update={
-                    "remote": RemoteConfig(
-                        url=primary_url,
-                        pullPath=f"/pull/{col.storage_path}",
-                        pushPath=f"/push/{col.storage_path}" if mode != WriteMode.PULL_ONLY else None,
-                        writeMode=mode,
-                        intervalMs=sync_interval_ms,
-                        syncTriggers=[SyncTrigger.ON_PULL, SyncTrigger.SCHEDULED],
-                    ),
-                }
-            )
-        updated.append(col)
-    return config.model_copy(update={"collections": updated})

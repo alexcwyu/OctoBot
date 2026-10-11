@@ -22,6 +22,13 @@ class ChangedElements(enum.Enum):
     TRADES = "trades"
     PORTFOLIO = "portfolio"
     POSITIONS = "positions"
+    TRANSACTIONS = "transactions"
+
+
+class ActionDependencyParameter(enum.Enum):
+    ACTION_ID = "action_id"
+    PARAMETER = "parameter"
+    RESULT_PATH = "result_path"
 
 
 class ActionType(enum.Enum):
@@ -38,6 +45,8 @@ class ActionErrorStatus(enum.Enum):
     INVALID_ORDER = "invalid_order"
     INVALID_CONFIG = "invalid_config"
     INVALID_SIGNAL_FORMAT = "invalid_signal_format"
+    NO_TRADING_SIGNAL = "no_trading_signal"
+    AUTHENTICATION_ERROR = "authentication_error"
     UNSUPPORTED_STOP_ORDER = "unsupported_stop_order"
     INCOMPATIBLE_TRADING_TYPE = "incompatible_trading_type"
     UNSUPPORTED_HEDGE_POSITION = "unsupported_hedge_position"
@@ -45,3 +54,11 @@ class ActionErrorStatus(enum.Enum):
     BLOCKCHAIN_WALLET_ERROR = "blockchain_wallet_error"
     DISABLED_FUNDS_TRANSFER_ERROR = "disabled_funds_transfer_error"
     UNSUPPORTED_ACTION_TYPE = "unsupported_action_type"
+    ACTION_DEPENDENCY_ERROR = "action_dependency_error"
+    MAX_ATTEMPTS_EXCEEDED = "max_attempts_exceeded"
+    DSL_EXECUTION_ERROR = "dsl_execution_error"
+
+
+class AutomationWorkflowErrorStatus(enum.Enum):
+    EXCEPTION_DURING_ITERATION = "exception_during_iteration"
+    INVALID_ACTION_CONFIGURATION = "invalid_action_configuration"

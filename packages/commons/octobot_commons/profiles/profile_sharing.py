@@ -1,4 +1,4 @@
-# pylint: disable=R0913,W0703
+# pylint: disable=R0913,W0703,R0914,R0401
 #  Drakkar-Software OctoBot-Commons
 #  Copyright (c) Drakkar-Software, All rights reserved.
 #
@@ -44,21 +44,16 @@ except ImportError:
     else:
         raise
 # avoid cyclic import
-from octobot_commons.profiles.profile import Profile
+from octobot_commons.profiles.profile_types.profile import Profile
+import octobot_commons.profiles.backends as profile_backends_module
 import octobot_commons.profiles.profile_data as profile_data_import
 import octobot_commons.profiles.profile_data_import as profile_data_importer
+import octobot_commons.profiles.profile_storage as profile_storage_module
+import octobot_commons.user_root_folder_provider as user_root_folder_provider
 
 
-NON_OVERWRITTEN_PROFILE_FOLDERS = []
+NON_OVERWRITTEN_PROFILE_FOLDERS = [constants.TENTACLES_SPECIFIC_CONFIG_FOLDER]
 NON_OVERWRITTEN_PROFILE_FILES = [constants.PROFILE_CONFIG_FILE]
-try:
-    import octobot_tentacles_manager.constants as tentacles_manager_constants
-
-    NON_OVERWRITTEN_PROFILE_FOLDERS.append(
-        tentacles_manager_constants.TENTACLES_SPECIFIC_CONFIG_FOLDER
-    )
-except ImportError:
-    pass
 
 
 def export_profile(profile, export_path: str) -> str:
@@ -120,7 +115,10 @@ def install_profile(
     if not quite:
         logger.info(f"{action}ing {profile_name} profile.")
     _import_profile_files(import_path, target_import_path)
-    profile = Profile(target_import_path, schema_path=profile_schema).read_config()
+    filesystem_backend = profile_backends_module.FilesystemProfileBackend()
+    profile = filesystem_backend.read_profile_from_path(
+        target_import_path, schema_path=profile_schema
+    )
     profile.imported = is_imported
     profile.origin_url = origin_url
     _ensure_unique_profile_id(profile)
@@ -132,7 +130,7 @@ def install_profile(
             raise errors.ProfileImportError(
                 f"Invalid imported profile: {err.message} in '{'/'.join(err.absolute_path)}'"
             ) from err
-    profile.save()
+    filesystem_backend.write_profile_config(profile)
     if not quite:
         logger.info(f"{action}ed {profile.name} ({profile_name}) profile.")
     return profile
@@ -164,8 +162,6 @@ def import_profile(
         origin_url=origin_url,
         profile_schema=profile_schema,
     )
-    if profile.name != temp_profile_name:
-        profile.rename_folder(_get_unique_profile_folder_from_name(profile), False)
     return profile
 
 
@@ -181,6 +177,7 @@ async def import_profile_data_as_profile(
     logo_url: str = None,
     auto_update: bool = False,
     force_simulator: bool = False,
+    profile_storage=None,
 ) -> Profile:
     """
     Imports the given ProfileData into the user's profile directory with the "imported_" prefix
@@ -197,6 +194,22 @@ async def import_profile_data_as_profile(
     :param force_simulator: True if trader simulator should be forced in config
     :return: The created profile
     """
+
+    if profile_storage is not None and profile_storage.is_sync_available():
+        return await profile_storage.import_profile_data(
+            profile_data,
+            profile_schema,
+            bot_install_path,
+            name=name,
+            description=description,
+            risk=risk,
+            auto_update=auto_update,
+            slug=profile_data.profile_details.name,
+            logo_url=logo_url,
+            force_simulator=force_simulator,
+            aiohttp_session=aiohttp_session,
+            origin_url=origin_url,
+        )
     logger = bot_logging.get_logger("ProfileSharing")
     import_path = f"{name}-{uuid.uuid4().hex}"
     try:
@@ -331,7 +344,10 @@ def _get_target_import_path(
     :return: (the final target import path, True if the profile is replaced)
     """
     target_import_path = os.path.join(
-        bot_install_path, constants.USER_PROFILES_FOLDER, profile_name
+        bot_install_path,
+        user_root_folder_provider.get_user_root_folder(),
+        constants.PROFILES_FOLDER,
+        profile_name,
     )
     if replace_if_exists:
         return target_import_path
@@ -419,10 +435,10 @@ def _ensure_unique_profile_id(profile) -> None:
     :param profile: the installed profile
     :return: None
     """
-    ids = Profile.get_all_profiles_ids(
-        pathlib.Path(profile.path).parent, ignore=profile.path
-    )
+    profiles_parent = str(pathlib.Path(profile.path).parent)
+    profile_storage = profile_storage_module.ProfileStorage(profiles_parent)
+    existing_ids = set(profile_storage.list_profile_ids(ignore=profile.path))
     iteration = 1
-    while profile.profile_id in ids and iteration < 100:
+    while profile.profile_id in existing_ids and iteration < 100:
         profile.profile_id = str(uuid.uuid4())
         iteration += 1

@@ -111,6 +111,31 @@ def set_logging_level(logger_names, level) -> None:
         logging.getLogger(name).setLevel(level)
 
 
+def get_private_minimized_message_if_necessary(message: typing.Any) -> typing.Any:
+    """
+    :param message: the message to minimize
+    :return: the private minimized message if necessary
+    """
+    if constants.ALLOW_PRIVATE_DATA_LOGS or message is None:
+        return message
+    str_message = message if isinstance(message, str) else str(message)
+    return (
+        str_message[:constants.PRIVATE_MESSAGE_ALLOWED_CHARS_COUNT]
+        + constants.PRIVATE_MESSAGE_PLACEHOLDER
+        + str_message[-constants.PRIVATE_MESSAGE_ALLOWED_CHARS_COUNT:]
+    )
+
+
+def get_private_placeholder_if_necessary(message: typing.Any) -> str:
+    """
+    :param message: the message replace with a placeholder
+    :return: the private placeholder if necessary
+    """
+    if constants.ALLOW_PRIVATE_DATA_LOGS:
+        return message
+    return constants.PRIVATE_MESSAGE_PLACEHOLDER
+
+
 def add_log(level, source, message, keep_log=True, call_notifiers=True):
     """
     Add a log to the log database
@@ -181,7 +206,7 @@ class BotLogger:
         """
         message = self._process_log_callback(message)
         self.logger.debug(message, *args, **kwargs)
-        self._publish_log_if_necessary(message, logging.DEBUG)
+        self._publish_log_if_necessary(self._format_message(message, args), logging.DEBUG)
 
     def info(self, message: str, *args, **kwargs) -> None:
         """
@@ -190,7 +215,7 @@ class BotLogger:
         """
         message = self._process_log_callback(message)
         self.logger.info(message, *args, **kwargs)
-        self._publish_log_if_necessary(message, logging.INFO)
+        self._publish_log_if_necessary(self._format_message(message, args), logging.INFO)
 
     def warning(self, message: str, *args, **kwargs) -> None:
         """
@@ -199,7 +224,7 @@ class BotLogger:
         """
         message = self._process_log_callback(message)
         self.logger.warning(message, *args, **kwargs)
-        self._publish_log_if_necessary(message, logging.WARNING)
+        self._publish_log_if_necessary(self._format_message(message, args), logging.WARNING)
 
     def error(self, message: str, *args, skip_post_callback=False, **kwargs) -> None:
         """
@@ -209,8 +234,9 @@ class BotLogger:
         """
         message = self._process_log_callback(message)
         self.logger.error(message, *args, **kwargs)
-        self._publish_log_if_necessary(message, logging.ERROR)
-        self._post_callback_if_necessary(None, message, skip_post_callback)
+        formatted_message = self._format_message(message, args)
+        self._publish_log_if_necessary(formatted_message, logging.ERROR)
+        self._post_callback_if_necessary(None, formatted_message, skip_post_callback)
 
     def exception(
         self,
@@ -261,7 +287,7 @@ class BotLogger:
         """
         message = self._process_log_callback(message)
         self.logger.critical(message, *args, **kwargs)
-        self._publish_log_if_necessary(message, logging.CRITICAL)
+        self._publish_log_if_necessary(self._format_message(message, args), logging.CRITICAL)
 
     def fatal(self, message: str, *args, **kwargs) -> None:
         """
@@ -270,7 +296,7 @@ class BotLogger:
         """
         message = self._process_log_callback(message)
         self.logger.fatal(message, *args, **kwargs)
-        self._publish_log_if_necessary(message, logging.FATAL)
+        self._publish_log_if_necessary(self._format_message(message, args), logging.FATAL)
 
     def disable(self, disabled):
         """
@@ -283,6 +309,26 @@ class BotLogger:
         if _LOG_CALLBACK is None:
             return message
         return _LOG_CALLBACK(message)
+
+    @staticmethod
+    def _format_message(message: str, args: tuple) -> str:
+        """
+        Apply %-style substitution of args into message, mirroring the lazy
+        formatting done by the standard logging module for the actual log
+        record. Without this, published logs (web interface, notifications,
+        error callbacks) would contain the raw, unsubstituted message
+        (ex: "reason=%s" instead of "reason=some reason").
+        :param message: the raw, unformatted log message
+        :param args: the % substitution args, if any
+        :return: the formatted message, or the original message when it
+        can't be formatted (missing/mismatched args)
+        """
+        if not args:
+            return message
+        try:
+            return message % args
+        except (TypeError, ValueError):
+            return message
 
     def _publish_log_if_necessary(self, message, level) -> None:
         """

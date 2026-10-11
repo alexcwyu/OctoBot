@@ -35,6 +35,17 @@ def convert_timestamp_to_datetime(
     ).strftime(time_format)
 
 
+def utc_datetime_from_timestamp(timestamp: float) -> datetime:
+    """
+    Convert a timestamp to a UTC datetime
+    :param timestamp: the timestamp to convert
+    :return: the converted UTC datetime
+    """
+    return datetime.fromtimestamp(
+        timestamp, tz=timezone.utc
+    )
+
+
 def convert_timestamps_to_datetime(
     timestamps: list[float],
     time_format: str = "%d/%m/%y %H:%M",
@@ -109,3 +120,11 @@ def create_datetime_from_string(
     return datetime.strptime(date_time_str, date_time_format).replace(
         tzinfo=LOCAL_TIMEZONE if local_timezone else timezone.utc
     )
+
+
+def utc_now_datetime() -> datetime:
+    """
+    Get the current UTC time
+    :return: the current UTC time
+    """
+    return datetime.now(tz=timezone.utc)

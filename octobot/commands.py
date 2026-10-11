@@ -28,8 +28,8 @@ import octobot_commons.profiles as profiles
 import octobot_commons.logging as logging
 import octobot_commons.constants as commons_constants
 import octobot_commons.errors as commons_errors
+import octobot_commons.os_util as os_util
 import octobot_commons.aiohttp_util as aiohttp_util
-
 import octobot_tentacles_manager.api as tentacles_manager_api
 import octobot_tentacles_manager.cli as tentacles_manager_cli
 
@@ -38,11 +38,14 @@ import octobot.logger as octobot_logger
 import octobot.constants as constants
 import octobot.community.tentacles_packages as community_tentacles_packages
 import octobot.configuration_manager as configuration_manager
+import octobot.enums as enums
+import octobot.community.node_journal.lifecycle as journal_startup
 
 COMMANDS_LOGGER_NAME = "Commands"
 IGNORED_COMMAND_WHEN_RESTART = ["-u", "--update"]
-
 GLOBAL_BOT_INSTANCE = None
+_signal_interrupt_count = 0
+_signal_interrupt_lock = threading.Lock()
 
 
 def call_tentacles_manager(command_args):
@@ -87,11 +90,40 @@ def run_tentacles_install_or_update(community_auth, config):
 
 async def _install_or_update_tentacles(community_auth, config):
     additional_tentacles_package_urls = community_auth.get_saved_package_urls()
-    await install_or_update_tentacles(config, additional_tentacles_package_urls, False)
+    only_additional = not constants.INSTALL_DEFAULT_TENTACLES
+    await install_or_update_tentacles(config, additional_tentacles_package_urls, only_additional)
 
 
 def run_update_or_repair_tentacles_if_necessary(community_auth, config, tentacles_setup_config):
     asyncio.run(update_or_repair_tentacles_if_necessary(community_auth, tentacles_setup_config, config))
+
+
+def run_install_missing_additional_tentacles_only(community_auth, config, tentacles_setup_config):
+    logger = logging.get_logger(COMMANDS_LOGGER_NAME)
+    if community_auth is None:
+        tentacles_manager_api.load_tentacles(verbose=True)
+        return
+    to_install_urls = community_tentacles_packages.get_urls_to_install(
+        community_auth, tentacles_setup_config, constants.LONG_VERSION
+    )
+    if not to_install_urls:
+        if not tentacles_manager_api.load_tentacles(verbose=True):
+            logger.error("OctoBot tentacles failed to load for process child.")
+        return
+    asyncio.run(_install_missing_additional_tentacles_only(config, to_install_urls))
+
+
+async def _install_missing_additional_tentacles_only(config, to_install_urls):
+    logger = logging.get_logger(COMMANDS_LOGGER_NAME)
+    logger.info(
+        f"Installing {len(to_install_urls)} additional tentacle package(s) for process child."
+    )
+    await install_or_update_tentacles(config, to_install_urls, only_additional=True)
+
+    tentacles_loaded = tentacles_manager_api.load_tentacles(verbose=True)
+    if not tentacles_loaded:
+        logger.error("OctoBot tentacles failed to load for process child.")
+    return tentacles_loaded
 
 
 def _check_tentacles_install_exit():
@@ -140,7 +172,8 @@ async def update_or_repair_tentacles_if_necessary(community_auth, selected_profi
                 not tentacles_manager_api.are_tentacles_up_to_date(local_profile_tentacles_setup_config, constants.VERSION):
             logger.info("OctoBot tentacles are not up to date. Updating tentacles...")
             _check_tentacles_install_exit()
-            if await install_or_update_tentacles(config, to_install_urls, False):
+            only_additional = not constants.INSTALL_DEFAULT_TENTACLES
+            if await install_or_update_tentacles(config, to_install_urls, only_additional):
                 logger.info("OctoBot tentacles are now up to date.")
         else:
             if to_install_urls:
@@ -151,9 +184,10 @@ async def update_or_repair_tentacles_if_necessary(community_auth, selected_profi
             if tentacles_manager_api.load_tentacles(verbose=True):
                 logger.debug("OctoBot tentacles are up to date.")
             else:
-                logger.info("OctoBot tentacles are damaged. Installing default tentacles only ...")
+                logger.info("OctoBot tentacles are damaged. Reinstalling tentacles ...")
                 _check_tentacles_install_exit()
-                await install_or_update_tentacles(config, [], False)
+                only_additional = not constants.INSTALL_DEFAULT_TENTACLES
+                await install_or_update_tentacles(config, [], only_additional)
     else:
         if tentacles_manager_api.load_tentacles(verbose=True):
             logger.debug("OctoBot tentacles loaded.")
@@ -263,24 +297,61 @@ def set_global_bot_instance(bot_instance):
     GLOBAL_BOT_INSTANCE = bot_instance
 
 
-def _signal_handler(_, __):
-    # run Commands.BOT.stop_threads in thread because can't use the current asyncio loop
-    stopping_thread = threading.Thread(target=GLOBAL_BOT_INSTANCE.task_manager.stop_tasks(),
-                                       name="Commands signal_handler stop_tasks")
-    stopping_thread.start()
-    stopping_thread.join()
-    os._exit(0)
+def _signal_handler(signum, _):
+    # Handle SIGINT/SIGTERM: first delivery stops the bot; a second delivery exits without stop_tasks()
+    # if the first stop is stuck.
+    global _signal_interrupt_count
+    commands_logger = logging.get_logger(COMMANDS_LOGGER_NAME)
+    signal_text = signal.strsignal(signum)
+    if not signal_text:
+        signal_text = f"signal {signum}"
+    with _signal_interrupt_lock:
+        _signal_interrupt_count += 1
+        interrupt_count = _signal_interrupt_count
+    if interrupt_count >= 2:
+        commands_logger.warning(
+            f"Received signal {signum} ({signal_text}) (delivery {interrupt_count}): "
+            f"forcing immediate process exit without stop_tasks()"
+        )
+        os._exit(128 + signum if isinstance(signum, int) and 0 < signum < 32 else 1)
+    commands_logger.info(
+        f"Received signal {signum} ({signal_text}) (delivery {interrupt_count})"
+    )
+    if GLOBAL_BOT_INSTANCE is not None:
+        commands_logger.info("Stopping OctoBot after signal (stop_bot, force=True)")
+        stop_bot(GLOBAL_BOT_INSTANCE, force=True)
+    else:
+        commands_logger.info("Exiting: no bot instance was registered (signal handler)")
+        os._exit(0)
 
 
 def run_bot(bot, logger):
-    # handle CTRL+C signal
+    # handle SIGINT (Ctrl+C) and SIGTERM (e.g. docker stop)
     try:
         signal.signal(signal.SIGINT, _signal_handler)
     except ValueError as e:
         logger.warning(f"Can't setup signal handler : {e}")
+    sigterm = getattr(signal, "SIGTERM", None)
+    if sigterm is not None:
+        try:
+            signal.signal(sigterm, _signal_handler)
+        except ValueError as e:
+            logger.warning(f"Can't setup SIGTERM handler : {e}")
 
     # start bot
     bot.task_manager.run_forever(start_bot(bot, logger))
+
+
+def _record_bot_initialize_failure(bot, error: Exception, *, catch: bool) -> None:
+    if configuration_manager.get_distribution(bot.config) is not enums.OctoBotDistribution.NODE:
+        return
+    edited_config = bot.get_edited_config(constants.CONFIG_KEY, dict_only=False)
+    journal_startup.record_node_startup_failed(
+        error,
+        startup_phase="bot_initialize",
+        force_exit=not catch,
+        config=edited_config,
+    )
 
 
 async def start_bot(bot, logger, catch=False):
@@ -297,13 +368,14 @@ async def start_bot(bot, logger, catch=False):
 
     except Exception as e:
         logger.exception(e)
+        _record_bot_initialize_failure(bot, e, catch=catch)
         if not catch:
             raise
         stop_bot(bot)
 
 
 def stop_bot(bot, force=False):
-    bot.task_manager.stop_tasks()
+    bot.task_manager.stop_tasks(stop_managed_child_processes=True, force=force)
     if force:
         os._exit(0)
 
@@ -313,7 +385,7 @@ def get_bot_file():
 
 
 def restart_bot():
-    argv = (f'{a}' for a in sys.argv if a not in IGNORED_COMMAND_WHEN_RESTART)
+    argv = [f'{argument}' for argument in sys.argv if argument not in IGNORED_COMMAND_WHEN_RESTART]
     if get_bot_file().endswith(".py"):
         os.execl(sys.executable, f'{sys.executable}', *argv)
     elif get_bot_file().endswith(constants.PROJECT_NAME):
@@ -323,7 +395,7 @@ def restart_bot():
         # restart from binary
         # from https://pyinstaller.org/en/stable/common-issues-and-pitfalls.html#using-sys-executable-to-spawn-subprocesses-that-outlive-the-application-process-implementing-application-restart
         # Restart the application
-        subprocess.Popen([sys.executable], env={**os.environ, "PYINSTALLER_RESET_ENVIRONMENT": "1"})
+        subprocess.Popen(argv, env={**os.environ, **os_util.PYINSTALLER_RESET_ENVIRONMENT_VARS})
         # force stop and restart
         os._exit(0)
 

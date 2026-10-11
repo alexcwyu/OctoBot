@@ -26,6 +26,8 @@ from octobot_commons.logging.logging_util import (
     get_backtesting_errors_count,
     reset_backtesting_errors,
     set_error_publication_enabled,
+    get_private_minimized_message_if_necessary,
+    get_private_placeholder_if_necessary,
     BACKTESTING_NEW_ERRORS_COUNT,
     LOG_DATABASE,
     LOG_NEW_ERRORS_COUNT,
@@ -43,6 +45,9 @@ from octobot_commons.logging.context_based_file_handler import (
     add_context_based_file_handler,
     ContextBasedFileHandler,
 )
+from octobot_commons.logging.fastapi_unhandled_exception_handlers import (
+    register_unhandled_exception_handler,
+)
 
 
 __all__ = [
@@ -56,6 +61,8 @@ __all__ = [
     "get_backtesting_errors_count",
     "reset_backtesting_errors",
     "set_error_publication_enabled",
+    "get_private_minimized_message_if_necessary",
+    "get_private_placeholder_if_necessary",
     "BACKTESTING_NEW_ERRORS_COUNT",
     "LOG_DATABASE",
     "LOG_NEW_ERRORS_COUNT",
@@ -70,4 +77,5 @@ __all__ = [
     "set_enable_web_interface_logs",
     "add_context_based_file_handler",
     "ContextBasedFileHandler",
+    "register_unhandled_exception_handler",
 ]

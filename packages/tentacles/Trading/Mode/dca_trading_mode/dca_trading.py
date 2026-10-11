@@ -21,8 +21,11 @@ import typing
 import octobot_commons.symbols.symbol_util as symbol_util
 import octobot_commons.enums as commons_enums
 import octobot_commons.constants as commons_constants
+import octobot_commons.time_frame_manager as time_frame_manager
+import octobot_commons.list_util as list_util
 import octobot_commons.evaluators_util as evaluators_util
 import octobot_commons.signals as commons_signals
+import octobot_commons.logging as logging
 
 import octobot_evaluators.api as evaluators_api
 import octobot_evaluators.constants as evaluators_constants
@@ -30,6 +33,7 @@ import octobot_evaluators.enums as evaluators_enums
 import octobot_evaluators.matrix as matrix
 
 import octobot_trading.modes as trading_modes
+import octobot_trading.dsl as trading_dsl
 import octobot_trading.enums as trading_enums
 import octobot_trading.constants as trading_constants
 import octobot_trading.util as trading_util
@@ -41,6 +45,7 @@ import octobot_trading.modes.script_keywords as script_keywords
 
 class TriggerMode(enum.Enum):
     TIME_BASED = "Time based"
+    ALWAYS_TRIGGER_LONG = "Always trigger long"
     MAXIMUM_EVALUATORS_SIGNALS_BASED = "Maximum evaluators signals based"
 
 
@@ -274,7 +279,9 @@ class DCATradingModeConsumer(trading_modes.AbstractTradingModeConsumer):
                         if is_cancelled:
                             next_step_dependencies.extend(new_dependencies)
                     except trading_errors.UnexpectedExchangeSideOrderStateError as err:
-                        self.logger.warning(f"Skipped order cancel: {err}, order: {order}")
+                        self.logger.warning(
+                            f"Skipped order cancel: {err}, order: {logging.get_private_minimized_message_if_necessary(order)}"
+                        )
             else:
                 self.logger.info(
                     f"Skipping {self.exchange_manager.exchange_name} {symbol} entry order cancel as new "
@@ -370,8 +377,13 @@ class DCATradingModeConsumer(trading_modes.AbstractTradingModeConsumer):
         try:
             buying = order_type in (trading_enums.TraderOrderType.BUY_MARKET, trading_enums.TraderOrderType.BUY_LIMIT)
             parsed_symbol = symbol_util.parse_symbol(symbol)
-            missing_currency = parsed_symbol.quote if buying else parsed_symbol.base
-            settlement_asset = parsed_symbol.settlement_asset if parsed_symbol.is_future() else parsed_symbol.quote
+            missing_currency = (
+                parsed_symbol.quote if buying else parsed_symbol.base
+            )
+            # Bare asset ticker: spot settlement quote / futures settlement asset — .base/.quote are network-qualified on ticker-wise pairs; use .base/.quote for portfolio[...] / reference_market.
+            settlement_asset = (
+                parsed_symbol.settlement_asset if parsed_symbol.is_future() else parsed_symbol.quote_asset_ticker()
+            )
             quantity_currency = trading_personal_data.get_order_quantity_currency(self.exchange_manager, symbol)
             if parsed_symbol.is_spot():
                 cost = quantity * price
@@ -551,6 +563,7 @@ class DCATradingModeProducer(trading_modes.AbstractTradingModeProducer):
 
     def __init__(self, channel, config, trading_mode, exchange_manager):
         super().__init__(channel, config, trading_mode, exchange_manager)
+        self.trading_mode: DCATradingMode = trading_mode
         self.task = None
         self.state = trading_enums.EvaluatorStates.NEUTRAL
 
@@ -561,26 +574,45 @@ class DCATradingModeProducer(trading_modes.AbstractTradingModeProducer):
             self.task.cancel()
         await super().stop()
 
-    async def set_final_eval(self, matrix_id: str, cryptocurrency: str, symbol: str, time_frame, trigger_source: str):
+    def _analyze_strategies(
+        self,
+        matrix_id: typing.Optional[str],
+        cryptocurrency: str,
+        symbol: str,
+    ) -> list[float]:
         evaluations = []
-        # Strategies analysis
-        for evaluated_strategy_node in matrix.get_tentacles_value_nodes(
+        if matrix_id:
+            for evaluated_strategy_node in matrix.get_tentacles_value_nodes(
                 matrix_id,
                 matrix.get_tentacle_nodes(matrix_id,
-                                          exchange_name=self.exchange_name,
-                                          tentacle_type=evaluators_enums.EvaluatorMatrixTypes.STRATEGIES.value),
+                                            exchange_name=self.exchange_name,
+                                            tentacle_type=evaluators_enums.EvaluatorMatrixTypes.STRATEGIES.value),
                 cryptocurrency=cryptocurrency,
-                symbol=symbol):
+                symbol=symbol,
+            ):
 
-            if evaluators_util.check_valid_eval_note(evaluators_api.get_value(evaluated_strategy_node),
-                                                     evaluators_api.get_type(evaluated_strategy_node),
-                                                     evaluators_constants.EVALUATOR_EVAL_DEFAULT_TYPE):
-                evaluations.append(evaluators_api.get_value(evaluated_strategy_node))
+                if evaluators_util.check_valid_eval_note(evaluators_api.get_value(evaluated_strategy_node),
+                                                            evaluators_api.get_type(evaluated_strategy_node),
+                                                            evaluators_constants.EVALUATOR_EVAL_DEFAULT_TYPE):
+                    evaluations.append(evaluators_api.get_value(evaluated_strategy_node))
+        return evaluations
 
-        is_forced_init_entry = self._should_trigger_init_entry()
-        if evaluations or is_forced_init_entry:
+    async def set_final_eval(
+        self,
+        matrix_id: str,
+        cryptocurrency: str,
+        symbol: str,
+        time_frame,
+        trigger_source: str,
+    ):
+        evaluations = self._analyze_strategies(matrix_id, cryptocurrency, symbol)
+        should_trigger_long = (
+            self._should_trigger_init_entry()
+            or self.trading_mode.trigger_mode == TriggerMode.ALWAYS_TRIGGER_LONG
+        )
+        if evaluations or should_trigger_long:
             state = trading_enums.EvaluatorStates.NEUTRAL
-            if is_forced_init_entry:
+            if should_trigger_long:
                 self.logger.info(
                     f"Triggering {self.trading_mode.symbol} init entries [{self.exchange_manager.exchange_name}]"
                 )
@@ -610,6 +642,29 @@ class DCATradingModeProducer(trading_modes.AbstractTradingModeProducer):
                     else:
                         # unexpected error, raise
                         raise
+
+    async def manual_trigger(
+        self,
+        matrix_id: str,
+        cryptocurrency: str,
+        symbol: str,
+        time_frame,
+        trigger_source: str,
+    ):
+        if self.trading_mode.trigger_mode is TriggerMode.TIME_BASED:
+            await self.trigger_dca(
+                cryptocurrency=cryptocurrency,
+                symbol=symbol or self.trading_mode.symbol,
+                state=trading_enums.EvaluatorStates.VERY_LONG,
+            )
+            return
+        await super().manual_trigger(
+            matrix_id=matrix_id,
+            cryptocurrency=cryptocurrency,
+            symbol=symbol,
+            time_frame=time_frame,
+            trigger_source=trigger_source,
+        )
 
     def _should_trigger_init_entry(self):
         if self.trading_mode.enable_initialization_entry:
@@ -678,18 +733,10 @@ class DCATradingModeProducer(trading_modes.AbstractTradingModeProducer):
         # todo implement signal based exits
         pass
 
-    async def dca_task(self):
+    async def dca_task(self, state: trading_enums.EvaluatorStates):
         while not self.should_stop:
             try:
-                for cryptocurrency, pairs in trading_util.get_traded_pairs_by_currency(
-                        self.exchange_manager.config
-                ).items():
-                    if self.trading_mode.symbol in pairs:
-                        await self.trigger_dca(
-                            cryptocurrency=cryptocurrency,
-                            symbol=self.trading_mode.symbol,
-                            state=trading_enums.EvaluatorStates.VERY_LONG
-                        )
+                await self._local_symbol_dca_trigger(state)
                 if self.exchange_manager.is_backtesting:
                     self.logger.error(
                         f"{self.trading_mode.trigger_mode.value} trigger is not supporting backtesting for now. Please "
@@ -700,10 +747,27 @@ class DCATradingModeProducer(trading_modes.AbstractTradingModeProducer):
             except Exception as e:
                 self.logger.error(f"An error happened during DCA task : {e}")
 
+    async def _local_symbol_dca_trigger(
+        self, state: trading_enums.EvaluatorStates
+    ):
+        for cryptocurrency, pairs in trading_util.get_traded_pairs_by_currency(
+            self.exchange_manager.config
+        ).items():
+            if self.trading_mode.symbol in pairs:
+                await self.trigger_dca(
+                    cryptocurrency=cryptocurrency,
+                    symbol=self.trading_mode.symbol,
+                    state=state
+                )
+
     async def inner_start(self) -> None:
         await super().inner_start()
-        if self.trading_mode.trigger_mode is TriggerMode.TIME_BASED:
-            self.task = asyncio.create_task(self.delayed_start())
+        if self.trading_mode.trigger_mode in (
+            TriggerMode.TIME_BASED, TriggerMode.ALWAYS_TRIGGER_LONG
+        ):
+            self.task = asyncio.create_task(
+                self.delayed_start(trading_enums.EvaluatorStates.VERY_LONG)
+            )
 
     def get_channels_registration(self):
         registration_channels = []
@@ -723,8 +787,11 @@ class DCATradingModeProducer(trading_modes.AbstractTradingModeProducer):
         # required as trigger can happen independently of price events when time based
         return [commons_enums.InitializationEventExchangeTopics.PRICE.value]
 
-    async def delayed_start(self):
-        await self.dca_task()
+    async def delayed_start(self, auto_trigger_state: trading_enums.EvaluatorStates):
+        if self.trading_mode.trigger_mode is TriggerMode.ALWAYS_TRIGGER_LONG:
+            await self._local_symbol_dca_trigger(auto_trigger_state)
+        else:
+            await self.dca_task(auto_trigger_state)
 
     async def _send_alert_notification(self, symbol, state, step):
         if self.exchange_manager.is_backtesting:
@@ -754,6 +821,8 @@ class DCATradingMode(trading_modes.AbstractTradingMode):
     SUPPORTS_HEALTH_CHECK = True
     DEFAULT_HEALTH_CHECK_SELL_ORPHAN_FUNDS_RATIO_THRESHOLD = decimal.Decimal("0.1")  # 10%
     HEALTH_CHECK_FILL_ORDERS_TIMEOUT = 20
+    TRADING_PAIRS = "trading_pairs"
+    TIME_FRAMES = "time_frames"
 
     def __init__(self, config, exchange_manager):
         super().__init__(config, exchange_manager)
@@ -1013,6 +1082,20 @@ class DCATradingMode(trading_modes.AbstractTradingMode):
                 min_val=0, max_val=100
             )
         )) / trading_constants.ONE_HUNDRED
+        self.UI.user_input(
+            DCATradingMode.TRADING_PAIRS, commons_enums.UserInputTypes.MULTIPLE_OPTIONS,
+            default_config[DCATradingMode.TRADING_PAIRS], inputs,
+            options=[],
+            other_schema_values={"minItems": 0},
+            title="Traded pairs: symbols to apply DCA on.",
+        )
+        self.UI.user_input(
+            DCATradingMode.TIME_FRAMES, commons_enums.UserInputTypes.MULTIPLE_OPTIONS,
+            default_config[DCATradingMode.TIME_FRAMES], inputs,
+            options=[time_frame.value for time_frame in commons_enums.TimeFrames],
+            other_schema_values={"minItems": 0},
+            title="Required time frames: time frames to apply DCA on.",
+        )
 
     @classmethod
     def get_default_config(
@@ -1065,7 +1148,56 @@ class DCATradingMode(trading_modes.AbstractTradingMode):
             DCATradingModeProducer.HEALTH_CHECK_ORPHAN_FUNDS_THRESHOLD:
                 health_check_orphan_funds_threshold or cls.DEFAULT_HEALTH_CHECK_SELL_ORPHAN_FUNDS_RATIO_THRESHOLD,
             DCATradingModeProducer.MAX_ASSET_HOLDING_PERCENT: max_asset_holding_percent or decimal.Decimal(1),
+            cls.TRADING_PAIRS: [],
+            cls.TIME_FRAMES: [],
         }
+
+    @classmethod
+    def get_tentacle_config_traded_symbols(cls, trading_config: dict, reference_market: str) -> list[str]:
+        trading_pairs = trading_config.get(cls.TRADING_PAIRS) or []
+        return list_util.deduplicate([symbol for symbol in trading_pairs if symbol])
+
+    def get_time_before_next_execution(self) -> float:
+        if self.trigger_mode is TriggerMode.TIME_BASED:
+            return self.minutes_before_next_buy * commons_constants.MINUTE_TO_SECONDS
+        configured_time_frames = self.trading_config.get(self.TIME_FRAMES) or []
+        if configured_time_frames:
+            sorted_time_frames = time_frame_manager.sort_time_frames(configured_time_frames)
+            minimum_time_frame = sorted_time_frames[0]
+            minimum_time_frame_minutes = commons_enums.TimeFramesMinutes[minimum_time_frame]
+            return minimum_time_frame_minutes * commons_constants.MINUTE_TO_SECONDS
+        return super().get_time_before_next_execution()
+
+    def get_dsl_recall_reset_to_action_id(self, param_by_name: dict) -> typing.Optional[str]:
+        if self.trigger_mode is not TriggerMode.MAXIMUM_EVALUATORS_SIGNALS_BASED:
+            return None
+        return param_by_name.get("dag_reset_to_action_id")
+
+    @classmethod
+    def get_dsl_dependencies(
+        cls, trading_config: dict, config: dict, previous_state: typing.Optional[dict]
+    ) -> list:
+        try:
+            reference_market = trading_util.get_reference_market(config)
+        except (KeyError, TypeError):
+            reference_market = commons_constants.DEFAULT_REFERENCE_MARKET
+        symbols = cls.get_tentacle_config_traded_symbols(trading_config, reference_market)
+        if not symbols:
+            return []
+        configured_time_frames = trading_config.get(cls.TIME_FRAMES) or []
+        time_frames = list_util.deduplicate(
+            [time_frame for time_frame in configured_time_frames if time_frame]
+        )
+        if not time_frames:
+            return [
+                trading_dsl.SymbolDependency(symbol=symbol)
+                for symbol in symbols
+            ]
+        return [
+            trading_dsl.SymbolDependency(symbol=symbol, time_frame=time_frame)
+            for symbol in symbols
+            for time_frame in time_frames
+        ]
 
     @classmethod
     def get_is_symbol_wildcard(cls) -> bool:
@@ -1098,7 +1230,7 @@ class DCATradingMode(trading_modes.AbstractTradingMode):
         sellable_assets = sorted(list(set(sellable_assets + traded_coins)))
         self.logger.info(f"Optimizing portfolio: selling {sellable_assets} to buy {target_asset}")
         return await trading_modes.convert_assets_to_target_asset(
-            self, sellable_assets, target_asset, tickers
+            sellable_assets, target_asset, tickers, trading_mode=self,
         )
 
     async def single_exchange_process_health_check(self, chained_orders: list, tickers: dict) -> list:
@@ -1119,7 +1251,7 @@ class DCATradingMode(trading_modes.AbstractTradingMode):
             )
             try:
                 asset_orders = await trading_modes.convert_asset_to_target_asset(
-                    self, asset, common_quote, tickers, asset_amount=amount
+                    asset, common_quote, tickers, asset_amount=amount, trading_mode=self,
                 )
                 if not asset_orders:
                     self.logger.info(
@@ -1133,12 +1265,8 @@ class DCATradingMode(trading_modes.AbstractTradingMode):
                     err, True, f"Error when creating order to sell {asset} into {common_quote}: {err}"
                 )
         if created_orders:
-            await asyncio.gather(
-                *[
-                    trading_personal_data.wait_for_order_fill(
-                        order, self.HEALTH_CHECK_FILL_ORDERS_TIMEOUT, True
-                    ) for order in created_orders
-                ]
+            await trading_personal_data.wait_for_orders_to_fill_considering_order_auto_synchronization(
+                self.exchange_manager, created_orders, self.HEALTH_CHECK_FILL_ORDERS_TIMEOUT, True
             )
             for producer in self.producers:
                 producer.last_activity = trading_modes.TradingModeActivity(

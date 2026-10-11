@@ -24,6 +24,7 @@ import octobot_commons.enums as commons_enums
 import octobot_commons.evaluators_util as evaluators_util
 import octobot_commons.pretty_printer as pretty_printer
 import octobot_commons.symbols.symbol_util as symbol_util
+import octobot_commons.logging as logging
 import octobot_commons.signals as signals
 import octobot_evaluators.api as evaluators_api
 import octobot_evaluators.constants as evaluators_constants
@@ -986,7 +987,9 @@ class DailyTradingModeProducer(trading_modes.AbstractTradingModeProducer):
             self.trading_mode.flush_trading_mode_consumers()
         await super().stop()
 
-    async def set_final_eval(self, matrix_id: str, cryptocurrency: str, symbol: str, time_frame, trigger_source: str):
+    async def set_final_eval(
+        self, matrix_id: str, cryptocurrency: str, symbol: str, time_frame, trigger_source: str,
+    ):
         strategies_analysis_note_counter = 0
         evaluation = commons_constants.INIT_EVAL_NOTE
         # Strategies analysis
@@ -1094,7 +1097,9 @@ class DailyTradingModeProducer(trading_modes.AbstractTradingModeProducer):
                     if is_cancelled:
                         dependencies.extend(dependency)
                 except trading_errors.UnexpectedExchangeSideOrderStateError as err:
-                    self.logger.warning(f"Skipped order cancel: {err}, order: {order}")
+                    self.logger.warning(
+                        f"Skipped order cancel: {err}, order: {logging.get_private_minimized_message_if_necessary(order)}"
+                    )
         return dependencies
 
     async def _send_alert_notification(self, symbol, new_state):

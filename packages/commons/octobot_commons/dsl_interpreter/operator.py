@@ -48,11 +48,15 @@ class Operator:
     )
     DESCRIPTION: str = ""  # description of the operator
     EXAMPLE: str = ""  # example of the operator in the DSL
+    LABEL: str = ""  # human-readable label; defaults to name when empty
+    CATEGORY: str = ""  # composition role; must match protocol DslKeywordCategory when set
 
     def __init__(self, *parameters: OperatorParameterType, **kwargs: typing.Any):
         self._validate_parameters(parameters, kwargs)
         self.parameters = parameters
         self.kwargs = kwargs
+        # Injected by Interpreter._instantiate_operator; not a DSL parameter.
+        self.interpreter: typing.Optional[typing.Any] = None
 
     @staticmethod
     def get_name() -> str:
@@ -93,7 +97,9 @@ class Operator:
                 )
             if max_params is not None and total_params > max_params:
                 raise octobot_commons.errors.InvalidParametersError(
-                    f"{self.get_name()} supports up to {max_params} "
+                    f"{self.get_name()} got {total_params} parameters "
+                    f"({', '.join([str(p) for p in tuple(parameters) + tuple(kwargs.values())])}) "
+                    f"but supports up to {max_params} "
                     f"parameters: {self.get_parameters_description()}"
                 )
 
@@ -111,12 +117,16 @@ class Operator:
         """
         Get the documentation of the operator.
         """
+        operator_name = cls.NAME or cls.get_name()
         return dsl_interpreter_operator_docs.OperatorDocs(
-            name=cls.NAME or cls.get_name(),
+            name=operator_name,
             description=cls.DESCRIPTION,
             type=cls.get_library(),
             example=cls.EXAMPLE,
             parameters=cls.get_parameters(),
+            label=cls.LABEL or operator_name,
+            category=cls.CATEGORY,
+            return_values=cls.get_return_values(),
         )
 
     @classmethod
@@ -125,6 +135,33 @@ class Operator:
         return: the description of the parameters of the operator.
         """
         return []
+
+    @classmethod
+    def get_return_values(
+        cls,
+    ) -> list[dsl_interpreter_operator_parameter.OperatorParameter]:
+        """
+        return: catalog metadata for the operator result value(s).
+        """
+        return []
+
+    @classmethod
+    def result_return_value(
+        cls,
+        value_type: str,
+        description: str = "Operator result",
+    ) -> list[dsl_interpreter_operator_parameter.OperatorParameter]:
+        """
+        Build a single-result return_values list for catalog metadata.
+        """
+        return [
+            dsl_interpreter_operator_parameter.OperatorParameter(
+                name="result",
+                description=description,
+                required=True,
+                type=value_type,
+            )
+        ]
 
     async def pre_compute(self) -> None:  # rename pre_compute
         """

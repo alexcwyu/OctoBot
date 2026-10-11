@@ -61,7 +61,6 @@ import octobot.community as community
 import octobot.constants as octobot_constants
 import octobot.enums as octobot_enums
 import octobot.configuration_manager as configuration_manager
-import octobot.databases_util as octobot_databases_util
 import tentacles.Services.Interfaces.web_interface.constants as constants
 import tentacles.Services.Interfaces.web_interface.models as models
 import tentacles.Services.Interfaces.web_interface.models.json_schemas as json_schemas
@@ -110,13 +109,16 @@ EXTRA_CONFIGURABLE_TENTACLES_TYPES = [
 ]
 _TENTACLE_CONFIG_CACHE = {}
 
+
+def clear_tentacle_config_cache():
+    _TENTACLE_CONFIG_CACHE.clear()
+
 DEFAULT_EXCHANGE = "binance"
 MERGED_CCXT_EXCHANGES = {
     result.__name__: [merged_exchange.__name__ for merged_exchange in merged]
     for result, merged in (
         (ccxt.async_support.kucoin, (ccxt.async_support.kucoinfutures, )),
         (ccxt.async_support.binance, (ccxt.async_support.binanceusdm, ccxt.async_support.binancecoinm)),
-        (ccxt.async_support.htx, (ccxt.async_support.huobi, )),
     )
 }
 REMOVED_CCXT_EXCHANGES = set().union(*(set(v) for v in MERGED_CCXT_EXCHANGES.values()))
@@ -485,6 +487,36 @@ def get_tentacles_activation_desc_by_group(media_url, missing_tentacles: set):
             if len(tentacles) > 1}
 
 
+def _persist_profile_tentacles_changes(tentacles_setup_config):
+    config = interfaces_util.get_edited_config(dict_only=False)
+    profile = config.profile
+    if profile is None:
+        tentacles_manager_api.save_tentacles_setup_configuration(tentacles_setup_config)
+        return
+    edited_profile = tentacles_setup_config.profile
+    if edited_profile is not None and edited_profile is not profile:
+        if edited_profile.is_profile_data_tentacle_backed():
+            edited_profile.bind_tentacles_setup_config(tentacles_setup_config)
+            tentacles_data = edited_profile.get_tentacles_data()
+            if tentacles_data is not None:
+                edited_profile.get_profile_data().tentacles = tentacles_data
+            edited_profile._require_profile_storage().save_active_profile(
+                edited_profile, config.config
+            )
+        else:
+            tentacles_manager_api.save_tentacles_setup_configuration(tentacles_setup_config)
+        return
+    if profile.is_profile_data_tentacle_backed():
+        if edited_profile is not None:
+            profile.get_profile_data().tentacles = list(
+                edited_profile.get_profile_data().tentacles
+            )
+        profile.bind_tentacles_setup_config(tentacles_setup_config)
+        config.save(save_profile=True)
+        return
+    tentacles_manager_api.save_tentacles_setup_configuration(tentacles_setup_config)
+
+
 def update_tentacle_config(tentacle_name, config_update, tentacle_class=None, tentacles_setup_config=None):
     try:
         tentacle_class = tentacle_class or get_tentacle_from_string(tentacle_name, None, with_info=False)[0]
@@ -494,6 +526,9 @@ def update_tentacle_config(tentacle_name, config_update, tentacle_class=None, te
             tentacles_setup_config or interfaces_util.get_edited_tentacles_config(),
             tentacle_class,
             config_update
+        )
+        _persist_profile_tentacles_changes(
+            tentacles_setup_config or interfaces_util.get_edited_tentacles_config()
         )
         return True, f"{tentacle_name} updated"
     except errors.InvalidAutomationConfigError:
@@ -519,6 +554,9 @@ def reset_config_to_default(tentacle_name, tentacle_class=None, tentacles_setup_
         tentacles_manager_api.factory_tentacle_reset_config(
             tentacles_setup_config or interfaces_util.get_edited_tentacles_config(),
             tentacle_class
+        )
+        _persist_profile_tentacles_changes(
+            tentacles_setup_config or interfaces_util.get_edited_tentacles_config()
         )
         return True, f"{tentacle_name} configuration reset to default values"
     except FileNotFoundError as e:
@@ -718,7 +756,7 @@ def update_tentacles_activation_config(new_config, deactivate_others=False, tent
         if tentacles_manager_api.update_activation_configuration(
                 tentacles_setup_configuration, updated_config, deactivate_others
         ):
-            tentacles_manager_api.save_tentacles_setup_configuration(tentacles_setup_configuration)
+            _persist_profile_tentacles_changes(tentacles_setup_configuration)
         return True
     except Exception as e:
         _get_logger().exception(e, True, f"Error when updating tentacles activation {e}")
@@ -738,7 +776,7 @@ async def _reset_profile_portfolio_history(current_edited_config):
         trading_api.get_exchange_name(exchange_manager): exchange_manager
         for exchange_manager in trading_api.get_exchange_managers_from_exchange_ids(trading_api.get_exchange_ids())
     }
-    run_dbs_identifier = octobot_databases_util.get_run_databases_identifier(
+    run_dbs_identifier = trading_api.get_run_databases_identifier(
         current_edited_config.config,
         interfaces_util.get_edited_tentacles_config()
     )
@@ -814,19 +852,6 @@ def update_global_config(new_config, delete=False):
         return False, str(e)
 
 
-def activate_metrics(enable_metrics):
-    current_edited_config = interfaces_util.get_edited_config(dict_only=False)
-    if commons_constants.CONFIG_METRICS not in current_edited_config.config:
-        current_edited_config.config[commons_constants.CONFIG_METRICS] = {
-            commons_constants.CONFIG_ENABLED_OPTION: enable_metrics}
-    else:
-        current_edited_config.config[commons_constants.CONFIG_METRICS][
-            commons_constants.CONFIG_ENABLED_OPTION] = enable_metrics
-    if enable_metrics and community.CommunityManager.should_register_bot(current_edited_config):
-        community.CommunityManager.background_get_id_and_register_bot(interfaces_util.get_bot_api())
-    current_edited_config.save()
-
-
 def activate_beta_env(enable_beta):
     new_env = octobot_enums.CommunityEnvironments.Staging if enable_beta \
         else octobot_enums.CommunityEnvironments.Production
@@ -836,10 +861,6 @@ def activate_beta_env(enable_beta):
     current_edited_config.config[octobot_constants.CONFIG_COMMUNITY][
         octobot_constants.CONFIG_COMMUNITY_ENVIRONMENT] = new_env.value
     current_edited_config.save()
-
-
-def get_metrics_enabled():
-    return interfaces_util.get_edited_config(dict_only=False).get_metrics_enabled()
 
 
 def get_beta_env_enabled_in_config():
@@ -907,6 +928,12 @@ async def _load_market(exchange, results):
             ) as client:
                 await client.load_markets()
                 symbols = client.symbols
+        elif not hasattr(ccxt.async_support, exchange):
+            _get_logger().warning(
+                "Skipping symbol list load for unknown exchange %r: not available in ccxt",
+                exchange,
+            )
+            return
         else:
             async with getattr(ccxt.async_support, exchange)({'verbose': False}) as client:
                 client.logger.setLevel(logging.INFO)    # prevent log of each request (huge on market statuses)
@@ -1369,7 +1396,11 @@ def are_compatible_accounts(exchange_details: dict) -> dict:
             to_check_config[commons_constants.CONFIG_EXCHANGE_PASSWORD] = configuration.encrypt(api_pass).decode()
         to_check_config[commons_constants.CONFIG_EXCHANGE_SANDBOXED] = sandboxed
         is_compatible = auth_success = is_configured = False
-        is_sponsoring = trading_api.is_sponsoring(exchange_name)
+        try:
+            is_sponsoring = trading_api.is_sponsoring(exchange_name)
+        except Exception as e:
+            bot_logging.get_logger("ConfigurationWebInterfaceModel").warning(f"Error when checking if {exchange_name} is sponsoring: {e}")
+            is_sponsoring = False
         is_supporter = authentication.Authenticator.instance().user_account.supports.is_supporting()
         error = None
         if _is_possible_exchange_config(to_check_config):
@@ -1435,6 +1466,11 @@ def get_distribution() -> octobot_enums.OctoBotDistribution:
     return configuration_manager.get_distribution(interfaces_util.get_edited_config())
 
 
+def get_octobot_display_name() -> str:
+    name = interfaces_util.get_edited_config(dict_only=False).octobot_name()
+    return name if name else "OctoBot"
+
+
 def change_reference_market_on_config_currencies(old_base_currency: str, new_quote_currency: str) -> bool:
     """
     Change the base currency from old to new for all configured pair
@@ -1460,6 +1496,7 @@ def change_reference_market_on_config_currencies(old_base_currency: str, new_quo
 
 def _change_base(pair, new_quote_currency):
     parsed_symbol = commons_symbols.parse_symbol(pair)
+    # Rebuild pair string for UI (quote leg assigned as provided by the user).
     parsed_symbol.quote = new_quote_currency
     return parsed_symbol.merged_str_symbol()
 

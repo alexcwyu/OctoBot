@@ -1,4 +1,4 @@
-# pylint: disable=R0913, R0902, W0703
+# pylint: disable=R0913,R0902,W0703,R0904,C0415
 #  Drakkar-Software OctoBot-Commons
 #  Copyright (c) Drakkar-Software, All rights reserved.
 #
@@ -16,16 +16,18 @@
 #  License along with this library.
 import os
 import functools
-import copy
-import shutil
+import typing
 
 import octobot_commons.logging as logging
 import octobot_commons.errors as errors
 import octobot_commons.constants as commons_constants
 import octobot_commons.profiles as profiles
+import octobot_commons.profiles.profile_storage as profile_storage_module
 import octobot_commons.json_util as json_util
 import octobot_commons.configuration.config_file_manager as config_file_manager
 import octobot_commons.configuration.config_operations as config_operations
+import octobot_commons.user_root_folder_provider as user_root_folder_provider
+import octobot_commons.copy_util as copy_util
 
 
 class Configuration:
@@ -54,6 +56,10 @@ class Configuration:
         self._read_config: dict = None
         self.profile: profiles.Profile = None
         self.profile_by_id: dict = {}
+        self.profile_storage = profile_storage_module.ProfileStorage(
+            profiles_path,
+            profile_schema_path,
+        )
 
     def validate(self) -> None:
         """
@@ -63,13 +69,20 @@ class Configuration:
         json_util.validate(self._read_config, self.config_schema_path)
         self.profile.validate()
 
-    def read(self, should_raise=True, fill_missing_fields=False) -> None:
+    def read(
+        self,
+        should_raise=True,
+        fill_missing_fields=False,
+        *,
+        activate_profile=True,
+    ) -> None:
         """
         Reads the configuration from self.config_path and load the current profile
         Overall config is stored into self.config and consists of a merger from the user
         config and activated profile
         :param should_raise: will raise upon exception when True
         :param fill_missing_fields: will try to fill in missing fields when true
+        :param activate_profile: when False, only load config.json without selecting a profile
         :return: None
         """
         self._read_config = config_file_manager.load(
@@ -77,7 +90,14 @@ class Configuration:
             should_raise=should_raise,
             fill_missing_fields=fill_missing_fields,
         )
-        self.config = copy.deepcopy(self._read_config)
+        self.config = copy_util.deepcopy(self._read_config, "read config")
+        if activate_profile:
+            self.load_profiles_if_possible_and_necessary()
+
+    def activate_saved_profile(self) -> None:
+        """
+        Load all profiles and select CONFIG_PROFILE from the last read config.json.
+        """
         self.load_profiles_if_possible_and_necessary()
 
     def load_profiles_if_possible_and_necessary(self) -> None:
@@ -89,14 +109,16 @@ class Configuration:
             self.load_profiles()
             self.select_profile(self._get_selected_profile())
 
-    def select_profile(self, profile_id) -> None:
+    def select_profile(self, profile_id, *, init_tentacles_setup: bool = True) -> None:
         """
         Sets self.profile using its profile_id
         :param profile_id: id of the profile to select
+        :param init_tentacles_setup: when False, skip tentacles setup initialization on activation
         :return: None
         """
         self.config[commons_constants.CONFIG_PROFILE] = profile_id
         self.profile = self.profile_by_id[profile_id]
+        self.profile_storage.activate_profile(self.profile, init_tentacles_setup=init_tentacles_setup)
         self.logger.info(f"Using {self.profile.name} profile.")
         self._generate_config_from_user_config_and_profile()
 
@@ -110,15 +132,22 @@ class Configuration:
         if profile.read_only and not profile.imported:
             raise errors.ProfileRemovalError(f"{profile.name} profile can't be removed")
         try:
-            shutil.rmtree(profile.path)
+            self.profile_storage.delete_profile(
+                profile_id,
+                profile=profile,
+            )
             self.profile_by_id.pop(profile_id, None)
+        except errors.ProfileRemovalError:
+            raise
         except Exception as err:
             raise errors.ProfileRemovalError() from err
 
     def _generate_config_from_user_config_and_profile(self):
         for profile_managed_element in self.profile.FULLY_MANAGED_ELEMENTS:
-            self.config[profile_managed_element] = copy.deepcopy(
-                self.profile.config[profile_managed_element]
+            self.config[profile_managed_element] = copy_util.deepcopy(
+                self.profile.config[profile_managed_element],
+                f"profile element {profile_managed_element!r}",
+                str(profile_managed_element),
             )
         for partially_managed_element in self.profile.PARTIALLY_MANAGED_ELEMENTS:
             self.profile.merge_partially_managed_element_into_config(
@@ -128,7 +157,8 @@ class Configuration:
     def save(
         self,
         schema_file=None,
-        sync_all_profiles=False,
+        sync_all_profiles: bool = False,
+        save_profile: typing.Optional[bool] = None,
     ) -> None:
         """
         Save the current self.config and self.profile.
@@ -141,10 +171,47 @@ class Configuration:
             config_to_save,
             schema_file=schema_file,
         )
-        if self.profile is not None:
+        if save_profile is None:
+            save_profile = self._profile_managed_elements_changed()
+        if save_profile and self.profile is not None:
             self.profile.save_config(self.config)
         if sync_all_profiles:
             self._sync_other_profiles()
+
+    def _profile_managed_elements_changed(self) -> bool:
+        if self.profile is None:
+            return False
+        for element in self.profile.FULLY_MANAGED_ELEMENTS:
+            if element in self.config:
+                if self.config[element] != self.profile.config.get(element):
+                    return True
+        for element in self.profile.PARTIALLY_MANAGED_ELEMENTS:
+            if self._partially_managed_element_would_change(element):
+                return True
+        return False
+
+    def _partially_managed_element_would_change(self, element: str) -> bool:
+        if element not in self.config:
+            return False
+        allowed_keys = profiles.Profile.PARTIALLY_MANAGED_ELEMENTS_ALLOWED_KEYS.get(
+            element
+        )
+        if allowed_keys is None:
+            return self.config[element] != self.profile.config.get(element)
+        global_element = self.config[element]
+        profile_element = self.profile.config.get(element, {})
+        for exchange_name, global_exchange_config in global_element.items():
+            if not isinstance(global_exchange_config, dict):
+                continue
+            profile_exchange_config = profile_element.get(exchange_name, {})
+            if not isinstance(profile_exchange_config, dict):
+                return True
+            for allowed_key in allowed_keys:
+                if global_exchange_config.get(allowed_key) != profile_exchange_config.get(
+                    allowed_key
+                ):
+                    return True
+        return False
 
     def _sync_other_profiles(self):
         """
@@ -155,8 +222,14 @@ class Configuration:
             if profile is self.profile:
                 # do not synchronize self.profile
                 continue
+            # Master read-only overlays use child overrides for the active profile only.
+            if self.profile_storage.is_readonly_master_overlay_profile(profile):
+                continue
             try:
-                profile.remove_deleted_elements(self.config)
+                # Sync propagates exchange deletions only (PARTIALLY_MANAGED_ELEMENTS).
+                exchanges_changed = profile.remove_deleted_elements(self.config)
+                if not exchanges_changed:
+                    continue
                 profile.validate_and_save_config()
             except Exception as err:
                 self.logger.exception(
@@ -193,8 +266,12 @@ class Configuration:
         Checks if self.profiles_path exists and contains folders
         :return: True if profiles folder is not empty
         """
+        self._prepare_profile_storage()
         return not (
-            os.path.isdir(self.profiles_path) and os.listdir(self.profiles_path)
+            self.profile_storage.has_any_profiles()
+            or (
+                os.path.isdir(self.profiles_path) and os.listdir(self.profiles_path)
+            )
         )
 
     def get_non_imported_profiles(self) -> list:
@@ -211,24 +288,50 @@ class Configuration:
         """
         return self.profile.get_tentacles_config_path()
 
-    def get_metrics_enabled(self) -> bool:
+    def get_active_tentacles_setup_config(self):
         """
-        Check if metrics are enabled
-        :return: True if metrics are enabled
+        :return: The tentacles setup config for the activated profile.
+        Profile-data-backed profiles use in-memory setup; filesystem profiles use their config path.
         """
-        return bool(
-            self.config.get(commons_constants.CONFIG_METRICS, {}).get(
-                commons_constants.CONFIG_ENABLED_OPTION, True
-            )
+        if self.profile.is_profile_data_tentacle_backed():
+            if self.profile.tentacles_setup_config is None:
+                self.profile.init_tentacles_setup_config()
+            tentacles_setup_config = self.profile.tentacles_setup_config
+            return self.profile.bind_tentacles_setup_config(tentacles_setup_config)
+        # create it from filesystem config path
+        import octobot_tentacles_manager.api as tentacles_manager_api
+
+        return tentacles_manager_api.get_tentacles_setup_config(
+            self.get_tentacles_config_path(),
+            profile=self.profile,
         )
 
-    def get_metrics_id(self) -> str:
+    def _get_master_reference_tentacles_config_file_path(self) -> str:
+        if self.uses_shared_reference_tentacles():
+            return user_root_folder_provider.get_user_reference_tentacle_config_file_path()
+        sync_data_root = os.path.normpath(user_root_folder_provider.get_sync_data_root())
+        user_root = os.path.normpath(user_root_folder_provider.get_user_root_folder())
+        if sync_data_root != user_root:
+            return os.path.join(
+                sync_data_root,
+                commons_constants.REFERENCE_TENTACLES_CONFIG_DIR,
+                commons_constants.CONFIG_TENTACLES_FILE,
+            )
+        return user_root_folder_provider.get_user_reference_tentacle_config_file_path()
+
+    def get_tentacles_setup_config_for_package_operations(self):
         """
-        :return: The current user's metrics id
+        Tentacles setup config used to compare installed vs saved community package URLs.
+        Sync/automation profiles read the master reference tentacles tree, not profile_data.
         """
-        return self.config[commons_constants.CONFIG_METRICS][
-            commons_constants.CONFIG_METRICS_BOT_ID
-        ]
+        self.apply_readonly_reference_tentacles_override()
+        if self.uses_shared_reference_tentacles() or self.profile.is_profile_data_tentacle_backed():
+            import octobot_tentacles_manager.api as tentacles_manager_api
+
+            return tentacles_manager_api.get_tentacles_setup_config(
+                self._get_master_reference_tentacles_config_file_path()
+            )
+        return self.get_active_tentacles_setup_config()
 
     def accepted_terms(self) -> bool:
         """
@@ -236,6 +339,14 @@ class Configuration:
         :return: the check result
         """
         return self.config.get(commons_constants.CONFIG_ACCEPTED_TERMS, False)
+
+    def octobot_name(self) -> str | None:
+        """
+        Optional display name for DSL-spawned child OctoBot instances.
+        :return: the configured name, or None when unset or blank
+        """
+        value = self.config.get(commons_constants.CONFIG_OCTOBOT_NAME)
+        return value if value and str(value).strip() else None
 
     def accept_terms(self, accepted) -> None:
         """
@@ -302,22 +413,90 @@ class Configuration:
             selected_profile_id != commons_constants.DEFAULT_PROFILE
             and commons_constants.DEFAULT_PROFILE in self.profile_by_id
         ):
+            self.logger.warning(
+                f"Profile {selected_profile_id} from config.json is not available yet; "
+                f"falling back to {commons_constants.DEFAULT_PROFILE}. "
+                f"This can happen when sync profiles are not loaded."
+            )
             return commons_constants.DEFAULT_PROFILE
         raise errors.NoProfileError
+
+    def uses_shared_reference_tentacles(self) -> bool:
+        """True when this config reads/writes the executor's shared reference tentacles tree."""
+        if not isinstance(self.config, dict):
+            return False
+        return bool(self.config.get(commons_constants.CONFIG_READONLY_REFERENCE_TENTACLES_PATH))
+
+    def apply_readonly_reference_tentacles_override(self) -> None:
+        """
+        Point ``UserRootFolderProvider`` at the master ``reference_tentacles_config`` tree
+        when ``readonly_reference_tentacles_path`` is set in user ``config.json`` (DSL process
+        children share the executor's reference tentacles instead of copying them locally).
+        """
+        if not isinstance(self.config, dict):
+            return
+        readonly_reference_tentacles_path = self.config.get(
+            commons_constants.CONFIG_READONLY_REFERENCE_TENTACLES_PATH
+        )
+        if readonly_reference_tentacles_path:
+            user_root_folder_provider.instance().configure_readonly_reference_tentacles_path(
+                readonly_reference_tentacles_path
+            )
+
+    def _prepare_profile_storage(self) -> None:
+        self.profile_storage.configure_paths(
+            self.profiles_path, self.profile_schema_path
+        )
+        if self.config:
+            readonly_profiles_path = self.config.get(
+                commons_constants.CONFIG_READONLY_PROFILES_PATH
+            )
+            if readonly_profiles_path:
+                self.profile_storage.configure_readonly_profiles_path(
+                    readonly_profiles_path
+                )
+            # Same config.json readonly overlay as profiles above: profile load and tentacles
+            # setup read reference paths via UserRootFolderProvider, so apply it whenever
+            # profile storage is prepared (load_profiles, refresh_sync_profiles, etc.).
+            self.apply_readonly_reference_tentacles_override()
 
     def load_profiles(self) -> None:
         """
         Loads the available profiles
         :return: None
         """
-        for profile in profiles.Profile.get_all_profiles(
-            self.profiles_path, schema_path=self.profile_schema_path
-        ):
-            if profile.profile_id not in self.profile_by_id:
-                self.profile_by_id[profile.profile_id] = profile
+        self._prepare_profile_storage()
+        loaded_profiles = self.profile_storage.load_all_profiles()
+        for profile_id, profile in loaded_profiles.items():
+            if profile_id not in self.profile_by_id:
+                self.profile_by_id[profile_id] = profile
+
+    def refresh_sync_profiles(self) -> None:
+        """
+        Reload sync-backed profiles from storage into profile_by_id.
+        Used when the sync collection may have changed externally.
+        """
+        if not self.profile_storage.is_sync_available():
+            return
+        self._prepare_profile_storage()
+        loaded_sync_profiles = self.profile_storage.list_sync_profiles()
+        loaded_sync_profile_ids = set(loaded_sync_profiles)
+        for profile_id, profile in loaded_sync_profiles.items():
+            self.profile_by_id[profile_id] = profile
+        removed_sync_profile_ids = [
+            profile_id
+            for profile_id, profile in list(self.profile_by_id.items())
+            if profile.is_sync_backed() and profile_id not in loaded_sync_profile_ids
+        ]
+        for profile_id in removed_sync_profile_ids:
+            self.profile_by_id.pop(profile_id, None)
+        if self.profile is not None and self.profile.is_sync_backed():
+            refreshed_profile = self.profile_by_id.get(self.profile.profile_id)
+            if refreshed_profile is not None:
+                self.profile = refreshed_profile
 
     def _get_config_without_profile_elements(self) -> dict:
-        filtered_config = copy.deepcopy(self.config)
+        filtered_config = copy_util.deepcopy(self.config, "save config filter")
         # do not include profile fully managed elements into filtered config
         for profile_managed_element in profiles.Profile.FULLY_MANAGED_ELEMENTS:
             filtered_config.pop(profile_managed_element, None)

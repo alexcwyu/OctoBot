@@ -17,6 +17,7 @@
 import typing
 
 import octobot_commons.constants as commons_constants
+import octobot_commons.enums as commons_enums
 import octobot_commons.dsl_interpreter as dsl_interpreter
 import octobot_trading.enums as trading_enums
 
@@ -70,9 +71,20 @@ def _market_expiry_operator(
         DESCRIPTION = "Returns the expiry timestamp in milliseconds for the given symbol's market, or None"
         EXAMPLE = "market_expiry(triggered_symbol())"
 
+        @staticmethod
+        def get_library() -> str:
+            return commons_constants.CONTEXTUAL_OPERATORS_LIBRARY
+
         @classmethod
         def get_parameters(cls) -> list:
-            return [dsl_interpreter.OperatorParameter("symbol", "The market symbol", True, str)]
+            return [
+                dsl_interpreter.OperatorParameter(
+                    "symbol",
+                    "The market symbol",
+                    True,
+                    commons_enums.DslValueType.TEXT.value,
+                )
+            ]
 
         @staticmethod
         def get_name() -> str:

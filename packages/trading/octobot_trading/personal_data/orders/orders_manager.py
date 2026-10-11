@@ -17,6 +17,7 @@ import collections
 import uuid
 import typing
 import contextlib
+import copy
 
 import octobot_commons.logging as logging
 
@@ -24,6 +25,7 @@ import octobot_trading.enums as enums
 import octobot_trading.constants as constants
 import octobot_trading.util as util
 import octobot_trading.errors as errors
+import octobot_trading.storage.orders_storage as orders_storage
 import octobot_trading.personal_data.orders.order as order_class
 import octobot_trading.personal_data.orders.order_factory as order_factory
 import octobot_trading.personal_data.orders.order_util as order_util
@@ -47,6 +49,7 @@ class OrdersManager(util.Initializable):
         self.trader: octobot_trading.exchanges.Trader = trader
         self.orders_initialized: bool = False
         self.enable_order_auto_synchronization: bool = True
+        self.enable_order_fill_events: bool = True
         self.orders: collections.OrderedDict[str, order_class.Order] = collections.OrderedDict()
         self.order_groups: dict[str, order_group_import.OrderGroup] = {}
         # orders that are expected from exchange but have not yet been fetched: will be removed when fetched
@@ -155,7 +158,9 @@ class OrdersManager(util.Initializable):
 
     async def upsert_order_from_raw(self, exchange_order_id: str, raw_order: dict, is_from_exchange: bool) -> tuple[bool, order_class.Order]:
         if not self.has_order(None, exchange_order_id=exchange_order_id):
-            self.logger.debug(f"Including new order fetched from exchange: {raw_order}")
+            self.logger.debug(
+                f"Including new order fetched from exchange: {logging.get_private_minimized_message_if_necessary(raw_order)}"
+            )
             new_order = order_factory.create_order_instance_from_raw(self.trader, raw_order)
             # replace new_order by previously created pending_order if any relevant pending_order
             new_order = await self.get_and_update_pending_order(new_order) or new_order
@@ -171,7 +176,7 @@ class OrdersManager(util.Initializable):
     def register_pending_creation_order(self, pending_order: order_class.Order):
         if self.trader.simulate:
             self.logger.error(f"Called register_pending_creation_order on an simulated trader, "
-                              f"this should not happen. Order: {pending_order}")
+                              f"this should not happen. Order: {logging.get_private_minimized_message_if_necessary(pending_order)}")
         self.pending_creation_orders.append(pending_order)
 
     async def get_and_update_pending_order(self, created_order):
@@ -212,7 +217,7 @@ class OrdersManager(util.Initializable):
             # this should not consume pending orders
             if self._get_pending_order(order, False):
                 self.logger.error(f"Called upsert_order_instance on an order that fits a pending order, "
-                                  f"this should not happen. Order: {order}")
+                                  f"this should not happen. Order: {logging.get_private_minimized_message_if_necessary(order)}")
             order = await self.get_and_update_pending_order(order) or order
             self._add_order(order.order_id, order)
             self._check_orders_size()
@@ -222,7 +227,9 @@ class OrdersManager(util.Initializable):
 
     def _add_order(self, order_id, order):
         if order_id is None:
-            self.logger.warning(f"Adding order with None order_id to order manager: {order}")
+            self.logger.warning(
+                f"Adding order with None order_id to order manager: {logging.get_private_minimized_message_if_necessary(order)}"
+            )
         self.orders[order_id] = order
 
     def has_order(self, order_id, exchange_order_id=None) -> bool:
@@ -251,15 +258,17 @@ class OrdersManager(util.Initializable):
         self._check_orders_size()
 
     @contextlib.contextmanager
-    def disabled_order_auto_synchronization(self):
+    def disabled_order_auto_synchronization(self, enable_order_fill_events: bool = False):
         """
         Can be used to locally disable orders auto refresh when an order is pending
         """
         self.enable_order_auto_synchronization = False
+        self.enable_order_fill_events = enable_order_fill_events
         try:
             yield
         finally:
             self.enable_order_auto_synchronization = True
+            self.enable_order_fill_events = True
 
     async def initialize_from_exchange_data(self, exchange_data: "exchange_data_import.ExchangeData") -> None:
         """
@@ -269,15 +278,17 @@ class OrdersManager(util.Initializable):
         pending_groups = {}
         for order_details in exchange_data.orders_details.open_orders:
             if constants.STORAGE_ORIGIN_VALUE in order_details:
+                formatted_order_dict = orders_storage.from_order_document(copy.deepcopy(order_details))
                 order = order_factory.create_order_from_order_raw_in_storage_details_without_related_elements(
-                    exchange_manager, order_details
+                    exchange_manager, formatted_order_dict
                 )
                 await orders_storage_operations.create_orders_storage_related_elements(
-                    order, order_details, exchange_manager, pending_groups
+                    order, formatted_order_dict, exchange_manager, pending_groups
                 )
             else:
                 # simple order dict (order just fetched from exchange)
                 order = order_factory.create_order_instance_from_raw(self.trader, order_details)
+
             await self.upsert_order_instance(order)
 
     # private methods

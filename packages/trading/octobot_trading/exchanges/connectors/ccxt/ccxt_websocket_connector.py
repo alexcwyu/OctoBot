@@ -220,7 +220,7 @@ class CCXTWebsocketConnector(abstract_websocket_exchange.AbstractWebsocketExchan
         """
         Reimplementation of self.client.stop() without calling loop.run_until_complete()
         """
-        if asyncio.get_event_loop() is self.local_loop:
+        if asyncio_tools.is_on_async_loop(self.local_loop):
             await self._inner_stop()
         else:
             asyncio_tools.run_coroutine_in_asyncio_loop(
@@ -319,7 +319,10 @@ class CCXTWebsocketConnector(abstract_websocket_exchange.AbstractWebsocketExchan
 
     def _should_authenticate(self):
         if self.exchange_manager.exchange.requires_authentication(
-            self.exchange_manager.exchange.tentacle_config, None, None
+            self.exchange_manager.exchange.tentacle_config,
+            None,
+            None,
+            self.exchange_manager,
         ):
             return True
         return self._has_authenticated_channel() and super()._should_authenticate()

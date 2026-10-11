@@ -19,6 +19,8 @@ import decimal
 
 import octobot_commons.dataclasses
 import octobot_commons.enums as common_enums
+import octobot_trading.constants as trading_constants
+import octobot_trading.enums as trading_enums
 import octobot_trading.exchanges.util.symbol_details as symbol_details_import
 
 @dataclasses.dataclass
@@ -27,6 +29,16 @@ class IncompatibleAssetDetails(
 ):
     symbol: str = ""
     updated_at: float = 0
+
+
+_NON_CREDENTIAL_EXCHANGE_AUTH_DETAILS_FIELDS = (
+    "exchange_type",
+    "sandboxed",
+    "broker_enabled",
+    "exchange_account_id",
+    "exchange_credential_id",
+    "incompatible_assets",
+)
 
 
 @dataclasses.dataclass
@@ -42,6 +54,14 @@ class ExchangeAuthDetails(octobot_commons.dataclasses.FlexibleDataclass, octobot
     exchange_account_id: typing.Union[str, None] = None # deprecated, will be deleted
     exchange_credential_id: typing.Union[str, None] = None
     incompatible_assets: typing.Union[list[IncompatibleAssetDetails], None] = dataclasses.field(default_factory=list)
+
+    @classmethod
+    def non_credential_dict(cls, auth_details: dict) -> dict:
+        return {
+            field_name: auth_details[field_name]
+            for field_name in _NON_CREDENTIAL_EXCHANGE_AUTH_DETAILS_FIELDS
+            if field_name in auth_details
+        }
 
     # pylint: disable=E1134
     def __post_init__(self):
@@ -90,11 +110,33 @@ class MarketDetails(octobot_commons.dataclasses.FlexibleDataclass, octobot_commo
         ohlcv[common_enums.PriceIndexes.IND_PRICE_VOL.value] = self.volume[index]
         return ohlcv
 
+    @staticmethod
+    def from_ohlcvs(symbol: str, time_frame: str, ohlcvs: list[dict]) -> "MarketDetails":
+        return MarketDetails(
+            symbol=symbol,
+            time_frame=time_frame,
+            close=[ohlcv[common_enums.PriceIndexes.IND_PRICE_CLOSE.value] for ohlcv in ohlcvs],
+            open=[ohlcv[common_enums.PriceIndexes.IND_PRICE_OPEN.value] for ohlcv in ohlcvs],
+            high=[ohlcv[common_enums.PriceIndexes.IND_PRICE_HIGH.value] for ohlcv in ohlcvs],
+            low=[ohlcv[common_enums.PriceIndexes.IND_PRICE_LOW.value] for ohlcv in ohlcvs],
+            volume=[ohlcv[common_enums.PriceIndexes.IND_PRICE_VOL.value] for ohlcv in ohlcvs],
+            time=[ohlcv[common_enums.PriceIndexes.IND_PRICE_TIME.value] for ohlcv in ohlcvs],
+        )
+
 
 @dataclasses.dataclass
 class OrdersDetails(octobot_commons.dataclasses.FlexibleDataclass, octobot_commons.dataclasses.UpdatableDataclass):
     open_orders: list[dict[str, typing.Any]] = dataclasses.field(default_factory=list)
     missing_orders: list[dict[str, typing.Any]] = dataclasses.field(default_factory=list)
+
+    def has_valid_open_orders(self) -> bool:
+        if not self.open_orders:
+            return False
+        return bool(
+            self.open_orders[0]
+            .get(trading_constants.STORAGE_ORIGIN_VALUE, {})
+            .get(trading_enums.ExchangeConstantsOrderColumns.TYPE.value)
+        )
 
 
 @dataclasses.dataclass
@@ -134,3 +176,25 @@ class ExchangeData(octobot_commons.dataclasses.MinimizableDataclass, octobot_com
             if market.symbol == symbol:
                 return market.close[-1]
         raise KeyError(symbol)
+
+
+def exchange_data_factory(
+    exchange_internal_name: str,
+    exchange_type: typing.Optional[str] = None,
+    sandboxed: bool = False,
+    exchange_credential_id: typing.Optional[str] = None,
+    auth_details: typing.Optional[ExchangeAuthDetails] = None,
+) -> ExchangeData:
+    exchange_data = ExchangeData()
+    exchange_data.exchange_details.name = exchange_internal_name
+    exchange_data.auth_details.sandboxed = sandboxed
+    exchange_data.auth_details.exchange_credential_id = exchange_credential_id
+    if exchange_type:
+        exchange_data.auth_details.exchange_type = exchange_type
+    if auth_details:
+        exchange_data.auth_details.api_key = auth_details.api_key
+        exchange_data.auth_details.api_secret = auth_details.api_secret
+        exchange_data.auth_details.api_password = auth_details.api_password
+        exchange_data.auth_details.access_token = auth_details.access_token
+        exchange_data.auth_details.encrypted = auth_details.encrypted
+    return exchange_data

@@ -16,12 +16,32 @@
 
 import logging
 
+import octobot_node.config
+import octobot_node.constants
 import octobot_node.scheduler.scheduler as scheduler_lib
-import octobot_node.scheduler.workflows
+import octobot_node.scheduler.workflows as scheduler_workflows
+import octobot_node.scheduler.workflows_version_migration as workflows_version_migration
 
-scheduler_logger = logging.getLogger(__name__)
+import octobot.community.node_journal as node_journal
+import octobot.community.node_journal.enums as journal_enums
+import octobot.community.node_journal.recording_context as journal_recording_context
+
+scheduler_logger = logging.getLogger("scheduler.init")
 
 SCHEDULER: scheduler_lib.Scheduler = scheduler_lib.Scheduler()
+
+_shutdown_done = False
+_scheduler_init_failure_recorded = False
+
+
+def scheduler_init_failure_was_recorded() -> bool:
+    return _scheduler_init_failure_recorded
+
+
+def _record_scheduler_init_failed(**kwargs) -> None:
+    global _scheduler_init_failure_recorded
+    _scheduler_init_failure_recorded = True
+    node_journal.record_scheduler_init_failed(**kwargs)
 
 
 def is_enabled() -> bool:
@@ -32,8 +52,70 @@ def is_initialized() -> bool:
     return SCHEDULER.is_initialized()
 
 
-def initialize_scheduler():
+def _scheduler_backend() -> journal_enums.JournalSchedulerBackend:
+    if octobot_node.config.settings.SCHEDULER_POSTGRES_URL:
+        return journal_enums.JournalSchedulerBackend.POSTGRES
+    return journal_enums.JournalSchedulerBackend.SQLITE
+
+
+async def initialize_scheduler():
+    global _shutdown_done, _scheduler_init_failure_recorded
+    _shutdown_done = False
+    _scheduler_init_failure_recorded = False
     scheduler_logger.info("Initializing scheduler")
-    SCHEDULER.create()
-    octobot_node.scheduler.workflows.register_workflows()
-    SCHEDULER.start()
+    backend = _scheduler_backend()
+    with journal_recording_context.scheduler_init_phase(
+        init_phase=journal_enums.JournalInitPhase.DBOS_CREATE,
+        backend=backend,
+        on_failure=_record_scheduler_init_failed,
+    ):
+        SCHEDULER.create()
+    with journal_recording_context.scheduler_init_phase(
+        init_phase=journal_enums.JournalInitPhase.REGISTER_WORKFLOWS,
+        backend=backend,
+        on_failure=_record_scheduler_init_failed,
+    ):
+        scheduler_workflows.register_workflows()
+    if octobot_node.constants.ALWAYS_ENSURE_SCHEDULER_APPLICATION_VERSION:
+        with journal_recording_context.scheduler_init_phase(
+            init_phase=journal_enums.JournalInitPhase.VERSION_MIGRATION,
+            backend=backend,
+            on_failure=_record_scheduler_init_failed,
+        ):
+            workflows_version_migration.migrate_stranded_workflow_versions(
+                target_version=octobot_node.constants.SCHEDULER_APPLICATION_VERSION,
+            )
+    import octobot_node.scheduler.queues as scheduler_queues
+    import octobot_node.scheduler.schedules as schedules
+    with journal_recording_context.scheduler_init_phase(
+        init_phase=journal_enums.JournalInitPhase.DBOS_LAUNCH,
+        backend=backend,
+        on_failure=_record_scheduler_init_failed,
+    ):
+        SCHEDULER.start()
+        scheduler_logger.info("Scheduler: registering DBOS queues")
+        await scheduler_queues.register_scheduler_queues_async()
+        scheduler_logger.info("Scheduler: DBOS queues registered")
+    # apply_schedules requires DBOS launch (sys_db); must run after start().
+    with journal_recording_context.scheduler_init_phase(
+        init_phase=journal_enums.JournalInitPhase.REGISTER_SCHEDULES,
+        backend=backend,
+        on_failure=_record_scheduler_init_failed,
+    ):
+        scheduler_logger.info("Scheduler: applying schedules")
+        await schedules.register_schedules(SCHEDULER)
+        scheduler_logger.info("Scheduler: schedules applied")
+    scheduler_logger.info("Scheduler: initialize_scheduler completed")
+
+
+async def shutdown_scheduler_and_trading_signal_channel() -> None:
+    global _shutdown_done
+    if _shutdown_done or not is_initialized():
+        return
+    try:
+        import octobot_flow.repositories.community.trading_signals_channel as trading_signals_channel
+        await trading_signals_channel.shutdown_internal_trading_signal_channel()
+    except ImportError:
+        pass
+    SCHEDULER.stop()
+    _shutdown_done = True

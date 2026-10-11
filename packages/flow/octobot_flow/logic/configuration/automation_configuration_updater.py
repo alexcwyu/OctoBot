@@ -50,7 +50,7 @@ class AutomationConfigurationUpdater:
         self._apply_automation_state_configuration_update(automation_state_update)
         self._register_execution_time(start_time)
         self._complete_execution_and_register_next_schedule_time()
-        self.action.complete()
+        self.action.complete(result=self.action.result)
 
     def _apply_automation_state_configuration_update(
         self, automation_state_update: octobot_flow.entities.AutomationState
@@ -73,9 +73,11 @@ class AutomationConfigurationUpdater:
         exchange_data_update = profiles_import.ExchangeData().get_update(
             configuration_update.exchange_details
         )
+        new_exchange_account_id = exchange_data_update.exchange_account_id
+        current_exchange_account_id = self.automation_state.exchange_account_details.exchange_details.exchange_account_id
         updating_exchange_account_id = bool(
-            exchange_data_update.exchange_account_id
-            and exchange_data_update.exchange_account_id != self.automation_state.exchange_account_details.exchange_details.exchange_account_id
+            new_exchange_account_id and current_exchange_account_id
+            and new_exchange_account_id != current_exchange_account_id
         )
         self.automation_state.exchange_account_details.exchange_details.update(exchange_data_update)
         return updating_exchange_account_id
