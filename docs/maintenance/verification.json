@@ -1,6 +1,6 @@
 {
   "repository": "OctoBot",
-  "source_commit_before_documentation_commit": "0f81437db3640f199332d538083e1ea7fb01f693",
+  "source_commit_before_documentation_commit": "abd3e581dcc3b7b839ee7d42afd2293e24637c4a",
   "recorded_on": "2026-10-12",
   "records": [
     {
@@ -1646,6 +1646,19 @@
     },
     {
       "command": [
+        ".venv/bin/python",
+        "-c",
+        "import os,sys,pytest;sys.path.insert(0,'<workspace>/OctoBot');os.chdir('<workspace>/OctoBot-Tentacles');sys.path.insert(0,'<workspace>/OctoBot-Tentacles');raise SystemExit(pytest.main(['tentacles','--continue-on-collection-errors','--rootdir=<workspace>/OctoBot-Tentacles','--collect-only','--tb=short']))"
+      ],
+      "exit_code": 0,
+      "seconds": 7.85,
+      "check": "Tentacles-api-collection-check",
+      "original_log": "OctoBot-Tentacles-api-collection-check.log",
+      "log_sha256": "007f4c91ba54bfe9db81d666072d7ffdb5fdf48587d5f41aa7b8bf9adaf0905b",
+      "outcomes": []
+    },
+    {
+      "command": [
         "<workspace>/OctoBot/.venv/bin/OctoBot",
         "tentacles",
         "--install",
@@ -1716,6 +1729,19 @@
     },
     {
       "command": [
+        ".venv/bin/python",
+        "-c",
+        "import os,sys,pytest;sys.path.insert(0,'<workspace>/OctoBot');os.chdir('<workspace>/OctoBot');sys.path.insert(0,'<workspace>/OctoBot-Tentacles');raise SystemExit(pytest.main(['<workspace>/OctoBot-Tentacles/tentacles','--continue-on-collection-errors','--rootdir=<workspace>/OctoBot-Tentacles','--timeout=60','--tb=short']))"
+      ],
+      "exit_code": -15,
+      "seconds": 901.69,
+      "check": "Tentacles-bounded-current-api-full-tests",
+      "original_log": "OctoBot-Tentacles-bounded-current-api-full-tests.log",
+      "log_sha256": "37301626aacee88a6f2174946b743064e1f9844f6e8208a1071c449e7a907bfe",
+      "outcomes": []
+    },
+    {
+      "command": [
         "uv",
         "build",
         "--python",
@@ -1745,6 +1771,36 @@
       "original_log": "OctoBot-Tentacles-compile.log",
       "log_sha256": "977a21ebecff2f88cda69aa37888f4a37f589bf6211e014af4e026dbda61ee72",
       "outcomes": []
+    },
+    {
+      "command": [
+        ".venv/bin/python",
+        "-c",
+        "import os,sys,pytest;sys.path.insert(0,'<workspace>/OctoBot');os.chdir('<workspace>/OctoBot-Tentacles');sys.path.insert(0,'<workspace>/OctoBot-Tentacles');raise SystemExit(pytest.main(['tentacles/Trading/Mode/dca_trading_mode/tests','tentacles/Trading/Mode/index_trading_mode/tests','tentacles/Trading/Mode/grid_trading_mode/tests','--rootdir=<workspace>/OctoBot-Tentacles','--tb=short']))"
+      ],
+      "exit_code": 1,
+      "seconds": 31.69,
+      "check": "Tentacles-converted-mode-focused-tests",
+      "original_log": "OctoBot-Tentacles-converted-mode-focused-tests.log",
+      "log_sha256": "afab830367bd95e968b67a5453f97dc5a797facbd0499ff95d3d413084edd7a2",
+      "outcomes": [
+        "36 failed, 6 passed, 55 errors in 27.42s"
+      ]
+    },
+    {
+      "command": [
+        ".venv/bin/python",
+        "-c",
+        "import os,sys,pytest;sys.path.insert(0,'<workspace>/OctoBot');os.chdir('<workspace>/OctoBot-Tentacles');sys.path.insert(0,'<workspace>/OctoBot-Tentacles');raise SystemExit(pytest.main(['tentacles/Trading/Mode/dca_trading_mode/tests','tentacles/Trading/Mode/index_trading_mode/tests','tentacles/Trading/Mode/grid_trading_mode/tests','--rootdir=<workspace>/OctoBot-Tentacles','--tb=short']))"
+      ],
+      "exit_code": 0,
+      "seconds": 20.71,
+      "check": "Tentacles-converted-mode-focused-tests-2",
+      "original_log": "OctoBot-Tentacles-converted-mode-focused-tests-2.log",
+      "log_sha256": "395a3ec55553a2b2e40c4e272646e88e12d9ac0f49a2e7aa219a37fdccd632e5",
+      "outcomes": [
+        "97 passed in 16.21s"
+      ]
     },
     {
       "command": [
@@ -1778,6 +1834,183 @@
       "check": "Tentacles-current-api-archive-pack",
       "original_log": "OctoBot-Tentacles-current-api-archive-pack.log",
       "log_sha256": "b282cbf31230a2722a36ba33173e634c283e9e623c5448c878f6c1cf55011b47",
+      "outcomes": []
+    },
+    {
+      "command": [
+        "../OctoBot/.venv/bin/OctoBot",
+        "tentacles",
+        "-d",
+        "src/octobot_tentacles",
+        "-m",
+        "metadata.yaml",
+        "-p",
+        "dist/current-host.zip"
+      ],
+      "exit_code": 0,
+      "seconds": 5.97,
+      "check": "Tentacles-current-api-export",
+      "original_log": "OctoBot-Tentacles-current-api-export.log",
+      "log_sha256": "22570202324c6aa49e080bbc66e18b778ba91cc23d6ea861616a8f53d2ff2eab",
+      "outcomes": []
+    },
+    {
+      "command": [
+        "../OctoBot/.venv/bin/OctoBot",
+        "tentacles",
+        "-d",
+        "src/octobot_tentacles",
+        "-m",
+        "metadata.yaml",
+        "-p",
+        "dist/current-host.zip"
+      ],
+      "exit_code": 0,
+      "seconds": 5.17,
+      "check": "Tentacles-current-api-export-2",
+      "original_log": "OctoBot-Tentacles-current-api-export-2.log",
+      "log_sha256": "e56b946f53a5644a2f3e2e0356636e70ef7466f85017ed628ceeae5f6874a5a7",
+      "outcomes": []
+    },
+    {
+      "command": [
+        "../OctoBot/.venv/bin/OctoBot",
+        "tentacles",
+        "-d",
+        "src/octobot_tentacles",
+        "-m",
+        "metadata.yaml",
+        "-p",
+        "dist/current-host.zip"
+      ],
+      "exit_code": 0,
+      "seconds": 4.94,
+      "check": "Tentacles-current-api-export-3",
+      "original_log": "OctoBot-Tentacles-current-api-export-3.log",
+      "log_sha256": "95f225c5a6eb2fdaf87f5199b70308e3f3cd56d600fc0e032008cd868504b05e",
+      "outcomes": []
+    },
+    {
+      "command": [
+        ".venv/bin/python",
+        "-c",
+        "import os,sys,pytest;sys.path.insert(0,'<workspace>/OctoBot');os.chdir('<workspace>/OctoBot');sys.path.insert(0,'<workspace>/OctoBot-Tentacles');raise SystemExit(pytest.main(['<workspace>/OctoBot-Tentacles/tentacles','--continue-on-collection-errors','--rootdir=<workspace>/OctoBot-Tentacles']))"
+      ],
+      "exit_code": -15,
+      "seconds": 784.99,
+      "check": "Tentacles-current-api-full-tests",
+      "original_log": "OctoBot-Tentacles-current-api-full-tests.log",
+      "log_sha256": "db230c93dbc61cf30a7a904833755380178c0a35d2d5bc454dc3c4ab734a0875",
+      "outcomes": []
+    },
+    {
+      "command": [
+        ".venv/bin/python",
+        "-c",
+        "import os,sys,pytest;sys.path.insert(0,'<workspace>/OctoBot');os.chdir('<workspace>/OctoBot-Tentacles');sys.path.insert(0,'<workspace>/OctoBot-Tentacles');raise SystemExit(pytest.main(['tentacles','--continue-on-collection-errors','--rootdir=<workspace>/OctoBot-Tentacles','--timeout=90','--tb=short']))"
+      ],
+      "exit_code": -15,
+      "seconds": 914.82,
+      "check": "Tentacles-current-api-full-tests-2",
+      "original_log": "OctoBot-Tentacles-current-api-full-tests-2.log",
+      "log_sha256": "f5c57586ac7a1dfa591ac62fb97d668f597de4420e9cd4d54dd6d8a7827e2b28",
+      "outcomes": []
+    },
+    {
+      "command": [
+        "env",
+        "ALLOW_UNSIGNED_TENTACLES=true",
+        "../OctoBot/.venv/bin/OctoBot",
+        "tentacles",
+        "--install",
+        "--location",
+        "output/dist/any_platform.zip",
+        "--all"
+      ],
+      "exit_code": 0,
+      "seconds": 5.21,
+      "check": "Tentacles-current-api-install",
+      "original_log": "OctoBot-Tentacles-current-api-install.log",
+      "log_sha256": "f5dba0e1c0838fbb0c3080698a39d17e396770bc34935b3be5436311ae487163",
+      "outcomes": []
+    },
+    {
+      "command": [
+        "env",
+        "ALLOW_UNSIGNED_TENTACLES=true",
+        "../OctoBot/.venv/bin/OctoBot",
+        "tentacles",
+        "--install",
+        "--location",
+        "output/dist/any_platform.zip",
+        "--all"
+      ],
+      "exit_code": 0,
+      "seconds": 3.7,
+      "check": "Tentacles-current-api-install-2",
+      "original_log": "OctoBot-Tentacles-current-api-install-2.log",
+      "log_sha256": "01791449795878cc7ade5ba890f0742f024a3182f90b2d98d4fb056f476e8e80",
+      "outcomes": []
+    },
+    {
+      "command": [
+        "uv",
+        "lock",
+        "--upgrade"
+      ],
+      "exit_code": 0,
+      "seconds": 1.81,
+      "check": "Tentacles-current-exchange-lock",
+      "original_log": "OctoBot-Tentacles-current-exchange-lock.log",
+      "log_sha256": "6af76921a12b28a3827038b4d6d1b904b542fad2c21687be85befbf6782c7f63",
+      "outcomes": []
+    },
+    {
+      "command": [
+        "uv",
+        "sync",
+        "--frozen",
+        "--all-extras",
+        "--python",
+        "3.14.8"
+      ],
+      "exit_code": 0,
+      "seconds": 0.75,
+      "check": "Tentacles-current-exchange-sync",
+      "original_log": "OctoBot-Tentacles-current-exchange-sync.log",
+      "log_sha256": "275047da41c40d11a21fb75e762947ebc407109cb9876f66c7599aab311f817e",
+      "outcomes": []
+    },
+    {
+      "command": [
+        "env",
+        "BOTS_REPO=tentacles",
+        ".venv/bin/python",
+        "-c",
+        "import os,sys,pytest;sys.path.insert(0,'/tmp');sys.path.insert(0,'<workspace>/OctoBot');os.chdir('<workspace>/OctoBot-Tentacles');sys.path.insert(0,'<workspace>/OctoBot-Tentacles');raise SystemExit(pytest.main(['tentacles/Evaluator/Strategies','tentacles/Meta/Keywords/scripting_library/tests/orders/order_types/test_multiple_orders_creation.py','--rootdir=<workspace>/OctoBot-Tentacles','--tb=short','-p','bots_test_observer']))"
+      ],
+      "exit_code": 1,
+      "seconds": 53.8,
+      "check": "Tentacles-current-host-exchange-focused-tests",
+      "original_log": "OctoBot-Tentacles-current-host-exchange-focused-tests.log",
+      "log_sha256": "b8d93abcd5028fb83e59acb8a58124d2a329c3eef1d0b1a6fca197c16ebfd192",
+      "outcomes": [
+        "5 failed, 30 passed in 50.56s"
+      ]
+    },
+    {
+      "command": [
+        "env",
+        "BOTS_REPO=tentacles",
+        ".venv/bin/python",
+        "-c",
+        "import os,sys,pytest;sys.path.insert(0,'/tmp');sys.path.insert(0,'<workspace>/OctoBot');os.chdir('<workspace>/OctoBot-Tentacles');sys.path.insert(0,'<workspace>/OctoBot-Tentacles');raise SystemExit(pytest.main(['tentacles','--continue-on-collection-errors','--rootdir=<workspace>/OctoBot-Tentacles','--timeout=300','--tb=short','-p','bots_test_observer','-o','faulthandler_timeout=120']))"
+      ],
+      "exit_code": -15,
+      "seconds": 172.82,
+      "check": "Tentacles-current-observed-existing-tests",
+      "original_log": "OctoBot-Tentacles-current-observed-existing-tests.log",
+      "log_sha256": "572121c11b1eee58b9b18d43ff5fc339faf12a3cb65700d698956cb54ffe9d4c",
       "outcomes": []
     },
     {
@@ -2138,6 +2371,60 @@
       "outcomes": [
         "8 failed, 42 passed, 51 errors in 5.48s"
       ]
+    },
+    {
+      "command": [
+        ".venv/bin/python",
+        "-c",
+        "import os,sys,pytest,faulthandler;faulthandler.dump_traceback_later(45,repeat=True);sys.path.insert(0,'<workspace>/OctoBot');os.chdir('<workspace>/OctoBot-Tentacles');sys.path.insert(0,'<workspace>/OctoBot-Tentacles');raise SystemExit(pytest.main(['tentacles/Trading/Exchange/binance_websocket_feed/tests','--rootdir=<workspace>/OctoBot-Tentacles','--timeout=300','--tb=short','-vv','-s']))"
+      ],
+      "exit_code": 1,
+      "seconds": 84.11,
+      "check": "Tentacles-websocket-lifecycle-diagnostic-tests",
+      "original_log": "OctoBot-Tentacles-websocket-lifecycle-diagnostic-tests.log",
+      "log_sha256": "a1920c6874ea14fb204e0517f221c418c56faf614ee08a37efa5967f5a6ed75e",
+      "outcomes": []
+    },
+    {
+      "command": [
+        ".venv/bin/python",
+        "-c",
+        "import os,sys,pytest;sys.path.insert(0,'<workspace>/OctoBot');os.chdir('<workspace>/OctoBot-Tentacles');sys.path.insert(0,'<workspace>/OctoBot-Tentacles');raise SystemExit(pytest.main(['tentacles/Trading/Exchange/binance_websocket_feed/tests','--rootdir=<workspace>/OctoBot-Tentacles','--timeout=300','--tb=short']))"
+      ],
+      "exit_code": 1,
+      "seconds": 86.86,
+      "check": "Tentacles-websocket-lifecycle-diagnostic-tests-2",
+      "original_log": "OctoBot-Tentacles-websocket-lifecycle-diagnostic-tests-2.log",
+      "log_sha256": "a898edd5a0420f62f999294d37693bba8cc471910c4aff8b4cb4c18f7c62bea8",
+      "outcomes": []
+    },
+    {
+      "command": [
+        ".venv/bin/python",
+        "-c",
+        "import os,sys,pytest;sys.path.insert(0,'<workspace>/OctoBot');os.chdir('<workspace>/OctoBot-Tentacles');sys.path.insert(0,'<workspace>/OctoBot-Tentacles');raise SystemExit(pytest.main(['tentacles/Trading/Exchange/binance_websocket_feed/tests','--rootdir=<workspace>/OctoBot-Tentacles','--timeout=300','--tb=short']))"
+      ],
+      "exit_code": 0,
+      "seconds": 81.81,
+      "check": "Tentacles-websocket-lifecycle-diagnostic-tests-3",
+      "original_log": "OctoBot-Tentacles-websocket-lifecycle-diagnostic-tests-3.log",
+      "log_sha256": "fa616b4a5970f0999922e2d118f7d87c5fa848b7c342ff7ed2e5d23da6028597",
+      "outcomes": [
+        "1 passed in 78.09s (0:01:18)"
+      ]
+    },
+    {
+      "command": [
+        ".venv/bin/python",
+        "-c",
+        "import os,sys,pytest;sys.path.insert(0,'<workspace>/OctoBot');os.chdir('<workspace>/OctoBot-Tentacles');sys.path.insert(0,'<workspace>/OctoBot-Tentacles');raise SystemExit(pytest.main(['tentacles/Trading/Exchange/binance_websocket_feed/tests','--rootdir=<workspace>/OctoBot-Tentacles','--timeout=90','--tb=short']))"
+      ],
+      "exit_code": -15,
+      "seconds": 387.18,
+      "check": "Tentacles-websocket-lifecycle-existing-tests",
+      "original_log": "OctoBot-Tentacles-websocket-lifecycle-existing-tests.log",
+      "log_sha256": "fc05ca05dfdbaf00d3f9bebc5929c1ef8fea89343171accc41aec6b8b8143190",
+      "outcomes": []
     },
     {
       "command": [
@@ -5347,6 +5634,182 @@
       "log_sha256": "f1bc83d870ad33e2da1d1f386be5b287ec5abdb291d08685cb24796bff26e4b9",
       "outcomes": [
         "9 failed, 502 passed in 39.53s"
+      ]
+    },
+    {
+      "command": [
+        "uv",
+        "build"
+      ],
+      "exit_code": 0,
+      "seconds": 14.56,
+      "check": "websocket-final-build",
+      "original_log": "OctoBot-websocket-final-build.log",
+      "log_sha256": "9849cc342d377a69a85a3677afd96e6f550845ab438b05994299cc85f7d1f5df",
+      "outcomes": [
+        "Successfully built dist/octobot-3.0.0b3.tar.gz",
+        "Successfully built dist/octobot-3.0.0b3-py3-none-any.whl"
+      ]
+    },
+    {
+      "command": [
+        "uv",
+        "run",
+        "--no-sync",
+        "python",
+        "-W",
+        "error",
+        "-m",
+        "compileall",
+        "-q",
+        "packages/trading/octobot_trading/exchanges",
+        "packages/trading/octobot_trading/util/test_tools/websocket_test_tools.py"
+      ],
+      "exit_code": 0,
+      "seconds": 0.14,
+      "check": "websocket-final-compile",
+      "original_log": "OctoBot-websocket-final-compile.log",
+      "log_sha256": "8a2b95a0d5a8ec11967e25a5ca60d0398c4eeba05c46855a552f53b0cf55f23d",
+      "outcomes": []
+    },
+    {
+      "command": [
+        "uv",
+        "run",
+        "--frozen",
+        "--all-extras",
+        "python",
+        "-m",
+        "tools.extended_linter",
+        "--base",
+        "origin/master"
+      ],
+      "exit_code": 0,
+      "seconds": 28.3,
+      "check": "websocket-final-extended-linter",
+      "original_log": "OctoBot-websocket-final-extended-linter.log",
+      "log_sha256": "611a8ef7e9f26196a607f68ec3bed8495379c1502d54b9fc11defa40497401c3",
+      "outcomes": []
+    },
+    {
+      "command": [
+        "uv",
+        "build"
+      ],
+      "exit_code": 0,
+      "seconds": 14.34,
+      "check": "websocket-lifecycle-build",
+      "original_log": "OctoBot-websocket-lifecycle-build.log",
+      "log_sha256": "9849cc342d377a69a85a3677afd96e6f550845ab438b05994299cc85f7d1f5df",
+      "outcomes": [
+        "Successfully built dist/octobot-3.0.0b3.tar.gz",
+        "Successfully built dist/octobot-3.0.0b3-py3-none-any.whl"
+      ]
+    },
+    {
+      "command": [
+        "uv",
+        "build"
+      ],
+      "exit_code": 0,
+      "seconds": 14.73,
+      "check": "websocket-lifecycle-build-2",
+      "original_log": "OctoBot-websocket-lifecycle-build-2.log",
+      "log_sha256": "9849cc342d377a69a85a3677afd96e6f550845ab438b05994299cc85f7d1f5df",
+      "outcomes": [
+        "Successfully built dist/octobot-3.0.0b3.tar.gz",
+        "Successfully built dist/octobot-3.0.0b3-py3-none-any.whl"
+      ]
+    },
+    {
+      "command": [
+        "uv",
+        "run",
+        "--no-sync",
+        "python",
+        "-W",
+        "error",
+        "-m",
+        "compileall",
+        "-q",
+        "packages/trading/octobot_trading/exchanges"
+      ],
+      "exit_code": 0,
+      "seconds": 0.13,
+      "check": "websocket-lifecycle-compile",
+      "original_log": "OctoBot-websocket-lifecycle-compile.log",
+      "log_sha256": "022e3971676d6f4f0ee83ef237698f9d002eacd4c271cedec3a52f82101a6328",
+      "outcomes": []
+    },
+    {
+      "command": [
+        "uv",
+        "run",
+        "--no-sync",
+        "pytest",
+        "packages/trading/tests/exchanges/test_abstract_websocket_exchange.py",
+        "packages/trading/tests/exchanges/implementations/test_default_websocket_exchange.py",
+        "packages/trading/tests/exchanges/types/test_websocket_exchange.py",
+        "--tb=short"
+      ],
+      "exit_code": 0,
+      "seconds": 4.75,
+      "check": "websocket-lifecycle-focused-tests",
+      "original_log": "OctoBot-websocket-lifecycle-focused-tests.log",
+      "log_sha256": "1c904914b8c770405dd475a5c6dce9e4c205b121aee64123aa71f82d235da185",
+      "outcomes": [
+        "2 passed in 0.74s"
+      ]
+    },
+    {
+      "command": [
+        "uv",
+        "run",
+        "--no-sync",
+        "pytest",
+        "packages/trading/tests/exchanges/test_abstract_websocket_exchange.py",
+        "packages/trading/tests/exchanges/implementations/test_default_websocket_exchange.py",
+        "packages/trading/tests/exchanges/types/test_websocket_exchange.py",
+        "packages/trading/tests/exchanges/connectors/ccxt",
+        "--tb=short"
+      ],
+      "exit_code": 1,
+      "seconds": 26.69,
+      "check": "websocket-lifecycle-focused-tests-2",
+      "original_log": "OctoBot-websocket-lifecycle-focused-tests-2.log",
+      "log_sha256": "d091693951489d09d0dd45dc4886a57882bf68455a342263fcbb0647bf6252a9",
+      "outcomes": [
+        "57 passed, 1 error in 22.58s"
+      ]
+    },
+    {
+      "command": [
+        ".venv/bin/python",
+        "-c",
+        "import os,pytest;os.chdir('packages/trading');raise SystemExit(pytest.main(['tests/exchanges/test_abstract_websocket_exchange.py','tests/exchanges/implementations/test_default_websocket_exchange.py','tests/exchanges/types/test_websocket_exchange.py','tests/exchanges/connectors/ccxt','--tb=short']))"
+      ],
+      "exit_code": 0,
+      "seconds": 26.83,
+      "check": "websocket-lifecycle-package-tests",
+      "original_log": "OctoBot-websocket-lifecycle-package-tests.log",
+      "log_sha256": "3d46b85a6c0dd0a5c5700292064be1c14e0de53ff20b111436c53333c5460d81",
+      "outcomes": [
+        "58 passed in 22.90s"
+      ]
+    },
+    {
+      "command": [
+        ".venv/bin/python",
+        "-c",
+        "import os,pytest;os.chdir('packages/trading');raise SystemExit(pytest.main(['tests/exchanges/test_abstract_websocket_exchange.py','tests/exchanges/implementations/test_default_websocket_exchange.py','tests/exchanges/types/test_websocket_exchange.py','tests/exchanges/connectors/ccxt','--tb=short']))"
+      ],
+      "exit_code": 0,
+      "seconds": 24.23,
+      "check": "websocket-lifecycle-package-tests-2",
+      "original_log": "OctoBot-websocket-lifecycle-package-tests-2.log",
+      "log_sha256": "cc5cc0fa385490402ab1815f153e13ad48cc59a04fd40c3747d644919e0fc0a6",
+      "outcomes": [
+        "58 passed in 21.77s"
       ]
     }
   ],

@@ -786,6 +786,13 @@ th,td{min-width:120px;overflow-wrap:normal}
 <td>============================= 14 passed in 34.04s ==============================</td>
 </tr>
 <tr>
+<td>Tentacles-api-collection-check</td>
+<td style="text-align: right;">0</td>
+<td style="text-align: right;">7.85s</td>
+<td><code>.venv/bin/python -c import os,sys,pytest;sys.path.insert(0,'&lt;workspace&gt;/OctoBot');os.chdir('&lt;workspace&gt;/OctoBot-Tentacles');sys.path.insert(0,'&lt;workspace&gt;/OctoBot-Tentacles');raise SystemExit(pytest.main(['tentacles','--continue-on-collection-errors','--rootdir=&lt;workspace&gt;/OctoBot-Tentacles','--collect-only','--tb=short']))</code></td>
+<td>See exit status; no test-count assertion.</td>
+</tr>
+<tr>
 <td>Tentacles-archive-install</td>
 <td style="text-align: right;">1</td>
 <td style="text-align: right;">5.34s</td>
@@ -814,6 +821,13 @@ th,td{min-width:120px;overflow-wrap:normal}
 <td>See exit status; no test-count assertion.</td>
 </tr>
 <tr>
+<td>Tentacles-bounded-current-api-full-tests</td>
+<td style="text-align: right;">-15</td>
+<td style="text-align: right;">901.69s</td>
+<td><code>.venv/bin/python -c import os,sys,pytest;sys.path.insert(0,'&lt;workspace&gt;/OctoBot');os.chdir('&lt;workspace&gt;/OctoBot');sys.path.insert(0,'&lt;workspace&gt;/OctoBot-Tentacles');raise SystemExit(pytest.main(['&lt;workspace&gt;/OctoBot-Tentacles/tentacles','--continue-on-collection-errors','--rootdir=&lt;workspace&gt;/OctoBot-Tentacles','--timeout=60','--tb=short']))</code></td>
+<td>See exit status; no test-count assertion.</td>
+</tr>
+<tr>
 <td>Tentacles-build</td>
 <td style="text-align: right;">0</td>
 <td style="text-align: right;">3.43s</td>
@@ -828,6 +842,20 @@ th,td{min-width:120px;overflow-wrap:normal}
 <td>See exit status; no test-count assertion.</td>
 </tr>
 <tr>
+<td>Tentacles-converted-mode-focused-tests</td>
+<td style="text-align: right;">1</td>
+<td style="text-align: right;">31.69s</td>
+<td><code>.venv/bin/python -c import os,sys,pytest;sys.path.insert(0,'&lt;workspace&gt;/OctoBot');os.chdir('&lt;workspace&gt;/OctoBot-Tentacles');sys.path.insert(0,'&lt;workspace&gt;/OctoBot-Tentacles');raise SystemExit(pytest.main(['tentacles/Trading/Mode/dca_trading_mode/tests','tentacles/Trading/Mode/index_trading_mode/tests','tentacles/Trading/Mode/grid_trading_mode/tests','--rootdir=&lt;workspace&gt;/OctoBot-Tentacles','--tb=short']))</code></td>
+<td>36 failed, 6 passed, 55 errors in 27.42s</td>
+</tr>
+<tr>
+<td>Tentacles-converted-mode-focused-tests-2</td>
+<td style="text-align: right;">0</td>
+<td style="text-align: right;">20.71s</td>
+<td><code>.venv/bin/python -c import os,sys,pytest;sys.path.insert(0,'&lt;workspace&gt;/OctoBot');os.chdir('&lt;workspace&gt;/OctoBot-Tentacles');sys.path.insert(0,'&lt;workspace&gt;/OctoBot-Tentacles');raise SystemExit(pytest.main(['tentacles/Trading/Mode/dca_trading_mode/tests','tentacles/Trading/Mode/index_trading_mode/tests','tentacles/Trading/Mode/grid_trading_mode/tests','--rootdir=&lt;workspace&gt;/OctoBot-Tentacles','--tb=short']))</code></td>
+<td>97 passed in 16.21s</td>
+</tr>
+<tr>
 <td>Tentacles-current-api-archive-install</td>
 <td style="text-align: right;">0</td>
 <td style="text-align: right;">6.44s</td>
@@ -839,6 +867,83 @@ th,td{min-width:120px;overflow-wrap:normal}
 <td style="text-align: right;">0</td>
 <td style="text-align: right;">7.23s</td>
 <td><code>../OctoBot/.venv/bin/OctoBot tentacles -d src/octobot_tentacles -m metadata.yaml -p dist/current-host.zip</code></td>
+<td>See exit status; no test-count assertion.</td>
+</tr>
+<tr>
+<td>Tentacles-current-api-export</td>
+<td style="text-align: right;">0</td>
+<td style="text-align: right;">5.97s</td>
+<td><code>../OctoBot/.venv/bin/OctoBot tentacles -d src/octobot_tentacles -m metadata.yaml -p dist/current-host.zip</code></td>
+<td>See exit status; no test-count assertion.</td>
+</tr>
+<tr>
+<td>Tentacles-current-api-export-2</td>
+<td style="text-align: right;">0</td>
+<td style="text-align: right;">5.17s</td>
+<td><code>../OctoBot/.venv/bin/OctoBot tentacles -d src/octobot_tentacles -m metadata.yaml -p dist/current-host.zip</code></td>
+<td>See exit status; no test-count assertion.</td>
+</tr>
+<tr>
+<td>Tentacles-current-api-export-3</td>
+<td style="text-align: right;">0</td>
+<td style="text-align: right;">4.94s</td>
+<td><code>../OctoBot/.venv/bin/OctoBot tentacles -d src/octobot_tentacles -m metadata.yaml -p dist/current-host.zip</code></td>
+<td>See exit status; no test-count assertion.</td>
+</tr>
+<tr>
+<td>Tentacles-current-api-full-tests</td>
+<td style="text-align: right;">-15</td>
+<td style="text-align: right;">784.99s</td>
+<td><code>.venv/bin/python -c import os,sys,pytest;sys.path.insert(0,'&lt;workspace&gt;/OctoBot');os.chdir('&lt;workspace&gt;/OctoBot');sys.path.insert(0,'&lt;workspace&gt;/OctoBot-Tentacles');raise SystemExit(pytest.main(['&lt;workspace&gt;/OctoBot-Tentacles/tentacles','--continue-on-collection-errors','--rootdir=&lt;workspace&gt;/OctoBot-Tentacles']))</code></td>
+<td>See exit status; no test-count assertion.</td>
+</tr>
+<tr>
+<td>Tentacles-current-api-full-tests-2</td>
+<td style="text-align: right;">-15</td>
+<td style="text-align: right;">914.82s</td>
+<td><code>.venv/bin/python -c import os,sys,pytest;sys.path.insert(0,'&lt;workspace&gt;/OctoBot');os.chdir('&lt;workspace&gt;/OctoBot-Tentacles');sys.path.insert(0,'&lt;workspace&gt;/OctoBot-Tentacles');raise SystemExit(pytest.main(['tentacles','--continue-on-collection-errors','--rootdir=&lt;workspace&gt;/OctoBot-Tentacles','--timeout=90','--tb=short']))</code></td>
+<td>See exit status; no test-count assertion.</td>
+</tr>
+<tr>
+<td>Tentacles-current-api-install</td>
+<td style="text-align: right;">0</td>
+<td style="text-align: right;">5.21s</td>
+<td><code>env ALLOW_UNSIGNED_TENTACLES=true ../OctoBot/.venv/bin/OctoBot tentacles --install --location output/dist/any_platform.zip --all</code></td>
+<td>See exit status; no test-count assertion.</td>
+</tr>
+<tr>
+<td>Tentacles-current-api-install-2</td>
+<td style="text-align: right;">0</td>
+<td style="text-align: right;">3.7s</td>
+<td><code>env ALLOW_UNSIGNED_TENTACLES=true ../OctoBot/.venv/bin/OctoBot tentacles --install --location output/dist/any_platform.zip --all</code></td>
+<td>See exit status; no test-count assertion.</td>
+</tr>
+<tr>
+<td>Tentacles-current-exchange-lock</td>
+<td style="text-align: right;">0</td>
+<td style="text-align: right;">1.81s</td>
+<td><code>uv lock --upgrade</code></td>
+<td>See exit status; no test-count assertion.</td>
+</tr>
+<tr>
+<td>Tentacles-current-exchange-sync</td>
+<td style="text-align: right;">0</td>
+<td style="text-align: right;">0.75s</td>
+<td><code>uv sync --frozen --all-extras --python 3.14.8</code></td>
+<td>See exit status; no test-count assertion.</td>
+</tr>
+<tr>
+<td>Tentacles-current-host-exchange-focused-tests</td>
+<td style="text-align: right;">1</td>
+<td style="text-align: right;">53.8s</td>
+<td><code>env BOTS_REPO=tentacles .venv/bin/python -c import os,sys,pytest;sys.path.insert(0,'/tmp');sys.path.insert(0,'&lt;workspace&gt;/OctoBot');os.chdir('&lt;workspace&gt;/OctoBot-Tentacles');sys.path.insert(0,'&lt;workspace&gt;/OctoBot-Tentacles');raise SystemExit(pytest.main(['tentacles/Evaluator/Strategies','tentacles/Meta/Keywords/scripting_library/tests/orders/order_types/test_multiple_orders_creation.py','--rootdir=&lt;workspace&gt;/OctoBot-Tentacles','--tb=short','-p','bots_test_observer']))</code></td>
+<td>5 failed, 30 passed in 50.56s</td>
+</tr>
+<tr>
+<td>Tentacles-current-observed-existing-tests</td>
+<td style="text-align: right;">-15</td>
+<td style="text-align: right;">172.82s</td>
+<td><code>env BOTS_REPO=tentacles .venv/bin/python -c import os,sys,pytest;sys.path.insert(0,'/tmp');sys.path.insert(0,'&lt;workspace&gt;/OctoBot');os.chdir('&lt;workspace&gt;/OctoBot-Tentacles');sys.path.insert(0,'&lt;workspace&gt;/OctoBot-Tentacles');raise SystemExit(pytest.main(['tentacles','--continue-on-collection-errors','--rootdir=&lt;workspace&gt;/OctoBot-Tentacles','--timeout=300','--tb=short','-p','bots_test_observer','-o','faulthandler_timeout=120']))</code></td>
 <td>See exit status; no test-count assertion.</td>
 </tr>
 <tr>
@@ -1008,6 +1113,34 @@ th,td{min-width:120px;overflow-wrap:normal}
 <td style="text-align: right;">6.93s</td>
 <td><code>.venv/bin/python -m pytest src/octobot_tentacles --continue-on-collection-errors</code></td>
 <td>8 failed, 42 passed, 51 errors in 5.48s</td>
+</tr>
+<tr>
+<td>Tentacles-websocket-lifecycle-diagnostic-tests</td>
+<td style="text-align: right;">1</td>
+<td style="text-align: right;">84.11s</td>
+<td><code>.venv/bin/python -c import os,sys,pytest,faulthandler;faulthandler.dump_traceback_later(45,repeat=True);sys.path.insert(0,'&lt;workspace&gt;/OctoBot');os.chdir('&lt;workspace&gt;/OctoBot-Tentacles');sys.path.insert(0,'&lt;workspace&gt;/OctoBot-Tentacles');raise SystemExit(pytest.main(['tentacles/Trading/Exchange/binance_websocket_feed/tests','--rootdir=&lt;workspace&gt;/OctoBot-Tentacles','--timeout=300','--tb=short','-vv','-s']))</code></td>
+<td>See exit status; no test-count assertion.</td>
+</tr>
+<tr>
+<td>Tentacles-websocket-lifecycle-diagnostic-tests-2</td>
+<td style="text-align: right;">1</td>
+<td style="text-align: right;">86.86s</td>
+<td><code>.venv/bin/python -c import os,sys,pytest;sys.path.insert(0,'&lt;workspace&gt;/OctoBot');os.chdir('&lt;workspace&gt;/OctoBot-Tentacles');sys.path.insert(0,'&lt;workspace&gt;/OctoBot-Tentacles');raise SystemExit(pytest.main(['tentacles/Trading/Exchange/binance_websocket_feed/tests','--rootdir=&lt;workspace&gt;/OctoBot-Tentacles','--timeout=300','--tb=short']))</code></td>
+<td>See exit status; no test-count assertion.</td>
+</tr>
+<tr>
+<td>Tentacles-websocket-lifecycle-diagnostic-tests-3</td>
+<td style="text-align: right;">0</td>
+<td style="text-align: right;">81.81s</td>
+<td><code>.venv/bin/python -c import os,sys,pytest;sys.path.insert(0,'&lt;workspace&gt;/OctoBot');os.chdir('&lt;workspace&gt;/OctoBot-Tentacles');sys.path.insert(0,'&lt;workspace&gt;/OctoBot-Tentacles');raise SystemExit(pytest.main(['tentacles/Trading/Exchange/binance_websocket_feed/tests','--rootdir=&lt;workspace&gt;/OctoBot-Tentacles','--timeout=300','--tb=short']))</code></td>
+<td>1 passed in 78.09s (0:01:18)</td>
+</tr>
+<tr>
+<td>Tentacles-websocket-lifecycle-existing-tests</td>
+<td style="text-align: right;">-15</td>
+<td style="text-align: right;">387.18s</td>
+<td><code>.venv/bin/python -c import os,sys,pytest;sys.path.insert(0,'&lt;workspace&gt;/OctoBot');os.chdir('&lt;workspace&gt;/OctoBot-Tentacles');sys.path.insert(0,'&lt;workspace&gt;/OctoBot-Tentacles');raise SystemExit(pytest.main(['tentacles/Trading/Exchange/binance_websocket_feed/tests','--rootdir=&lt;workspace&gt;/OctoBot-Tentacles','--timeout=90','--tb=short']))</code></td>
+<td>See exit status; no test-count assertion.</td>
 </tr>
 <tr>
 <td>Trading-allocation-diagnosis-tests</td>
@@ -2443,6 +2576,76 @@ th,td{min-width:120px;overflow-wrap:normal}
 <td style="text-align: right;">44.71s</td>
 <td><code>.venv/bin/python -m pytest tests</code></td>
 <td>9 failed, 502 passed in 39.53s</td>
+</tr>
+<tr>
+<td>websocket-final-build</td>
+<td style="text-align: right;">0</td>
+<td style="text-align: right;">14.56s</td>
+<td><code>uv build</code></td>
+<td>Successfully built dist/octobot-3.0.0b3.tar.gz<br>Successfully built dist/octobot-3.0.0b3-py3-none-any.whl</td>
+</tr>
+<tr>
+<td>websocket-final-compile</td>
+<td style="text-align: right;">0</td>
+<td style="text-align: right;">0.14s</td>
+<td><code>uv run --no-sync python -W error -m compileall -q packages/trading/octobot_trading/exchanges packages/trading/octobot_trading/util/test_tools/websocket_test_tools.py</code></td>
+<td>See exit status; no test-count assertion.</td>
+</tr>
+<tr>
+<td>websocket-final-extended-linter</td>
+<td style="text-align: right;">0</td>
+<td style="text-align: right;">28.3s</td>
+<td><code>uv run --frozen --all-extras python -m tools.extended_linter --base origin/master</code></td>
+<td>See exit status; no test-count assertion.</td>
+</tr>
+<tr>
+<td>websocket-lifecycle-build</td>
+<td style="text-align: right;">0</td>
+<td style="text-align: right;">14.34s</td>
+<td><code>uv build</code></td>
+<td>Successfully built dist/octobot-3.0.0b3.tar.gz<br>Successfully built dist/octobot-3.0.0b3-py3-none-any.whl</td>
+</tr>
+<tr>
+<td>websocket-lifecycle-build-2</td>
+<td style="text-align: right;">0</td>
+<td style="text-align: right;">14.73s</td>
+<td><code>uv build</code></td>
+<td>Successfully built dist/octobot-3.0.0b3.tar.gz<br>Successfully built dist/octobot-3.0.0b3-py3-none-any.whl</td>
+</tr>
+<tr>
+<td>websocket-lifecycle-compile</td>
+<td style="text-align: right;">0</td>
+<td style="text-align: right;">0.13s</td>
+<td><code>uv run --no-sync python -W error -m compileall -q packages/trading/octobot_trading/exchanges</code></td>
+<td>See exit status; no test-count assertion.</td>
+</tr>
+<tr>
+<td>websocket-lifecycle-focused-tests</td>
+<td style="text-align: right;">0</td>
+<td style="text-align: right;">4.75s</td>
+<td><code>uv run --no-sync pytest packages/trading/tests/exchanges/test_abstract_websocket_exchange.py packages/trading/tests/exchanges/implementations/test_default_websocket_exchange.py packages/trading/tests/exchanges/types/test_websocket_exchange.py --tb=short</code></td>
+<td>2 passed in 0.74s</td>
+</tr>
+<tr>
+<td>websocket-lifecycle-focused-tests-2</td>
+<td style="text-align: right;">1</td>
+<td style="text-align: right;">26.69s</td>
+<td><code>uv run --no-sync pytest packages/trading/tests/exchanges/test_abstract_websocket_exchange.py packages/trading/tests/exchanges/implementations/test_default_websocket_exchange.py packages/trading/tests/exchanges/types/test_websocket_exchange.py packages/trading/tests/exchanges/connectors/ccxt --tb=short</code></td>
+<td>57 passed, 1 error in 22.58s</td>
+</tr>
+<tr>
+<td>websocket-lifecycle-package-tests</td>
+<td style="text-align: right;">0</td>
+<td style="text-align: right;">26.83s</td>
+<td><code>.venv/bin/python -c import os,pytest;os.chdir('packages/trading');raise SystemExit(pytest.main(['tests/exchanges/test_abstract_websocket_exchange.py','tests/exchanges/implementations/test_default_websocket_exchange.py','tests/exchanges/types/test_websocket_exchange.py','tests/exchanges/connectors/ccxt','--tb=short']))</code></td>
+<td>58 passed in 22.90s</td>
+</tr>
+<tr>
+<td>websocket-lifecycle-package-tests-2</td>
+<td style="text-align: right;">0</td>
+<td style="text-align: right;">24.23s</td>
+<td><code>.venv/bin/python -c import os,pytest;os.chdir('packages/trading');raise SystemExit(pytest.main(['tests/exchanges/test_abstract_websocket_exchange.py','tests/exchanges/implementations/test_default_websocket_exchange.py','tests/exchanges/types/test_websocket_exchange.py','tests/exchanges/connectors/ccxt','--tb=short']))</code></td>
+<td>58 passed in 21.77s</td>
 </tr>
 </tbody>
 </table></main>
