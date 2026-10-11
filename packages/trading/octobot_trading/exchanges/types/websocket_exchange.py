@@ -212,6 +212,10 @@ class WebSocketExchange(abstract_websocket.AbstractWebsocketExchange):
         """
         Closes the websocket. Can't be restarted
         """
+        # CCXT connectors keep their worker loop alive until stop() signals it.
+        # Stop those loops before joining the executor; close() alone is a no-op
+        # for connectors whose clients must be closed on their own event loop.
+        await self.stop_sockets()
         try:
             for websocket in self.websocket_connectors:
                 await websocket.close()
@@ -219,10 +223,11 @@ class WebSocketExchange(abstract_websocket.AbstractWebsocketExchange):
             self.logger.error(f"Error when closing sockets : {html_util.get_html_summary_if_relevant(e)}")
         for websocket_task in self.websocket_connectors_tasks:
             websocket_task.cancel()
-        if sys.version_info.minor >= 9:
-            self.websocket_connectors_executors.shutdown(True)
-        else:
-            thread_util.stop_thread_pool_executor_non_gracefully(self.websocket_connectors_executors)
+        if self.websocket_connectors_executors is not None:
+            if sys.version_info.minor >= 9:
+                self.websocket_connectors_executors.shutdown(True)
+            else:
+                thread_util.stop_thread_pool_executor_non_gracefully(self.websocket_connectors_executors)
         self.websocket_connectors_executors = None
 
     def add_pairs(self, pairs, watching_only=False):

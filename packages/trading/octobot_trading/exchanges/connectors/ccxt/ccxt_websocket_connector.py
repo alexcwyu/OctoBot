@@ -131,6 +131,7 @@ class CCXTWebsocketConnector(abstract_websocket_exchange.AbstractWebsocketExchan
         self.websocket_name: str = websocket_name or self.get_name()
 
         self.local_loop: typing.Optional[asyncio.AbstractEventLoop] = None
+        self.stopped_event: typing.Optional[asyncio.Event] = None
 
         self.should_stop: bool = False
         self.is_authenticated: bool = False
@@ -179,6 +180,7 @@ class CCXTWebsocketConnector(abstract_websocket_exchange.AbstractWebsocketExchan
 
     async def _inner_start(self):
         self._start_time_millis = self.client.milliseconds()
+        self.should_stop = False
         self.stopped_event = asyncio.Event()
         self.local_loop = asyncio.get_event_loop()
         await self._init_client()
@@ -211,16 +213,26 @@ class CCXTWebsocketConnector(abstract_websocket_exchange.AbstractWebsocketExchan
         try:
             if self.client is not None:
                 await self.client.close()
-            self.stopped_event.set()
         except Exception as e:
             self.logger.exception(e, False)
             self.logger.error(f"Failed to stop websocket feed : {e}")
+        finally:
+            # Worker shutdown must complete even when closing the client raises.
+            if self.stopped_event is not None:
+                self.stopped_event.set()
 
     async def stop(self):
         """
         Reimplementation of self.client.stop() without calling loop.run_until_complete()
         """
-        if asyncio_tools.is_on_async_loop(self.local_loop):
+        if self.should_stop:
+            return
+        if self.local_loop is None:
+            # A connector may be initialized but never started after setup fails.
+            await self._inner_stop()
+        elif self.local_loop.is_closed():
+            self.should_stop = True
+        elif asyncio_tools.is_on_async_loop(self.local_loop):
             await self._inner_stop()
         else:
             asyncio_tools.run_coroutine_in_asyncio_loop(
