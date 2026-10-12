@@ -211,6 +211,14 @@ class CCXTWebsocketConnector(abstract_websocket_exchange.AbstractWebsocketExchan
     async def _inner_stop(self):
         self.should_stop = True
         try:
+            # Stop subscription owners before closing their shared client: a
+            # pending watch call can otherwise reopen a connection during close.
+            tasks = tuple(self.feed_tasks.values())
+            for task in tasks:
+                task.cancel()
+            if tasks:
+                await asyncio.gather(*tasks, return_exceptions=True)
+            self.feed_tasks.clear()
             if self.client is not None:
                 await self.client.close()
         except Exception as e:
@@ -309,7 +317,7 @@ class CCXTWebsocketConnector(abstract_websocket_exchange.AbstractWebsocketExchan
         """
         Creates ccxt client instance
         """
-        client_class = getattr(ccxtpro, self.get_feed_name())
+        client_class = self.get_client_class()
         self.client, self.is_authenticated = ccxt_client_util.create_client(
             client_class,
             self.exchange_manager,
@@ -328,6 +336,9 @@ class CCXTWebsocketConnector(abstract_websocket_exchange.AbstractWebsocketExchan
     
     def _get_keys_adapter(self):
         return None
+
+    def get_client_class(self):
+        return getattr(ccxtpro, self.get_feed_name())
 
     def _should_authenticate(self):
         if self.exchange_manager.exchange.requires_authentication(
