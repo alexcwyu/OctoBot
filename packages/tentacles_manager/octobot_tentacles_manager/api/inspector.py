@@ -151,19 +151,20 @@ def _load_tentacle_class(tentacle_name):
             pass
         try:
             import octobot_services.services as services
-            import tentacles.Services as tentacles_services
+            import tentacles.Services.Services_bases as tentacles_service_bases
+            import tentacles.Services.Interfaces as tentacles_interfaces
             if tentacle_class := _get_tentacle_class_from_module(
                 tentacle_name, services.AbstractAIService,
-                tentacles_services.Services_bases, tentacles_management.default_parents_inspection):
+                tentacles_service_bases, tentacles_management.default_parents_inspection):
                 return tentacle_class
             if tentacle_class := _get_tentacle_class_from_module(
                 tentacle_name, services.AbstractWebSearchService,
-                tentacles_services.Services_bases, tentacles_management.default_parents_inspection):
+                tentacles_service_bases, tentacles_management.default_parents_inspection):
                 return tentacle_class
             import tentacles.Services.Interfaces.web_interface.plugins as web_plugins
             if tentacle_class := _get_tentacle_class_from_module(
                 tentacle_name, web_plugins.AbstractWebInterfacePlugin,
-                tentacles_services.Interfaces, tentacles_management.default_parents_inspection):
+                tentacles_interfaces, tentacles_management.default_parents_inspection):
                 return tentacle_class
         except ImportError:
             pass

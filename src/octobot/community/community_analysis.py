@@ -30,10 +30,10 @@ async def get_current_octobots_stats():
 
 
 async def _ensure_closed_sockets():
-    # ugly workaround to prevent some of these current aiohttp version warnings:
-    # "unclosed transport {'_pending_data': None, '_paused': False, '_sock': <socket.socket fd=-1,
-    # family=AddressFamily.AF_INET, type=SocketKind.SOCK_STREAM, proto=6>,"
-    await asyncio.sleep(0.01)
+    # Community requests can run in a short-lived asyncio.run executor loop.
+    # aiohttp closes TLS transports asynchronously after the session exits, so
+    # let their shutdown callbacks finish before that worker loop is destroyed.
+    await asyncio.sleep(0.25)
 
 
 async def _get_stats(endpoint_by_key):

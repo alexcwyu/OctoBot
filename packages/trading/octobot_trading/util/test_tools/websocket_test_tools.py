@@ -102,7 +102,9 @@ async def test_unauthenticated_push_to_channel_coverage_websocket(
                                                 tentacles_setup_config=None)
                 await ws_exchange.start_sockets()
                 await asyncio.sleep(time_before_assert)
-        assert pushed_channel_names == expected_pushed_channels
+        assert pushed_channel_names == expected_pushed_channels, (
+            f"Observed channels: {pushed_channel_names}; expected: {expected_pushed_channels}"
+        )
     finally:
         await ws_exchange.close_sockets()
         ws_exchange.clear()
