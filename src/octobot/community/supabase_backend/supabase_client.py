@@ -15,12 +15,32 @@
 #  License along with OctoBot. If not, see <https://www.gnu.org/licenses/>.
 import copy
 import typing
+import asyncio
 import httpx
 import postgrest
 import supabase
 
 
 class AuthenticatedAsyncSupabaseClient(supabase.AClient):
+    def __init__(self, *args, **kwargs):
+        self._auth_state_close_tasks = set()
+        super().__init__(*args, **kwargs)
+
+    def _listen_to_auth_events(self, event, session):
+        retired = []
+        if event in ("SIGNED_IN", "TOKEN_REFRESHED", "SIGNED_OUT") and self.options.httpx_client is None:
+            # The SDK invalidates these cached clients on authentication changes.
+            # Keep ownership of their HTTP pools until asynchronous close finishes.
+            if self._postgrest is not None:
+                retired.append(self._postgrest.session)
+            if self._storage is not None:
+                retired.append(self._storage.session)
+            if self._functions is not None:
+                retired.append(self._functions._client)
+        super()._listen_to_auth_events(event, session)
+        for client in retired:
+            self._auth_state_close_tasks.add(asyncio.create_task(client.aclose()))
+
     @staticmethod
     def _init_postgrest_client(
         rest_url: str, headers: dict, schema: str, timeout: float = 30,
@@ -61,6 +81,9 @@ class AuthenticatedAsyncSupabaseClient(supabase.AClient):
 
     async def aclose(self):
         # waiting from supabase close() method
+        if self._auth_state_close_tasks:
+            await asyncio.gather(*self._auth_state_close_tasks)
+            self._auth_state_close_tasks.clear()
         try:
             await self.auth.close()
         except RuntimeError:
@@ -74,6 +97,11 @@ class AuthenticatedAsyncSupabaseClient(supabase.AClient):
             except RuntimeError:
                 # can happen when "Event loop is closed"
                 pass
+        if self.options.httpx_client is None:
+            if self._storage is not None:
+                await self._storage.session.aclose()
+            if self._functions is not None:
+                await self._functions._client.aclose()
         # timer has to be stopped, there is no public stop api
         if self.auth._refresh_token_timer:
             self.auth._refresh_token_timer.cancel()
