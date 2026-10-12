@@ -1,6 +1,6 @@
 # OctoBot: validation results
 
-The current monorepo builds with managed Python 3.14.8, uv 0.13.0 and current compatible locked dependencies. Python 3.15 was attempted; the actual OctoBot-Tulipy native distribution requires the selected fallback.
+The current monorepo builds with managed Python **3.15.0**, uv **0.13.0** and current compatible locked dependencies. Complete native source builds, source-distribution-to-wheel builds and strict compilation pass. Source commit: `a77468479eda47d959afa87cef5ea1b216184921`. The older Python 3.14 fallback was superseded by the licensed Tulipy source build and pycares’ supported system c-ares configuration.
 
 ## Existing suites
 
@@ -15,3 +15,14 @@ The current official OctoBot CCXT Git source is locked immutably because the lat
 ## Portable evidence
 
 [Exact executed commands and outcomes](maintenance/index.html) · [Machine-readable verification](maintenance/verification.json) · [Offline engineering guide](ayu-develop.html). Failed exploratory runs are retained; later success applies only to the scope of the corresponding command.
+
+
+## Final Python 3.15 scope
+
+The complete original Python scope passed across its actual package working directories: **5,240 passed and 16 pre-existing skips**. This combines the 511 root cases, 4,550 package cases and 179 Python protocol cases; it is not a claim that a single root invocation collects every package. The separate frontend, TypeScript client and JavaScript protocol checks above retain their own exact recorded commands.
+
+The selected main environment was synchronized frozen on Python 3.15 after an isolated complete-suite control, then strictly compiled. Native financial cases in the adjacent Tentacles repository also passed in the selected main environment with unchanged expected returns.
+
+[Latest Tulipy provenance](../vendor/octobot-tulipy/PROVENANCE.md) records the original source, license, upstream revision, complete source manifest and strict floating-point compiler settings. These prevent ARM fused multiply/add differences from changing exact RSI decisions. No indicator formulas, fixture market data or financial golden values were changed.
+
+The [Supabase client](../src/octobot/community/supabase_backend/supabase_client.py) closes HTTP clients retired by actual authentication callbacks. The [WebSocket feed owner](../packages/trading/octobot_trading/exchanges/connectors/ccxt/ccxt_websocket_connector.py) stops and awaits its real feed tasks before closing their shared client. See [development](development.md) for native prerequisites and [portable evidence](maintenance/index.md) for complete commands, prior failures and log hashes.

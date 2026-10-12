@@ -22,7 +22,7 @@ git clone https://github.com/Drakkar-Software/OctoBot.git
 cd OctoBot
 
 # Install with uv (recommended)
-uv sync --all-extras --dev --python 3.14.8
+uv sync --all-extras --dev --python 3.15.0
 
 # Install default tentacles
 python start.py tentacles --install --all
@@ -702,14 +702,17 @@ Profiles must match the schema defined in `src/octobot/config/profile_schema.jso
 
 ## uv maintenance workflow (2026-10-12)
 
-Selected complete environment: Python 3.14.8; build backend `hatchling.build`. The workspace uses uv 0.13.0. Python 3.15 was attempted before any fallback; the actual failure and selected runtime are recorded in [validation](validation.md).
+Selected complete environment: Python 3.15.0; build backend `hatchling.build`. The workspace uses uv 0.13.0. The complete native source build and original-suite results are recorded in [validation](validation.md).
 
 ```sh
 export UV_PYTHON_PREFERENCE=only-managed
-uv python install 3.14.8
+export PYCARES_USE_SYSTEM_LIB=1
+export CFLAGS='-I/opt/homebrew/opt/c-ares/include'
+export LDFLAGS='-L/opt/homebrew/opt/c-ares/lib'
+uv python install 3.15.0
 uv lock --upgrade
-uv sync --all-extras --python 3.14.8
-uv build --python 3.14.8
+uv sync --all-extras --python 3.15.0
+uv build --python 3.15.0
 uv run --frozen --all-extras python -m compileall -q src/octobot
 uv run --frozen --all-extras python -m pytest tests
 ```
@@ -742,3 +745,19 @@ npm --prefix packages/protocol run test:postprocess:codegen
 The pairing-code distribution fixture still samples 4,000 freshly generated random codes and signs each code. It reuses a real identity and its fixed KEM certificate for that statistical case, avoiding thousands of unrelated expensive key generations while preserving the sample size, frequency assertions and existing five-second timeout. Other identity, signature and pairing tests continue to generate their own keys.
 
 The frontend compiles with the native TypeScript 7.0.2 package installed as `typescript-native`. Its API generator imports the JavaScript compiler API, so `typescript` supplies the newest compatible 6.0.3 API instead. Hey API 0.99 was attempted but removed the legacy Axios/CancelablePromise generator required by the existing client contract; the locked 0.86.12 release is the newest compatible release before the [documented removal in 0.87](https://heyapi.dev/docs/openapi/typescript/migrating#v0870). Both generation and compilation are verified by the full tentacle exporter/linter hook, using the selected uv environment through a local `.cursor/env.sh`.
+
+## Native indicator arithmetic and Python 3.15 source builds
+
+The host and adjacent Tentacles archive explicitly build [the current licensed Tulipy source](../vendor/octobot-tulipy/PROVENANCE.md), version 0.4.11b13 with NumPy 2.4.2. Its unchanged Wilder RSI C recurrence is compiled with separate multiply/add operations (`-O3 -fno-fast-math -ffp-contract=off`; MSVC `/O2 /fp:strict`). This preserves the historical arithmetic required by existing exact strategy decisions: all 18,860 recorded real RSI input arrays reproduce the historical numerical control bit for bit. The 14 original financial cases pass with native imports and unchanged expected returns. The source manifest includes all C/header/Cython declarations, license and authors, and rebuilding an sdist into a wheel succeeds.
+
+An isolated Python 3.15.0 environment now builds the complete current dependency graph and passes those 14 native financial cases plus strict source compilation. On this macOS SDK, bundled c-ares 5.1.0 discovers `pipe2` but compiles for an older deployment target. Use pycares' supported system-library build with the actual installed Homebrew c-ares instead:
+
+```sh
+UV_PROJECT_ENVIRONMENT=/tmp/octobot-python315-control \
+PYCARES_USE_SYSTEM_LIB=1 \
+CFLAGS='-I/opt/homebrew/opt/c-ares/include' \
+LDFLAGS='-L/opt/homebrew/opt/c-ares/lib' \
+uv sync --all-extras --frozen --python 3.15.0
+```
+
+The system c-ares installation is a native build prerequisite; interpreter controls use separate environments while existing suites are running. Supabase authentication still follows the real SDK callback, while the host closes HTTP clients retired by login, token refresh or logout before their owning loop ends.

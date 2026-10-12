@@ -1,23 +1,8 @@
 <!doctype html>
-<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>OctoBot: portable verification records</title><style>
-:root{color-scheme:light dark;--bg:#f6f8fa;--paper:#fff;--fg:#182332;--muted:#526274;--line:#d9e0e7;--accent:#1769aa}
-@media(prefers-color-scheme:dark){:root{--bg:#111820;--paper:#192330;--fg:#e6edf3;--muted:#a0b3c5;--line:#344354;--accent:#71b7ee}}
-*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--fg);font:16px/1.7 system-ui,-apple-system,sans-serif}
-header{border-bottom:1px solid var(--line);padding:16px max(24px,calc((100vw - 1120px)/2));background:var(--paper);font-size:14px}
-main{max-width:1120px;margin:32px auto;padding:40px 48px;background:var(--paper);border:1px solid var(--line);border-radius:12px}
-h1,h2,h3,h4{line-height:1.3;scroll-margin-top:24px}h1{font-size:2.1rem}h2{margin-top:2.5em;border-bottom:1px solid var(--line);padding-bottom:.35em}h3{margin-top:1.8em}
-a{color:var(--accent);text-underline-offset:3px}code{font:14px/1.6 ui-monospace,SFMono-Regular,Menlo,monospace;background:var(--bg);border-radius:4px;padding:2px 5px}pre{overflow:auto;border:1px solid var(--line);background:var(--bg);padding:16px;border-radius:7px}pre code{padding:0;background:none}
-table{border-collapse:collapse;width:100%;display:block;overflow-x:auto;font-size:14px}th,td{border:1px solid var(--line);padding:9px 12px;text-align:left}th{background:var(--bg)}blockquote{border-left:4px solid var(--accent);margin:16px 0;padding:4px 20px;color:var(--muted)}
-.diagram{overflow-x:auto;margin:24px 0;padding:20px;border:1px solid var(--line);border-radius:8px;background:#fff;color:#182332}.mermaid{border:0;background:none;text-align:center}.mermaid svg{height:auto;max-width:100%}details{font-size:13px;color:#526274}.headerlink{margin-left:.4em;font-size:.7em;text-decoration:none;color:var(--muted)}
-main{min-width:0;overflow-wrap:anywhere}table,pre{max-width:100%}.diagram svg{display:block}
-th,td{min-width:120px;overflow-wrap:normal}
-@media(max-width:740px){main{margin:0;padding:24px 18px;border:0;border-radius:0}h1{font-size:1.7rem}.diagram{padding:8px}}
-@media print{header,details,.headerlink{display:none}body,main{background:#fff;color:#000;border:0;margin:0;padding:0}a{color:#000}.diagram,pre{break-inside:avoid}}
-</style></head><body><header>Engineering documentation · <a href="index.md">Markdown source</a></header><main><h1 id="octobot-portable-verification-records">OctoBot: portable verification records<a class="headerlink" href="#octobot-portable-verification-records" title="Permanent link">&para;</a></h1>
-<p>Full raw logs are retained in the workspace maintenance evidence, not distributed here. Hashes identify those original logs. A successful build or selected test subset does not imply a full test-suite pass. Commands containing <workspace> describe the original execution environment.</p>
-<p><a href="verification.json">Machine-readable records</a> · <a href="../validation.md">Repository validation summary</a></p>
-<h2 id="executed-commands">Executed commands<a class="headerlink" href="#executed-commands" title="Permanent link">&para;</a></h2>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>OctoBot: portable verification records</title><style>html{color-scheme:light dark}body{margin:0;background:#f5f7fa;color:#172333;font:16px/1.7 system-ui,sans-serif}main{max-width:1120px;margin:28px auto;background:white;padding:40px;border:1px solid #dbe2ea;border-radius:10px}h1,h2,h3{line-height:1.25}h2{margin-top:2em;border-bottom:1px solid #dbe2ea;padding-bottom:.4em}a{color:#1769aa}pre{overflow:auto;padding:16px;background:#f5f7fa;border:1px solid #dbe2ea;border-radius:6px}code{font:14px/1.6 ui-monospace,monospace}table{border-collapse:collapse;display:block;overflow:auto}th,td{border:1px solid #dbe2ea;padding:8px 12px;text-align:left;vertical-align:top}blockquote{margin-left:0;border-left:4px solid #1769aa;padding-left:18px}@media(max-width:700px){main{margin:8px;padding:18px}body{font-size:15px}}@media(prefers-color-scheme:dark){body{background:#111820;color:#e7edf5}main{background:#192330;border-color:#344354}pre{background:#111820}a{color:#78b9ef}th,td,h2,pre{border-color:#344354}}@media print{main{margin:0;border:0;padding:0}a{color:inherit}pre,table{overflow:visible}}</style></head><body><main><h1 id="octobot-portable-verification-records">OctoBot: portable verification records</h1>
+<p>These records retain exact commands, outcomes, original-log hashes and available source snapshots. Failed, interrupted and earlier exploratory commands remain visible. A later focused pass proves only its own scope.</p>
+<p><a href="verification.json">Machine-readable records</a> · <a href="../validation.md">Validation</a> · <a href="../ayu-develop.md">Engineering guide</a></p>
+<p>Original logs remain in the workspace maintenance evidence. Tracked source hashes exclude untracked additions and later edits, as stated in each captured snapshot.</p>
 <table>
 <thead>
 <tr>
@@ -25,2627 +10,2690 @@ th,td{min-width:120px;overflow-wrap:normal}
 <th style="text-align: right;">Exit</th>
 <th style="text-align: right;">Duration</th>
 <th>Command</th>
-<th>Outcomes</th>
 </tr>
 </thead>
 <tbody>
 <tr>
-<td>Backtesting-build</td>
+<td>build</td>
 <td style="text-align: right;">0</td>
 <td style="text-align: right;">1.0s</td>
 <td><code>uv build --python 3.15</code></td>
-<td>Successfully built dist/octobot_backtesting-1.10.0.tar.gz<br>Successfully built dist/octobot_backtesting-1.10.0-py3-none-any.whl</td>
 </tr>
 <tr>
-<td>Backtesting-compile</td>
+<td>compile</td>
 <td style="text-align: right;">0</td>
 <td style="text-align: right;">0.13s</td>
 <td><code>&lt;workspace&gt;/OctoBot-Backtesting/.venv/bin/python -m compileall -q src</code></td>
-<td>See exit status; no test-count assertion.</td>
 </tr>
 <tr>
-<td>Backtesting-final-build</td>
+<td>final-build-2</td>
+<td style="text-align: right;">0</td>
+<td style="text-align: right;">0.97s</td>
+<td><code>uv build --python 3.15.0</code></td>
+</tr>
+<tr>
+<td>final-build</td>
 <td style="text-align: right;">0</td>
 <td style="text-align: right;">1.49s</td>
 <td><code>uv build --python 3.15.0</code></td>
-<td>Successfully built dist/octobot_backtesting-1.10.0.tar.gz<br>Successfully built dist/octobot_backtesting-1.10.0-py3-none-any.whl</td>
 </tr>
 <tr>
-<td>Backtesting-final-build-2</td>
-<td style="text-align: right;">0</td>
-<td style="text-align: right;">0.97s</td>
-<td><code>uv build --python 3.15.0</code></td>
-<td>Successfully built dist/octobot_backtesting-1.10.0.tar.gz<br>Successfully built dist/octobot_backtesting-1.10.0-py3-none-any.whl</td>
-</tr>
-<tr>
-<td>Backtesting-final-compile</td>
-<td style="text-align: right;">0</td>
-<td style="text-align: right;">0.09s</td>
-<td><code>.venv/bin/python -m compileall -q src</code></td>
-<td>See exit status; no test-count assertion.</td>
-</tr>
-<tr>
-<td>Backtesting-final-compile-2</td>
+<td>final-compile-2</td>
 <td style="text-align: right;">0</td>
 <td style="text-align: right;">0.08s</td>
 <td><code>.venv/bin/python -m compileall -q src</code></td>
-<td>See exit status; no test-count assertion.</td>
 </tr>
 <tr>
-<td>Backtesting-final-lock</td>
+<td>final-compile</td>
 <td style="text-align: right;">0</td>
-<td style="text-align: right;">0.25s</td>
-<td><code>uv lock --upgrade</code></td>
-<td>See exit status; no test-count assertion.</td>
+<td style="text-align: right;">0.09s</td>
+<td><code>.venv/bin/python -m compileall -q src</code></td>
 </tr>
 <tr>
-<td>Backtesting-final-lock-2</td>
+<td>final-lock-2</td>
 <td style="text-align: right;">0</td>
 <td style="text-align: right;">0.46s</td>
 <td><code>uv lock --upgrade</code></td>
-<td>See exit status; no test-count assertion.</td>
 </tr>
 <tr>
-<td>Backtesting-final-sync</td>
+<td>final-lock</td>
+<td style="text-align: right;">0</td>
+<td style="text-align: right;">0.25s</td>
+<td><code>uv lock --upgrade</code></td>
+</tr>
+<tr>
+<td>final-sync-2</td>
 <td style="text-align: right;">0</td>
 <td style="text-align: right;">0.05s</td>
 <td><code>uv sync --all-extras --frozen --python 3.15.0</code></td>
-<td>See exit status; no test-count assertion.</td>
 </tr>
 <tr>
-<td>Backtesting-final-sync-2</td>
+<td>final-sync</td>
 <td style="text-align: right;">0</td>
 <td style="text-align: right;">0.05s</td>
 <td><code>uv sync --all-extras --frozen --python 3.15.0</code></td>
-<td>See exit status; no test-count assertion.</td>
 </tr>
 <tr>
-<td>Backtesting-lock-3.15</td>
+<td>lock-3.15</td>
 <td style="text-align: right;">0</td>
 <td style="text-align: right;">1.42s</td>
 <td><code>uv lock --upgrade --python 3.15</code></td>
-<td>See exit status; no test-count assertion.</td>
 </tr>
 <tr>
-<td>Backtesting-public-manager-sync</td>
+<td>public-manager-sync</td>
 <td style="text-align: right;">0</td>
 <td style="text-align: right;">0.56s</td>
 <td><code>uv sync --all-extras --python 3.15</code></td>
-<td>See exit status; no test-count assertion.</td>
 </tr>
 <tr>
-<td>Backtesting-sync-3.15</td>
+<td>sync-3.15</td>
 <td style="text-align: right;">0</td>
 <td style="text-align: right;">2.28s</td>
 <td><code>uv sync --all-extras --python 3.15</code></td>
-<td>See exit status; no test-count assertion.</td>
 </tr>
 <tr>
-<td>Backtesting-tests</td>
-<td style="text-align: right;">2</td>
-<td style="text-align: right;">1.97s</td>
-<td><code>&lt;workspace&gt;/OctoBot-Backtesting/.venv/bin/python -m pytest tests</code></td>
-<td>See exit status; no test-count assertion.</td>
-</tr>
-<tr>
-<td>Backtesting-tests-2</td>
+<td>tests-2</td>
 <td style="text-align: right;">0</td>
 <td style="text-align: right;">6.59s</td>
 <td><code>.venv/bin/python -m pytest tests</code></td>
-<td>19 passed in 4.88s</td>
 </tr>
 <tr>
-<td>Backtesting-tests-3</td>
+<td>tests-3</td>
 <td style="text-align: right;">0</td>
 <td style="text-align: right;">2.51s</td>
 <td><code>.venv/bin/python -m pytest tests</code></td>
-<td>19 passed in 1.25s</td>
 </tr>
 <tr>
-<td>Commons-build</td>
+<td>tests</td>
+<td style="text-align: right;">2</td>
+<td style="text-align: right;">1.97s</td>
+<td><code>&lt;workspace&gt;/OctoBot-Backtesting/.venv/bin/python -m pytest tests</code></td>
+</tr>
+<tr>
+<td>build</td>
 <td style="text-align: right;">0</td>
 <td style="text-align: right;">1.0s</td>
 <td><code>uv build --python 3.15</code></td>
-<td>Successfully built dist/octobot_commons-1.10.6.tar.gz<br>Successfully built dist/octobot_commons-1.10.6-py3-none-any.whl</td>
 </tr>
 <tr>
-<td>Commons-compile</td>
+<td>compile</td>
 <td style="text-align: right;">0</td>
 <td style="text-align: right;">0.18s</td>
 <td><code>&lt;workspace&gt;/OctoBot-Commons/.venv/bin/python -m compileall -q src</code></td>
-<td>See exit status; no test-count assertion.</td>
 </tr>
 <tr>
-<td>Commons-counter-final-tests</td>
+<td>counter-final-tests</td>
 <td style="text-align: right;">0</td>
 <td style="text-align: right;">14.27s</td>
 <td><code>.venv/bin/python -m pytest tests</code></td>
-<td>322 passed in 13.66s</td>
 </tr>
 <tr>
-<td>Commons-final-build</td>
+<td>final-build-2</td>
+<td style="text-align: right;">0</td>
+<td style="text-align: right;">1.04s</td>
+<td><code>uv build --python 3.15.0</code></td>
+</tr>
+<tr>
+<td>final-build</td>
 <td style="text-align: right;">0</td>
 <td style="text-align: right;">1.52s</td>
 <td><code>uv build --python 3.15.0</code></td>
-<td>Successfully built dist/octobot_commons-1.10.6.tar.gz<br>Successfully built dist/octobot_commons-1.10.6-py3-none-any.whl</td>
 </tr>
 <tr>
-<td>Commons-final-build-2</td>
-<td style="text-align: right;">0</td>
-<td style="text-align: right;">1.04s</td>
-<td><code>uv build --python 3.15.0</code></td>
-<td>Successfully built dist/octobot_commons-1.10.6.tar.gz<br>Successfully built dist/octobot_commons-1.10.6-py3-none-any.whl</td>
-</tr>
-<tr>
-<td>Commons-final-compile</td>
-<td style="text-align: right;">0</td>
-<td style="text-align: right;">0.14s</td>
-<td><code>.venv/bin/python -m compileall -q src</code></td>
-<td>See exit status; no test-count assertion.</td>
-</tr>
-<tr>
-<td>Commons-final-compile-2</td>
+<td>final-compile-2</td>
 <td style="text-align: right;">0</td>
 <td style="text-align: right;">0.07s</td>
 <td><code>.venv/bin/python -m compileall -q src</code></td>
-<td>See exit status; no test-count assertion.</td>
 </tr>
 <tr>
-<td>Commons-final-lock</td>
+<td>final-compile</td>
 <td style="text-align: right;">0</td>
-<td style="text-align: right;">0.19s</td>
-<td><code>uv lock --upgrade</code></td>
-<td>See exit status; no test-count assertion.</td>
+<td style="text-align: right;">0.14s</td>
+<td><code>.venv/bin/python -m compileall -q src</code></td>
 </tr>
 <tr>
-<td>Commons-final-lock-2</td>
+<td>final-lock-2</td>
 <td style="text-align: right;">0</td>
 <td style="text-align: right;">0.4s</td>
 <td><code>uv lock --upgrade</code></td>
-<td>See exit status; no test-count assertion.</td>
 </tr>
 <tr>
-<td>Commons-final-sync</td>
+<td>final-lock</td>
 <td style="text-align: right;">0</td>
-<td style="text-align: right;">0.05s</td>
-<td><code>uv sync --all-extras --frozen --python 3.15.0</code></td>
-<td>See exit status; no test-count assertion.</td>
+<td style="text-align: right;">0.19s</td>
+<td><code>uv lock --upgrade</code></td>
 </tr>
 <tr>
-<td>Commons-final-sync-2</td>
+<td>final-sync-2</td>
 <td style="text-align: right;">0</td>
 <td style="text-align: right;">0.04s</td>
 <td><code>uv sync --all-extras --frozen --python 3.15.0</code></td>
-<td>See exit status; no test-count assertion.</td>
 </tr>
 <tr>
-<td>Commons-lock-3.15</td>
+<td>final-sync</td>
+<td style="text-align: right;">0</td>
+<td style="text-align: right;">0.05s</td>
+<td><code>uv sync --all-extras --frozen --python 3.15.0</code></td>
+</tr>
+<tr>
+<td>lock-3.15</td>
 <td style="text-align: right;">0</td>
 <td style="text-align: right;">0.28s</td>
 <td><code>uv lock --upgrade --python 3.15</code></td>
-<td>See exit status; no test-count assertion.</td>
 </tr>
 <tr>
-<td>Commons-sync-3.15</td>
+<td>sync-3.15</td>
 <td style="text-align: right;">0</td>
 <td style="text-align: right;">0.94s</td>
 <td><code>uv sync --all-extras --python 3.15</code></td>
-<td>See exit status; no test-count assertion.</td>
 </tr>
 <tr>
-<td>Commons-tests</td>
-<td style="text-align: right;">2</td>
-<td style="text-align: right;">3.4s</td>
-<td><code>&lt;workspace&gt;/OctoBot-Commons/.venv/bin/python -m pytest tests</code></td>
-<td>See exit status; no test-count assertion.</td>
-</tr>
-<tr>
-<td>Commons-tests-2</td>
+<td>tests-2</td>
 <td style="text-align: right;">2</td>
 <td style="text-align: right;">3.2s</td>
 <td><code>.venv/bin/python -m pytest tests</code></td>
-<td>See exit status; no test-count assertion.</td>
 </tr>
 <tr>
-<td>Commons-tests-3</td>
+<td>tests-3</td>
 <td style="text-align: right;">1</td>
 <td style="text-align: right;">29.49s</td>
 <td><code>.venv/bin/python -m pytest tests</code></td>
-<td>2 failed, 320 passed in 28.64s</td>
 </tr>
 <tr>
-<td>Commons-tests-4</td>
+<td>tests-4</td>
 <td style="text-align: right;">1</td>
 <td style="text-align: right;">31.8s</td>
 <td><code>.venv/bin/python -m pytest tests</code></td>
-<td>1 failed, 321 passed in 31.03s</td>
 </tr>
 <tr>
-<td>Commons-tests-5</td>
+<td>tests-5</td>
 <td style="text-align: right;">1</td>
 <td style="text-align: right;">19.59s</td>
 <td><code>.venv/bin/python -m pytest tests</code></td>
-<td>1 failed, 321 passed in 19.09s</td>
 </tr>
 <tr>
-<td>Commons-tests-6</td>
+<td>tests-6</td>
 <td style="text-align: right;">0</td>
 <td style="text-align: right;">14.69s</td>
 <td><code>.venv/bin/python -m pytest tests</code></td>
-<td>322 passed in 14.22s</td>
 </tr>
 <tr>
-<td>Commons-tls-diagnostic</td>
+<td>tests</td>
+<td style="text-align: right;">2</td>
+<td style="text-align: right;">3.4s</td>
+<td><code>&lt;workspace&gt;/OctoBot-Commons/.venv/bin/python -m pytest tests</code></td>
+</tr>
+<tr>
+<td>tls-diagnostic</td>
 <td style="text-align: right;">0</td>
 <td style="text-align: right;">4.24s</td>
 <td><code>.venv/bin/python -m pytest tests/test_aiohttp_util.py tests/test_async_job.py::test_run_stop_run -s --log-cli-level INFO</code></td>
-<td>============================== 5 passed in 3.82s ===============================</td>
 </tr>
 <tr>
-<td>Evaluators-build</td>
+<td>build</td>
 <td style="text-align: right;">0</td>
 <td style="text-align: right;">1.04s</td>
 <td><code>uv build --python 3.14</code></td>
-<td>Successfully built dist/octobot_evaluators-1.10.1.tar.gz<br>Successfully built dist/octobot_evaluators-1.10.1-py3-none-any.whl</td>
 </tr>
 <tr>
-<td>Evaluators-compile</td>
+<td>compile</td>
 <td style="text-align: right;">0</td>
 <td style="text-align: right;">0.13s</td>
 <td><code>&lt;workspace&gt;/OctoBot-Evaluators/.venv/bin/python -m compileall -q src</code></td>
-<td>See exit status; no test-count assertion.</td>
 </tr>
 <tr>
-<td>Evaluators-directory-resource-sync</td>
+<td>directory-resource-sync</td>
 <td style="text-align: right;">0</td>
 <td style="text-align: right;">0.77s</td>
 <td><code>uv sync --all-extras --python 3.14.8</code></td>
-<td>See exit status; no test-count assertion.</td>
 </tr>
 <tr>
-<td>Evaluators-final-build</td>
-<td style="text-align: right;">0</td>
-<td style="text-align: right;">1.25s</td>
-<td><code>uv build --python 3.14.8</code></td>
-<td>Successfully built dist/octobot_evaluators-1.10.1.tar.gz<br>Successfully built dist/octobot_evaluators-1.10.1-py3-none-any.whl</td>
-</tr>
-<tr>
-<td>Evaluators-final-build-2</td>
+<td>final-build-2</td>
 <td style="text-align: right;">0</td>
 <td style="text-align: right;">0.89s</td>
 <td><code>uv build --python 3.14.8</code></td>
-<td>Successfully built dist/octobot_evaluators-1.10.1.tar.gz<br>Successfully built dist/octobot_evaluators-1.10.1-py3-none-any.whl</td>
 </tr>
 <tr>
-<td>Evaluators-final-compile</td>
+<td>final-build</td>
+<td style="text-align: right;">0</td>
+<td style="text-align: right;">1.25s</td>
+<td><code>uv build --python 3.14.8</code></td>
+</tr>
+<tr>
+<td>final-compile-2</td>
 <td style="text-align: right;">0</td>
 <td style="text-align: right;">0.07s</td>
 <td><code>.venv/bin/python -m compileall -q src</code></td>
-<td>See exit status; no test-count assertion.</td>
 </tr>
 <tr>
-<td>Evaluators-final-compile-2</td>
+<td>final-compile</td>
 <td style="text-align: right;">0</td>
 <td style="text-align: right;">0.07s</td>
 <td><code>.venv/bin/python -m compileall -q src</code></td>
-<td>See exit status; no test-count assertion.</td>
 </tr>
 <tr>
-<td>Evaluators-final-existing-tests</td>
-<td style="text-align: right;">2</td>
-<td style="text-align: right;">1.13s</td>
-<td><code>.venv/bin/python -m pytest tests</code></td>
-<td>See exit status; no test-count assertion.</td>
-</tr>
-<tr>
-<td>Evaluators-final-existing-tests-2</td>
+<td>final-existing-tests-2</td>
 <td style="text-align: right;">0</td>
 <td style="text-align: right;">1.39s</td>
 <td><code>.venv/bin/python -m pytest tests</code></td>
-<td>57 passed in 0.98s</td>
 </tr>
 <tr>
-<td>Evaluators-final-lock</td>
-<td style="text-align: right;">0</td>
-<td style="text-align: right;">0.25s</td>
-<td><code>uv lock --upgrade</code></td>
-<td>See exit status; no test-count assertion.</td>
+<td>final-existing-tests</td>
+<td style="text-align: right;">2</td>
+<td style="text-align: right;">1.13s</td>
+<td><code>.venv/bin/python -m pytest tests</code></td>
 </tr>
 <tr>
-<td>Evaluators-final-lock-2</td>
+<td>final-lock-2</td>
 <td style="text-align: right;">0</td>
 <td style="text-align: right;">0.41s</td>
 <td><code>uv lock --upgrade</code></td>
-<td>See exit status; no test-count assertion.</td>
 </tr>
 <tr>
-<td>Evaluators-final-sync</td>
+<td>final-lock</td>
 <td style="text-align: right;">0</td>
-<td style="text-align: right;">0.08s</td>
-<td><code>uv sync --all-extras --frozen --python 3.14.8</code></td>
-<td>See exit status; no test-count assertion.</td>
+<td style="text-align: right;">0.25s</td>
+<td><code>uv lock --upgrade</code></td>
 </tr>
 <tr>
-<td>Evaluators-final-sync-2</td>
+<td>final-sync-2</td>
 <td style="text-align: right;">0</td>
 <td style="text-align: right;">0.56s</td>
 <td><code>uv sync --all-extras --frozen --python 3.14.8</code></td>
-<td>See exit status; no test-count assertion.</td>
 </tr>
 <tr>
-<td>Evaluators-local-manager-sync</td>
+<td>final-sync</td>
+<td style="text-align: right;">0</td>
+<td style="text-align: right;">0.08s</td>
+<td><code>uv sync --all-extras --frozen --python 3.14.8</code></td>
+</tr>
+<tr>
+<td>local-manager-sync</td>
 <td style="text-align: right;">0</td>
 <td style="text-align: right;">1.85s</td>
 <td><code>uv sync --all-extras --python 3.14</code></td>
-<td>See exit status; no test-count assertion.</td>
 </tr>
 <tr>
-<td>Evaluators-lock-3.14</td>
+<td>lock-3.14</td>
 <td style="text-align: right;">0</td>
 <td style="text-align: right;">0.88s</td>
 <td><code>uv lock --upgrade --python 3.14</code></td>
-<td>See exit status; no test-count assertion.</td>
 </tr>
 <tr>
-<td>Evaluators-lock-3.15</td>
+<td>lock-3.15</td>
 <td style="text-align: right;">0</td>
 <td style="text-align: right;">1.37s</td>
 <td><code>uv lock --upgrade --python 3.15</code></td>
-<td>See exit status; no test-count assertion.</td>
 </tr>
 <tr>
-<td>Evaluators-public-manager-sync</td>
+<td>public-manager-sync</td>
 <td style="text-align: right;">0</td>
 <td style="text-align: right;">1.12s</td>
 <td><code>uv sync --all-extras --python 3.14</code></td>
-<td>See exit status; no test-count assertion.</td>
 </tr>
 <tr>
-<td>Evaluators-sync-3.14</td>
+<td>compile</td>
+<td style="text-align: right;">0</td>
+<td style="text-align: right;">0.05s</td>
+<td><code>.venv/bin/python -Werror -m compileall -q src</code></td>
+</tr>
+<tr>
+<td>sync</td>
+<td style="text-align: right;">0</td>
+<td style="text-align: right;">1.36s</td>
+<td><code>uv sync --all-extras --frozen --python 3.15.0</code></td>
+</tr>
+<tr>
+<td>build</td>
+<td style="text-align: right;">0</td>
+<td style="text-align: right;">0.94s</td>
+<td><code>uv build --python 3.15.0</code></td>
+</tr>
+<tr>
+<td>compile</td>
+<td style="text-align: right;">0</td>
+<td style="text-align: right;">0.13s</td>
+<td><code>/tmp/octobot-evaluators-final315-control/bin/python -Werror -m compileall -q src</code></td>
+</tr>
+<tr>
+<td>lock</td>
+<td style="text-align: right;">0</td>
+<td style="text-align: right;">0.13s</td>
+<td><code>uv lock</code></td>
+</tr>
+<tr>
+<td>sync</td>
+<td style="text-align: right;">0</td>
+<td style="text-align: right;">0.78s</td>
+<td><code>uv sync --all-extras --frozen --python 3.15.0</code></td>
+</tr>
+<tr>
+<td>tests</td>
+<td style="text-align: right;">0</td>
+<td style="text-align: right;">3.52s</td>
+<td><code>/tmp/octobot-evaluators-final315-control/bin/python -m pytest tests --tb=short</code></td>
+</tr>
+<tr>
+<td>sync-3.14</td>
 <td style="text-align: right;">0</td>
 <td style="text-align: right;">1.37s</td>
 <td><code>uv sync --all-extras --python 3.14</code></td>
-<td>See exit status; no test-count assertion.</td>
 </tr>
 <tr>
-<td>Evaluators-sync-3.15</td>
+<td>sync-3.15</td>
 <td style="text-align: right;">2</td>
 <td style="text-align: right;">0.04s</td>
 <td><code>uv sync --all-extras --python 3.15</code></td>
-<td>See exit status; no test-count assertion.</td>
 </tr>
 <tr>
-<td>Evaluators-tests</td>
-<td style="text-align: right;">2</td>
-<td style="text-align: right;">2.39s</td>
-<td><code>&lt;workspace&gt;/OctoBot-Evaluators/.venv/bin/python -m pytest tests</code></td>
-<td>See exit status; no test-count assertion.</td>
-</tr>
-<tr>
-<td>Evaluators-tests-2</td>
+<td>tests-2</td>
 <td style="text-align: right;">1</td>
 <td style="text-align: right;">8.46s</td>
 <td><code>.venv/bin/python -m pytest tests</code></td>
-<td>52 passed, 5 errors in 6.78s</td>
 </tr>
 <tr>
-<td>Evaluators-tests-3</td>
+<td>tests-3</td>
 <td style="text-align: right;">2</td>
 <td style="text-align: right;">2.19s</td>
 <td><code>.venv/bin/python -m pytest tests</code></td>
-<td>See exit status; no test-count assertion.</td>
 </tr>
 <tr>
-<td>Evaluators-tests-4</td>
+<td>tests-4</td>
 <td style="text-align: right;">2</td>
 <td style="text-align: right;">2.16s</td>
 <td><code>.venv/bin/python -m pytest tests</code></td>
-<td>See exit status; no test-count assertion.</td>
 </tr>
 <tr>
-<td>Evaluators-tests-5</td>
+<td>tests-5</td>
 <td style="text-align: right;">2</td>
 <td style="text-align: right;">2.15s</td>
 <td><code>.venv/bin/python -m pytest tests</code></td>
-<td>See exit status; no test-count assertion.</td>
 </tr>
 <tr>
-<td>Evaluators-tests-6</td>
+<td>tests-6</td>
 <td style="text-align: right;">1</td>
 <td style="text-align: right;">3.34s</td>
 <td><code>.venv/bin/python -m pytest tests</code></td>
-<td>52 passed, 5 errors in 2.50s</td>
 </tr>
 <tr>
-<td>Evaluators-updated-manager-sync</td>
+<td>tests</td>
+<td style="text-align: right;">2</td>
+<td style="text-align: right;">2.39s</td>
+<td><code>&lt;workspace&gt;/OctoBot-Evaluators/.venv/bin/python -m pytest tests</code></td>
+</tr>
+<tr>
+<td>updated-manager-sync</td>
 <td style="text-align: right;">0</td>
 <td style="text-align: right;">0.61s</td>
 <td><code>uv sync --all-extras --python 3.14</code></td>
-<td>See exit status; no test-count assertion.</td>
 </tr>
 <tr>
-<td>Market-Making-build</td>
+<td>build</td>
 <td style="text-align: right;">0</td>
 <td style="text-align: right;">1.01s</td>
 <td><code>uv build --python 3.13</code></td>
-<td>Successfully built dist/octobot_market_making-2.1.1.tar.gz<br>Successfully built dist/octobot_market_making-2.1.1-py3-none-any.whl</td>
 </tr>
 <tr>
-<td>Market-Making-compile</td>
+<td>compile</td>
 <td style="text-align: right;">0</td>
 <td style="text-align: right;">0.08s</td>
 <td><code>&lt;workspace&gt;/OctoBot-Market-Making/.venv/bin/python -m compileall -q src</code></td>
-<td>See exit status; no test-count assertion.</td>
 </tr>
 <tr>
-<td>Market-Making-current-sync</td>
-<td style="text-align: right;">0</td>
-<td style="text-align: right;">0.61s</td>
-<td><code>uv sync --all-extras --python 3.14</code></td>
-<td>See exit status; no test-count assertion.</td>
-</tr>
-<tr>
-<td>Market-Making-current-sync-2</td>
+<td>current-sync-2</td>
 <td style="text-align: right;">0</td>
 <td style="text-align: right;">2.14s</td>
 <td><code>uv sync --all-extras --python 3.14</code></td>
-<td>See exit status; no test-count assertion.</td>
 </tr>
 <tr>
-<td>Market-Making-final-build</td>
+<td>current-sync</td>
 <td style="text-align: right;">0</td>
-<td style="text-align: right;">2.03s</td>
-<td><code>uv build --python 3.14.8</code></td>
-<td>Successfully built dist/octobot_market_making-2.1.1.tar.gz<br>Successfully built dist/octobot_market_making-2.1.1-py3-none-any.whl</td>
+<td style="text-align: right;">0.61s</td>
+<td><code>uv sync --all-extras --python 3.14</code></td>
 </tr>
 <tr>
-<td>Market-Making-final-build-2</td>
+<td>final-build-2</td>
 <td style="text-align: right;">0</td>
 <td style="text-align: right;">1.06s</td>
 <td><code>uv build --python 3.14.8</code></td>
-<td>Successfully built dist/octobot_market_making-2.1.1.tar.gz<br>Successfully built dist/octobot_market_making-2.1.1-py3-none-any.whl</td>
 </tr>
 <tr>
-<td>Market-Making-final-compile</td>
+<td>final-build</td>
+<td style="text-align: right;">0</td>
+<td style="text-align: right;">2.03s</td>
+<td><code>uv build --python 3.14.8</code></td>
+</tr>
+<tr>
+<td>final-compile-2</td>
 <td style="text-align: right;">0</td>
 <td style="text-align: right;">0.09s</td>
 <td><code>.venv/bin/python -m compileall -q src</code></td>
-<td>See exit status; no test-count assertion.</td>
 </tr>
 <tr>
-<td>Market-Making-final-compile-2</td>
+<td>final-compile</td>
 <td style="text-align: right;">0</td>
 <td style="text-align: right;">0.09s</td>
 <td><code>.venv/bin/python -m compileall -q src</code></td>
-<td>See exit status; no test-count assertion.</td>
 </tr>
 <tr>
-<td>Market-Making-final-lock</td>
-<td style="text-align: right;">0</td>
-<td style="text-align: right;">0.58s</td>
-<td><code>uv lock --upgrade</code></td>
-<td>See exit status; no test-count assertion.</td>
-</tr>
-<tr>
-<td>Market-Making-final-lock-2</td>
+<td>final-lock-2</td>
 <td style="text-align: right;">0</td>
 <td style="text-align: right;">0.5s</td>
 <td><code>uv lock --upgrade</code></td>
-<td>See exit status; no test-count assertion.</td>
 </tr>
 <tr>
-<td>Market-Making-final-sync</td>
+<td>final-lock</td>
+<td style="text-align: right;">0</td>
+<td style="text-align: right;">0.58s</td>
+<td><code>uv lock --upgrade</code></td>
+</tr>
+<tr>
+<td>final-sync-2</td>
+<td style="text-align: right;">0</td>
+<td style="text-align: right;">0.65s</td>
+<td><code>uv sync --all-extras --frozen --python 3.14.8</code></td>
+</tr>
+<tr>
+<td>final-sync</td>
 <td style="text-align: right;">0</td>
 <td style="text-align: right;">0.59s</td>
 <td><code>uv sync --all-extras --frozen --python 3.14.8</code></td>
-<td>See exit status; no test-count assertion.</td>
 </tr>
 <tr>
-<td>Market-Making-final-sync-2</td>
-<td style="text-align: right;">0</td>
-<td style="text-align: right;">0.65s</td>
-<td><code>uv sync --all-extras --frozen --python 3.14.8</code></td>
-<td>See exit status; no test-count assertion.</td>
-</tr>
-<tr>
-<td>Market-Making-lock-3.13</td>
+<td>lock-3.13</td>
 <td style="text-align: right;">0</td>
 <td style="text-align: right;">0.77s</td>
 <td><code>uv lock --upgrade --python 3.13</code></td>
-<td>See exit status; no test-count assertion.</td>
 </tr>
 <tr>
-<td>Market-Making-lock-3.14</td>
+<td>lock-3.14</td>
 <td style="text-align: right;">0</td>
 <td style="text-align: right;">0.34s</td>
 <td><code>uv lock --upgrade --python 3.14</code></td>
-<td>See exit status; no test-count assertion.</td>
 </tr>
 <tr>
-<td>Market-Making-lock-3.15</td>
+<td>lock-3.15</td>
 <td style="text-align: right;">0</td>
 <td style="text-align: right;">1.64s</td>
 <td><code>uv lock --upgrade --python 3.15</code></td>
-<td>See exit status; no test-count assertion.</td>
 </tr>
 <tr>
-<td>Market-Making-sync-3.13</td>
+<td>compile</td>
+<td style="text-align: right;">0</td>
+<td style="text-align: right;">0.06s</td>
+<td><code>.venv/bin/python -Werror -m compileall -q src</code></td>
+</tr>
+<tr>
+<td>sync</td>
+<td style="text-align: right;">0</td>
+<td style="text-align: right;">3.02s</td>
+<td><code>uv sync --all-extras --frozen --python 3.15.0</code></td>
+</tr>
+<tr>
+<td>build</td>
+<td style="text-align: right;">0</td>
+<td style="text-align: right;">1.06s</td>
+<td><code>uv build --python 3.15.0</code></td>
+</tr>
+<tr>
+<td>compile</td>
+<td style="text-align: right;">0</td>
+<td style="text-align: right;">0.08s</td>
+<td><code>/tmp/octobot-market-making-final315-control/bin/python -Werror -m compileall -q src</code></td>
+</tr>
+<tr>
+<td>lock</td>
+<td style="text-align: right;">0</td>
+<td style="text-align: right;">1.9s</td>
+<td><code>uv lock</code></td>
+</tr>
+<tr>
+<td>sync</td>
+<td style="text-align: right;">0</td>
+<td style="text-align: right;">1.41s</td>
+<td><code>uv sync --all-extras --frozen --python 3.15.0</code></td>
+</tr>
+<tr>
+<td>tests</td>
+<td style="text-align: right;">0</td>
+<td style="text-align: right;">9.62s</td>
+<td><code>/tmp/octobot-market-making-final315-control/bin/python -m pytest tests --tb=short</code></td>
+</tr>
+<tr>
+<td>sync-3.13</td>
 <td style="text-align: right;">1</td>
 <td style="text-align: right;">7.62s</td>
 <td><code>uv sync --all-extras --python 3.13</code></td>
-<td>See exit status; no test-count assertion.</td>
 </tr>
 <tr>
-<td>Market-Making-sync-3.14</td>
+<td>sync-3.14</td>
 <td style="text-align: right;">1</td>
 <td style="text-align: right;">3.9s</td>
 <td><code>uv sync --all-extras --python 3.14</code></td>
-<td>See exit status; no test-count assertion.</td>
 </tr>
 <tr>
-<td>Market-Making-sync-3.15</td>
+<td>sync-3.15</td>
 <td style="text-align: right;">1</td>
 <td style="text-align: right;">5.22s</td>
 <td><code>uv sync --all-extras --python 3.15</code></td>
-<td>See exit status; no test-count assertion.</td>
 </tr>
 <tr>
-<td>Market-Making-tests</td>
-<td style="text-align: right;">1</td>
-<td style="text-align: right;">0.04s</td>
-<td><code>&lt;workspace&gt;/OctoBot-Market-Making/.venv/bin/python -m pytest tests</code></td>
-<td>See exit status; no test-count assertion.</td>
-</tr>
-<tr>
-<td>Market-Making-tests-2</td>
+<td>tests-2</td>
 <td style="text-align: right;">3</td>
 <td style="text-align: right;">34.54s</td>
 <td><code>.venv/bin/python -m pytest tests</code></td>
-<td>See exit status; no test-count assertion.</td>
 </tr>
 <tr>
-<td>Market-Making-tests-3</td>
+<td>tests-3</td>
 <td style="text-align: right;">0</td>
 <td style="text-align: right;">9.86s</td>
 <td><code>.venv/bin/python -m pytest tests</code></td>
-<td>1 passed in 6.63s</td>
 </tr>
 <tr>
-<td>Script-build</td>
+<td>tests</td>
+<td style="text-align: right;">1</td>
+<td style="text-align: right;">0.04s</td>
+<td><code>&lt;workspace&gt;/OctoBot-Market-Making/.venv/bin/python -m pytest tests</code></td>
+</tr>
+<tr>
+<td>build</td>
 <td style="text-align: right;">0</td>
 <td style="text-align: right;">0.95s</td>
 <td><code>uv build --python 3.13</code></td>
-<td>Successfully built dist/octobot_script-0.1.1.tar.gz<br>Successfully built dist/octobot_script-0.1.1-py3-none-any.whl</td>
 </tr>
 <tr>
-<td>Script-compile</td>
+<td>compile</td>
 <td style="text-align: right;">0</td>
 <td style="text-align: right;">0.08s</td>
 <td><code>&lt;workspace&gt;/OctoBot-Script/.venv/bin/python -m compileall -q src</code></td>
-<td>See exit status; no test-count assertion.</td>
 </tr>
 <tr>
-<td>Script-current-sync</td>
-<td style="text-align: right;">0</td>
-<td style="text-align: right;">0.4s</td>
-<td><code>uv sync --all-extras --python 3.14</code></td>
-<td>See exit status; no test-count assertion.</td>
-</tr>
-<tr>
-<td>Script-current-sync-2</td>
+<td>current-sync-2</td>
 <td style="text-align: right;">0</td>
 <td style="text-align: right;">0.97s</td>
 <td><code>uv sync --all-extras --python 3.14</code></td>
-<td>See exit status; no test-count assertion.</td>
 </tr>
 <tr>
-<td>Script-final-build</td>
+<td>current-sync</td>
 <td style="text-align: right;">0</td>
-<td style="text-align: right;">5.09s</td>
-<td><code>uv build --python 3.14.8</code></td>
-<td>Successfully built dist/octobot_script-0.1.1.tar.gz<br>Successfully built dist/octobot_script-0.1.1-py3-none-any.whl</td>
+<td style="text-align: right;">0.4s</td>
+<td><code>uv sync --all-extras --python 3.14</code></td>
 </tr>
 <tr>
-<td>Script-final-build-2</td>
+<td>final-build-2</td>
 <td style="text-align: right;">0</td>
 <td style="text-align: right;">3.13s</td>
 <td><code>uv build --python 3.14.8</code></td>
-<td>Successfully built dist/octobot_script-0.1.1.tar.gz<br>Successfully built dist/octobot_script-0.1.1-py3-none-any.whl</td>
 </tr>
 <tr>
-<td>Script-final-build-3</td>
+<td>final-build-3</td>
 <td style="text-align: right;">0</td>
 <td style="text-align: right;">2.68s</td>
 <td><code>uv build --python 3.14.8</code></td>
-<td>Successfully built dist/octobot_script-0.1.1.tar.gz<br>Successfully built dist/octobot_script-0.1.1-py3-none-any.whl</td>
 </tr>
 <tr>
-<td>Script-final-compile</td>
+<td>final-build</td>
 <td style="text-align: right;">0</td>
-<td style="text-align: right;">0.14s</td>
-<td><code>.venv/bin/python -m compileall -q src</code></td>
-<td>See exit status; no test-count assertion.</td>
+<td style="text-align: right;">5.09s</td>
+<td><code>uv build --python 3.14.8</code></td>
 </tr>
 <tr>
-<td>Script-final-compile-2</td>
+<td>final-compile-2</td>
 <td style="text-align: right;">0</td>
 <td style="text-align: right;">0.07s</td>
 <td><code>.venv/bin/python -m compileall -q src</code></td>
-<td>See exit status; no test-count assertion.</td>
 </tr>
 <tr>
-<td>Script-final-lock</td>
+<td>final-compile</td>
+<td style="text-align: right;">0</td>
+<td style="text-align: right;">0.14s</td>
+<td><code>.venv/bin/python -m compileall -q src</code></td>
+</tr>
+<tr>
+<td>final-lock-2</td>
+<td style="text-align: right;">0</td>
+<td style="text-align: right;">0.49s</td>
+<td><code>uv lock --upgrade</code></td>
+</tr>
+<tr>
+<td>final-lock</td>
 <td style="text-align: right;">0</td>
 <td style="text-align: right;">0.48s</td>
 <td><code>uv lock --upgrade</code></td>
-<td>See exit status; no test-count assertion.</td>
 </tr>
 <tr>
-<td>Script-final-lock-2</td>
-<td style="text-align: right;">0</td>
-<td style="text-align: right;">0.49s</td>
-<td><code>uv lock --upgrade</code></td>
-<td>See exit status; no test-count assertion.</td>
-</tr>
-<tr>
-<td>Script-final-sync</td>
-<td style="text-align: right;">0</td>
-<td style="text-align: right;">2.17s</td>
-<td><code>uv sync --all-extras --frozen --python 3.14.8</code></td>
-<td>See exit status; no test-count assertion.</td>
-</tr>
-<tr>
-<td>Script-final-sync-2</td>
+<td>final-sync-2</td>
 <td style="text-align: right;">0</td>
 <td style="text-align: right;">0.65s</td>
 <td><code>uv sync --all-extras --frozen --python 3.14.8</code></td>
-<td>See exit status; no test-count assertion.</td>
 </tr>
 <tr>
-<td>Script-lock-3.13</td>
+<td>final-sync</td>
+<td style="text-align: right;">0</td>
+<td style="text-align: right;">2.17s</td>
+<td><code>uv sync --all-extras --frozen --python 3.14.8</code></td>
+</tr>
+<tr>
+<td>lock-3.13</td>
 <td style="text-align: right;">0</td>
 <td style="text-align: right;">0.85s</td>
 <td><code>uv lock --upgrade --python 3.13</code></td>
-<td>See exit status; no test-count assertion.</td>
 </tr>
 <tr>
-<td>Script-lock-3.14</td>
+<td>lock-3.14</td>
 <td style="text-align: right;">0</td>
 <td style="text-align: right;">0.72s</td>
 <td><code>uv lock --upgrade --python 3.14</code></td>
-<td>See exit status; no test-count assertion.</td>
 </tr>
 <tr>
-<td>Script-lock-3.15</td>
+<td>lock-3.15</td>
 <td style="text-align: right;">0</td>
 <td style="text-align: right;">0.61s</td>
 <td><code>uv lock --upgrade --python 3.15</code></td>
-<td>See exit status; no test-count assertion.</td>
 </tr>
 <tr>
-<td>Script-report-build</td>
+<td>report-build</td>
 <td style="text-align: right;">0</td>
 <td style="text-align: right;">11.97s</td>
 <td><code>npm run build</code></td>
-<td>See exit status; no test-count assertion.</td>
 </tr>
 <tr>
-<td>Script-report-install</td>
+<td>report-install</td>
 <td style="text-align: right;">0</td>
 <td style="text-align: right;">24.44s</td>
 <td><code>npm ci</code></td>
-<td>See exit status; no test-count assertion.</td>
 </tr>
 <tr>
-<td>Script-sync-3.13</td>
+<td>compile</td>
+<td style="text-align: right;">0</td>
+<td style="text-align: right;">0.05s</td>
+<td><code>.venv/bin/python -Werror -m compileall -q src</code></td>
+</tr>
+<tr>
+<td>sync</td>
+<td style="text-align: right;">0</td>
+<td style="text-align: right;">3.16s</td>
+<td><code>uv sync --all-extras --frozen --python 3.15.0</code></td>
+</tr>
+<tr>
+<td>build</td>
+<td style="text-align: right;">0</td>
+<td style="text-align: right;">2.5s</td>
+<td><code>uv build --python 3.15.0</code></td>
+</tr>
+<tr>
+<td>compile</td>
+<td style="text-align: right;">0</td>
+<td style="text-align: right;">0.08s</td>
+<td><code>/tmp/octobot-script-final315-control/bin/python -Werror -m compileall -q src</code></td>
+</tr>
+<tr>
+<td>lock</td>
+<td style="text-align: right;">0</td>
+<td style="text-align: right;">1.9s</td>
+<td><code>uv lock</code></td>
+</tr>
+<tr>
+<td>sync</td>
+<td style="text-align: right;">0</td>
+<td style="text-align: right;">1.42s</td>
+<td><code>uv sync --all-extras --frozen --python 3.15.0</code></td>
+</tr>
+<tr>
+<td>tests</td>
+<td style="text-align: right;">0</td>
+<td style="text-align: right;">18.4s</td>
+<td><code>/tmp/octobot-script-final315-control/bin/python -m pytest tests --tb=short</code></td>
+</tr>
+<tr>
+<td>sync-3.13</td>
 <td style="text-align: right;">1</td>
 <td style="text-align: right;">2.17s</td>
 <td><code>uv sync --all-extras --python 3.13</code></td>
-<td>See exit status; no test-count assertion.</td>
 </tr>
 <tr>
-<td>Script-sync-3.14</td>
+<td>sync-3.14</td>
 <td style="text-align: right;">1</td>
 <td style="text-align: right;">4.65s</td>
 <td><code>uv sync --all-extras --python 3.14</code></td>
-<td>See exit status; no test-count assertion.</td>
 </tr>
 <tr>
-<td>Script-sync-3.15</td>
+<td>sync-3.15</td>
 <td style="text-align: right;">1</td>
 <td style="text-align: right;">6.04s</td>
 <td><code>uv sync --all-extras --python 3.15</code></td>
-<td>See exit status; no test-count assertion.</td>
 </tr>
 <tr>
-<td>Script-tests</td>
-<td style="text-align: right;">1</td>
-<td style="text-align: right;">0.04s</td>
-<td><code>&lt;workspace&gt;/OctoBot-Script/.venv/bin/python -m pytest tests</code></td>
-<td>See exit status; no test-count assertion.</td>
-</tr>
-<tr>
-<td>Script-tests-2</td>
+<td>tests-2</td>
 <td style="text-align: right;">2</td>
 <td style="text-align: right;">35.64s</td>
 <td><code>.venv/bin/python -m pytest tests</code></td>
-<td>See exit status; no test-count assertion.</td>
 </tr>
 <tr>
-<td>Script-tests-3</td>
+<td>tests-3</td>
 <td style="text-align: right;">2</td>
 <td style="text-align: right;">20.53s</td>
 <td><code>.venv/bin/python -m pytest tests</code></td>
-<td>See exit status; no test-count assertion.</td>
 </tr>
 <tr>
-<td>Script-tests-4</td>
+<td>tests-4</td>
 <td style="text-align: right;">0</td>
 <td style="text-align: right;">38.37s</td>
 <td><code>.venv/bin/python -m pytest tests</code></td>
-<td>============================= 14 passed in 34.04s ==============================</td>
 </tr>
 <tr>
-<td>Tentacles-api-collection-check</td>
+<td>tests</td>
+<td style="text-align: right;">1</td>
+<td style="text-align: right;">0.04s</td>
+<td><code>&lt;workspace&gt;/OctoBot-Script/.venv/bin/python -m pytest tests</code></td>
+</tr>
+<tr>
+<td>api-collection-check</td>
 <td style="text-align: right;">0</td>
 <td style="text-align: right;">7.85s</td>
 <td><code>.venv/bin/python -c import os,sys,pytest;sys.path.insert(0,'&lt;workspace&gt;/OctoBot');os.chdir('&lt;workspace&gt;/OctoBot-Tentacles');sys.path.insert(0,'&lt;workspace&gt;/OctoBot-Tentacles');raise SystemExit(pytest.main(['tentacles','--continue-on-collection-errors','--rootdir=&lt;workspace&gt;/OctoBot-Tentacles','--collect-only','--tb=short']))</code></td>
-<td>See exit status; no test-count assertion.</td>
 </tr>
 <tr>
-<td>Tentacles-archive-install</td>
-<td style="text-align: right;">1</td>
-<td style="text-align: right;">5.34s</td>
-<td><code>&lt;workspace&gt;/OctoBot/.venv/bin/OctoBot tentacles --install --location &lt;workspace&gt;/OctoBot-Tentacles/dist/any_platform.zip --all</code></td>
-<td>See exit status; no test-count assertion.</td>
-</tr>
-<tr>
-<td>Tentacles-archive-install-2</td>
+<td>archive-install-2</td>
 <td style="text-align: right;">0</td>
 <td style="text-align: right;">5.88s</td>
 <td><code>&lt;workspace&gt;/OctoBot/.venv/bin/OctoBot tentacles --install --location &lt;workspace&gt;/OctoBot-Tentacles/dist/any_platform.zip --all</code></td>
-<td>See exit status; no test-count assertion.</td>
 </tr>
 <tr>
-<td>Tentacles-archive-pack</td>
+<td>archive-install</td>
 <td style="text-align: right;">1</td>
-<td style="text-align: right;">0.05s</td>
-<td><code>../OctoBot/.venv/bin/python -m octobot tentacles -d src/octobot_tentacles -m metadata.yaml -p &lt;workspace&gt;/OctoBot-Tentacles/dist/tentacles-source.zip</code></td>
-<td>See exit status; no test-count assertion.</td>
+<td style="text-align: right;">5.34s</td>
+<td><code>&lt;workspace&gt;/OctoBot/.venv/bin/OctoBot tentacles --install --location &lt;workspace&gt;/OctoBot-Tentacles/dist/any_platform.zip --all</code></td>
 </tr>
 <tr>
-<td>Tentacles-archive-pack-2</td>
+<td>archive-pack-2</td>
 <td style="text-align: right;">0</td>
 <td style="text-align: right;">4.93s</td>
 <td><code>&lt;workspace&gt;/OctoBot/.venv/bin/OctoBot tentacles -d src/octobot_tentacles -m metadata.yaml -p &lt;workspace&gt;/OctoBot-Tentacles/dist/tentacles-source.zip</code></td>
-<td>See exit status; no test-count assertion.</td>
 </tr>
 <tr>
-<td>Tentacles-bounded-current-api-full-tests</td>
+<td>archive-pack</td>
+<td style="text-align: right;">1</td>
+<td style="text-align: right;">0.05s</td>
+<td><code>../OctoBot/.venv/bin/python -m octobot tentacles -d src/octobot_tentacles -m metadata.yaml -p &lt;workspace&gt;/OctoBot-Tentacles/dist/tentacles-source.zip</code></td>
+</tr>
+<tr>
+<td>bounded-current-api-full-tests</td>
 <td style="text-align: right;">-15</td>
 <td style="text-align: right;">901.69s</td>
 <td><code>.venv/bin/python -c import os,sys,pytest;sys.path.insert(0,'&lt;workspace&gt;/OctoBot');os.chdir('&lt;workspace&gt;/OctoBot');sys.path.insert(0,'&lt;workspace&gt;/OctoBot-Tentacles');raise SystemExit(pytest.main(['&lt;workspace&gt;/OctoBot-Tentacles/tentacles','--continue-on-collection-errors','--rootdir=&lt;workspace&gt;/OctoBot-Tentacles','--timeout=60','--tb=short']))</code></td>
-<td>See exit status; no test-count assertion.</td>
 </tr>
 <tr>
-<td>Tentacles-build</td>
+<td>build</td>
 <td style="text-align: right;">0</td>
 <td style="text-align: right;">3.43s</td>
 <td><code>uv build --python 3.15</code></td>
-<td>Successfully built dist/octobot_tentacles-0.1.0.tar.gz<br>Successfully built dist/octobot_tentacles-0.1.0-py3-none-any.whl</td>
 </tr>
 <tr>
-<td>Tentacles-compile</td>
+<td>compile</td>
 <td style="text-align: right;">0</td>
 <td style="text-align: right;">1.25s</td>
 <td><code>&lt;workspace&gt;/OctoBot-Tentacles/.venv/bin/python -m compileall -q src</code></td>
-<td>See exit status; no test-count assertion.</td>
 </tr>
 <tr>
-<td>Tentacles-converted-mode-focused-tests</td>
-<td style="text-align: right;">1</td>
-<td style="text-align: right;">31.69s</td>
-<td><code>.venv/bin/python -c import os,sys,pytest;sys.path.insert(0,'&lt;workspace&gt;/OctoBot');os.chdir('&lt;workspace&gt;/OctoBot-Tentacles');sys.path.insert(0,'&lt;workspace&gt;/OctoBot-Tentacles');raise SystemExit(pytest.main(['tentacles/Trading/Mode/dca_trading_mode/tests','tentacles/Trading/Mode/index_trading_mode/tests','tentacles/Trading/Mode/grid_trading_mode/tests','--rootdir=&lt;workspace&gt;/OctoBot-Tentacles','--tb=short']))</code></td>
-<td>36 failed, 6 passed, 55 errors in 27.42s</td>
-</tr>
-<tr>
-<td>Tentacles-converted-mode-focused-tests-2</td>
+<td>converted-mode-focused-tests-2</td>
 <td style="text-align: right;">0</td>
 <td style="text-align: right;">20.71s</td>
 <td><code>.venv/bin/python -c import os,sys,pytest;sys.path.insert(0,'&lt;workspace&gt;/OctoBot');os.chdir('&lt;workspace&gt;/OctoBot-Tentacles');sys.path.insert(0,'&lt;workspace&gt;/OctoBot-Tentacles');raise SystemExit(pytest.main(['tentacles/Trading/Mode/dca_trading_mode/tests','tentacles/Trading/Mode/index_trading_mode/tests','tentacles/Trading/Mode/grid_trading_mode/tests','--rootdir=&lt;workspace&gt;/OctoBot-Tentacles','--tb=short']))</code></td>
-<td>97 passed in 16.21s</td>
 </tr>
 <tr>
-<td>Tentacles-current-api-archive-install</td>
+<td>converted-mode-focused-tests</td>
+<td style="text-align: right;">1</td>
+<td style="text-align: right;">31.69s</td>
+<td><code>.venv/bin/python -c import os,sys,pytest;sys.path.insert(0,'&lt;workspace&gt;/OctoBot');os.chdir('&lt;workspace&gt;/OctoBot-Tentacles');sys.path.insert(0,'&lt;workspace&gt;/OctoBot-Tentacles');raise SystemExit(pytest.main(['tentacles/Trading/Mode/dca_trading_mode/tests','tentacles/Trading/Mode/index_trading_mode/tests','tentacles/Trading/Mode/grid_trading_mode/tests','--rootdir=&lt;workspace&gt;/OctoBot-Tentacles','--tb=short']))</code></td>
+</tr>
+<tr>
+<td>current-api-archive-install</td>
 <td style="text-align: right;">0</td>
 <td style="text-align: right;">6.44s</td>
 <td><code>../OctoBot/.venv/bin/OctoBot tentacles --install --location output/dist/any_platform.zip --all</code></td>
-<td>See exit status; no test-count assertion.</td>
 </tr>
 <tr>
-<td>Tentacles-current-api-archive-pack</td>
+<td>current-api-archive-pack</td>
 <td style="text-align: right;">0</td>
 <td style="text-align: right;">7.23s</td>
 <td><code>../OctoBot/.venv/bin/OctoBot tentacles -d src/octobot_tentacles -m metadata.yaml -p dist/current-host.zip</code></td>
-<td>See exit status; no test-count assertion.</td>
 </tr>
 <tr>
-<td>Tentacles-current-api-export</td>
+<td>current-api-export-10</td>
 <td style="text-align: right;">0</td>
-<td style="text-align: right;">5.97s</td>
+<td style="text-align: right;">4.63s</td>
 <td><code>../OctoBot/.venv/bin/OctoBot tentacles -d src/octobot_tentacles -m metadata.yaml -p dist/current-host.zip</code></td>
-<td>See exit status; no test-count assertion.</td>
 </tr>
 <tr>
-<td>Tentacles-current-api-export-2</td>
+<td>current-api-export-11</td>
+<td style="text-align: right;">0</td>
+<td style="text-align: right;">22.94s</td>
+<td><code>../OctoBot/.venv/bin/OctoBot tentacles -d src/octobot_tentacles -m metadata.yaml -p dist/current-host.zip</code></td>
+</tr>
+<tr>
+<td>current-api-export-2</td>
 <td style="text-align: right;">0</td>
 <td style="text-align: right;">5.17s</td>
 <td><code>../OctoBot/.venv/bin/OctoBot tentacles -d src/octobot_tentacles -m metadata.yaml -p dist/current-host.zip</code></td>
-<td>See exit status; no test-count assertion.</td>
 </tr>
 <tr>
-<td>Tentacles-current-api-export-3</td>
+<td>current-api-export-3</td>
 <td style="text-align: right;">0</td>
 <td style="text-align: right;">4.94s</td>
 <td><code>../OctoBot/.venv/bin/OctoBot tentacles -d src/octobot_tentacles -m metadata.yaml -p dist/current-host.zip</code></td>
-<td>See exit status; no test-count assertion.</td>
 </tr>
 <tr>
-<td>Tentacles-current-api-full-tests</td>
-<td style="text-align: right;">-15</td>
-<td style="text-align: right;">784.99s</td>
-<td><code>.venv/bin/python -c import os,sys,pytest;sys.path.insert(0,'&lt;workspace&gt;/OctoBot');os.chdir('&lt;workspace&gt;/OctoBot');sys.path.insert(0,'&lt;workspace&gt;/OctoBot-Tentacles');raise SystemExit(pytest.main(['&lt;workspace&gt;/OctoBot-Tentacles/tentacles','--continue-on-collection-errors','--rootdir=&lt;workspace&gt;/OctoBot-Tentacles']))</code></td>
-<td>See exit status; no test-count assertion.</td>
+<td>current-api-export-4</td>
+<td style="text-align: right;">0</td>
+<td style="text-align: right;">5.37s</td>
+<td><code>../OctoBot/.venv/bin/OctoBot tentacles -d src/octobot_tentacles -m metadata.yaml -p dist/current-host.zip</code></td>
 </tr>
 <tr>
-<td>Tentacles-current-api-full-tests-2</td>
+<td>current-api-export-5</td>
+<td style="text-align: right;">0</td>
+<td style="text-align: right;">3.69s</td>
+<td><code>../OctoBot/.venv/bin/OctoBot tentacles -d src/octobot_tentacles -m metadata.yaml -p dist/current-host.zip</code></td>
+</tr>
+<tr>
+<td>current-api-export-6</td>
+<td style="text-align: right;">0</td>
+<td style="text-align: right;">3.4s</td>
+<td><code>../OctoBot/.venv/bin/OctoBot tentacles -d src/octobot_tentacles -m metadata.yaml -p dist/current-host.zip</code></td>
+</tr>
+<tr>
+<td>current-api-export-7</td>
+<td style="text-align: right;">0</td>
+<td style="text-align: right;">5.07s</td>
+<td><code>../OctoBot/.venv/bin/OctoBot tentacles -d src/octobot_tentacles -m metadata.yaml -p dist/current-host.zip</code></td>
+</tr>
+<tr>
+<td>current-api-export-8</td>
+<td style="text-align: right;">0</td>
+<td style="text-align: right;">4.82s</td>
+<td><code>../OctoBot/.venv/bin/OctoBot tentacles -d src/octobot_tentacles -m metadata.yaml -p dist/current-host.zip</code></td>
+</tr>
+<tr>
+<td>current-api-export-9</td>
+<td style="text-align: right;">0</td>
+<td style="text-align: right;">5.43s</td>
+<td><code>../OctoBot/.venv/bin/OctoBot tentacles -d src/octobot_tentacles -m metadata.yaml -p dist/current-host.zip</code></td>
+</tr>
+<tr>
+<td>current-api-export</td>
+<td style="text-align: right;">0</td>
+<td style="text-align: right;">5.97s</td>
+<td><code>../OctoBot/.venv/bin/OctoBot tentacles -d src/octobot_tentacles -m metadata.yaml -p dist/current-host.zip</code></td>
+</tr>
+<tr>
+<td>current-api-full-tests-2</td>
 <td style="text-align: right;">-15</td>
 <td style="text-align: right;">914.82s</td>
 <td><code>.venv/bin/python -c import os,sys,pytest;sys.path.insert(0,'&lt;workspace&gt;/OctoBot');os.chdir('&lt;workspace&gt;/OctoBot-Tentacles');sys.path.insert(0,'&lt;workspace&gt;/OctoBot-Tentacles');raise SystemExit(pytest.main(['tentacles','--continue-on-collection-errors','--rootdir=&lt;workspace&gt;/OctoBot-Tentacles','--timeout=90','--tb=short']))</code></td>
-<td>See exit status; no test-count assertion.</td>
 </tr>
 <tr>
-<td>Tentacles-current-api-install</td>
+<td>current-api-full-tests</td>
+<td style="text-align: right;">-15</td>
+<td style="text-align: right;">784.99s</td>
+<td><code>.venv/bin/python -c import os,sys,pytest;sys.path.insert(0,'&lt;workspace&gt;/OctoBot');os.chdir('&lt;workspace&gt;/OctoBot');sys.path.insert(0,'&lt;workspace&gt;/OctoBot-Tentacles');raise SystemExit(pytest.main(['&lt;workspace&gt;/OctoBot-Tentacles/tentacles','--continue-on-collection-errors','--rootdir=&lt;workspace&gt;/OctoBot-Tentacles']))</code></td>
+</tr>
+<tr>
+<td>current-api-install-10</td>
 <td style="text-align: right;">0</td>
-<td style="text-align: right;">5.21s</td>
+<td style="text-align: right;">18.07s</td>
 <td><code>env ALLOW_UNSIGNED_TENTACLES=true ../OctoBot/.venv/bin/OctoBot tentacles --install --location output/dist/any_platform.zip --all</code></td>
-<td>See exit status; no test-count assertion.</td>
 </tr>
 <tr>
-<td>Tentacles-current-api-install-2</td>
+<td>current-api-install-2</td>
 <td style="text-align: right;">0</td>
 <td style="text-align: right;">3.7s</td>
 <td><code>env ALLOW_UNSIGNED_TENTACLES=true ../OctoBot/.venv/bin/OctoBot tentacles --install --location output/dist/any_platform.zip --all</code></td>
-<td>See exit status; no test-count assertion.</td>
 </tr>
 <tr>
-<td>Tentacles-current-exchange-lock</td>
+<td>current-api-install-3</td>
+<td style="text-align: right;">0</td>
+<td style="text-align: right;">4.05s</td>
+<td><code>env ALLOW_UNSIGNED_TENTACLES=true ../OctoBot/.venv/bin/OctoBot tentacles --install --location output/dist/any_platform.zip --all</code></td>
+</tr>
+<tr>
+<td>current-api-install-4</td>
+<td style="text-align: right;">0</td>
+<td style="text-align: right;">3.56s</td>
+<td><code>env ALLOW_UNSIGNED_TENTACLES=true ../OctoBot/.venv/bin/OctoBot tentacles --install --location output/dist/any_platform.zip --all</code></td>
+</tr>
+<tr>
+<td>current-api-install-5</td>
+<td style="text-align: right;">0</td>
+<td style="text-align: right;">3.74s</td>
+<td><code>env ALLOW_UNSIGNED_TENTACLES=true ../OctoBot/.venv/bin/OctoBot tentacles --install --location output/dist/any_platform.zip --all</code></td>
+</tr>
+<tr>
+<td>current-api-install-6</td>
+<td style="text-align: right;">0</td>
+<td style="text-align: right;">5.23s</td>
+<td><code>env ALLOW_UNSIGNED_TENTACLES=true ../OctoBot/.venv/bin/OctoBot tentacles --install --location output/dist/any_platform.zip --all</code></td>
+</tr>
+<tr>
+<td>current-api-install-7</td>
+<td style="text-align: right;">0</td>
+<td style="text-align: right;">3.56s</td>
+<td><code>env ALLOW_UNSIGNED_TENTACLES=true ../OctoBot/.venv/bin/OctoBot tentacles --install --location output/dist/any_platform.zip --all</code></td>
+</tr>
+<tr>
+<td>current-api-install-8</td>
+<td style="text-align: right;">0</td>
+<td style="text-align: right;">4.8s</td>
+<td><code>env ALLOW_UNSIGNED_TENTACLES=true ../OctoBot/.venv/bin/OctoBot tentacles --install --location output/dist/any_platform.zip --all</code></td>
+</tr>
+<tr>
+<td>current-api-install-9</td>
+<td style="text-align: right;">0</td>
+<td style="text-align: right;">4.17s</td>
+<td><code>env ALLOW_UNSIGNED_TENTACLES=true ../OctoBot/.venv/bin/OctoBot tentacles --install --location output/dist/any_platform.zip --all</code></td>
+</tr>
+<tr>
+<td>current-api-install</td>
+<td style="text-align: right;">0</td>
+<td style="text-align: right;">5.21s</td>
+<td><code>env ALLOW_UNSIGNED_TENTACLES=true ../OctoBot/.venv/bin/OctoBot tentacles --install --location output/dist/any_platform.zip --all</code></td>
+</tr>
+<tr>
+<td>current-exchange-lock</td>
 <td style="text-align: right;">0</td>
 <td style="text-align: right;">1.81s</td>
 <td><code>uv lock --upgrade</code></td>
-<td>See exit status; no test-count assertion.</td>
 </tr>
 <tr>
-<td>Tentacles-current-exchange-sync</td>
+<td>current-exchange-sync</td>
 <td style="text-align: right;">0</td>
 <td style="text-align: right;">0.75s</td>
 <td><code>uv sync --frozen --all-extras --python 3.14.8</code></td>
-<td>See exit status; no test-count assertion.</td>
 </tr>
 <tr>
-<td>Tentacles-current-host-exchange-focused-tests</td>
+<td>current-host-exchange-focused-tests</td>
 <td style="text-align: right;">1</td>
 <td style="text-align: right;">53.8s</td>
 <td><code>env BOTS_REPO=tentacles .venv/bin/python -c import os,sys,pytest;sys.path.insert(0,'/tmp');sys.path.insert(0,'&lt;workspace&gt;/OctoBot');os.chdir('&lt;workspace&gt;/OctoBot-Tentacles');sys.path.insert(0,'&lt;workspace&gt;/OctoBot-Tentacles');raise SystemExit(pytest.main(['tentacles/Evaluator/Strategies','tentacles/Meta/Keywords/scripting_library/tests/orders/order_types/test_multiple_orders_creation.py','--rootdir=&lt;workspace&gt;/OctoBot-Tentacles','--tb=short','-p','bots_test_observer']))</code></td>
-<td>5 failed, 30 passed in 50.56s</td>
 </tr>
 <tr>
-<td>Tentacles-current-observed-existing-tests</td>
+<td>current-observed-existing-tests-2</td>
+<td style="text-align: right;">1</td>
+<td style="text-align: right;">297.96s</td>
+<td><code>env BOTS_REPO=tentacles .venv/bin/python -c import os,sys,pytest;sys.path.insert(0,'/tmp');sys.path.insert(0,'&lt;workspace&gt;/OctoBot');os.chdir('&lt;workspace&gt;/OctoBot-Tentacles');sys.path.insert(0,'&lt;workspace&gt;/OctoBot-Tentacles');raise SystemExit(pytest.main(['tentacles','--continue-on-collection-errors','--rootdir=&lt;workspace&gt;/OctoBot-Tentacles','--timeout=300','--tb=short','-p','bots_test_observer','-o','faulthandler_timeout=120']))</code></td>
+</tr>
+<tr>
+<td>current-observed-existing-tests</td>
 <td style="text-align: right;">-15</td>
 <td style="text-align: right;">172.82s</td>
 <td><code>env BOTS_REPO=tentacles .venv/bin/python -c import os,sys,pytest;sys.path.insert(0,'/tmp');sys.path.insert(0,'&lt;workspace&gt;/OctoBot');os.chdir('&lt;workspace&gt;/OctoBot-Tentacles');sys.path.insert(0,'&lt;workspace&gt;/OctoBot-Tentacles');raise SystemExit(pytest.main(['tentacles','--continue-on-collection-errors','--rootdir=&lt;workspace&gt;/OctoBot-Tentacles','--timeout=300','--tb=short','-p','bots_test_observer','-o','faulthandler_timeout=120']))</code></td>
-<td>See exit status; no test-count assertion.</td>
 </tr>
 <tr>
-<td>Tentacles-current-sync</td>
+<td>current-sync</td>
 <td style="text-align: right;">0</td>
 <td style="text-align: right;">5.27s</td>
 <td><code>uv sync --all-extras --python 3.14</code></td>
-<td>See exit status; no test-count assertion.</td>
 </tr>
 <tr>
-<td>Tentacles-final-build</td>
-<td style="text-align: right;">0</td>
-<td style="text-align: right;">8.86s</td>
-<td><code>uv build --python 3.14.8</code></td>
-<td>Successfully built dist/octobot_tentacles-0.1.0.tar.gz<br>Successfully built dist/octobot_tentacles-0.1.0-py3-none-any.whl</td>
+<td>current-web-focused-tests-2</td>
+<td style="text-align: right;">1</td>
+<td style="text-align: right;">53.03s</td>
+<td><code>.venv/bin/python -m pytest tentacles/Services/Interfaces/web_interface/tests tentacles/Trading/Mode/trading_view_signals_trading_mode/tests tentacles/Trading/Mode/dip_analyser_trading_mode/tests/test_dip_analyser_trading_mode.py tentacles/Meta/Keywords/scripting_library/tests --tb=short</code></td>
 </tr>
 <tr>
-<td>Tentacles-final-build-2</td>
+<td>current-web-focused-tests-3</td>
+<td style="text-align: right;">1</td>
+<td style="text-align: right;">52.89s</td>
+<td><code>env BOTS_REPO=tentacles .venv/bin/python -c import sys,pytest;sys.path.insert(0,'/tmp');raise SystemExit(pytest.main(['tentacles/Services/Interfaces/web_interface/tests','tentacles/Trading/Mode/trading_view_signals_trading_mode/tests','tentacles/Trading/Mode/dip_analyser_trading_mode/tests/test_dip_analyser_trading_mode.py','tentacles/Meta/Keywords/scripting_library/tests','--tb=short','-p','bots_test_observer']))</code></td>
+</tr>
+<tr>
+<td>current-web-focused-tests-4</td>
+<td style="text-align: right;">1</td>
+<td style="text-align: right;">38.84s</td>
+<td><code>env BOTS_REPO=tentacles .venv/bin/python -c import sys,pytest;sys.path.insert(0,'/tmp');raise SystemExit(pytest.main(['tentacles/Services/Interfaces/web_interface/tests','tentacles/Trading/Mode/trading_view_signals_trading_mode/tests','tentacles/Trading/Mode/dip_analyser_trading_mode/tests/test_dip_analyser_trading_mode.py','tentacles/Meta/Keywords/scripting_library/tests','--tb=short','-p','bots_test_observer']))</code></td>
+</tr>
+<tr>
+<td>current-web-focused-tests-5</td>
+<td style="text-align: right;">1</td>
+<td style="text-align: right;">37.67s</td>
+<td><code>env BOTS_REPO=tentacles .venv/bin/python -c import sys,pytest;sys.path.insert(0,'/tmp');raise SystemExit(pytest.main(['tentacles/Services/Interfaces/web_interface/tests','tentacles/Trading/Mode/trading_view_signals_trading_mode/tests','tentacles/Trading/Mode/dip_analyser_trading_mode/tests/test_dip_analyser_trading_mode.py','tentacles/Meta/Keywords/scripting_library/tests','tentacles/Meta/DSL_operators','--tb=short','-p','bots_test_observer']))</code></td>
+</tr>
+<tr>
+<td>current-web-focused-tests-6</td>
+<td style="text-align: right;">1</td>
+<td style="text-align: right;">68.37s</td>
+<td><code>env BOTS_REPO=tentacles .venv/bin/python -c import sys,pytest;sys.path.insert(0,'/tmp');raise SystemExit(pytest.main(['tentacles/Services/Interfaces/web_interface/tests','tentacles/Trading/Mode/trading_view_signals_trading_mode/tests','tentacles/Trading/Mode/dip_analyser_trading_mode/tests/test_dip_analyser_trading_mode.py','tentacles/Meta/Keywords/scripting_library/tests','tentacles/Meta/DSL_operators','--tb=short','-p','bots_test_observer']))</code></td>
+</tr>
+<tr>
+<td>current-web-focused-tests-7</td>
+<td style="text-align: right;">1</td>
+<td style="text-align: right;">47.12s</td>
+<td><code>env BOTS_REPO=tentacles .venv/bin/python -c import sys,pytest;sys.path.insert(0,'/tmp');raise SystemExit(pytest.main(['tentacles/Services/Interfaces/web_interface/tests','tentacles/Trading/Mode/trading_view_signals_trading_mode/tests','tentacles/Trading/Mode/dip_analyser_trading_mode/tests/test_dip_analyser_trading_mode.py','tentacles/Meta/Keywords/scripting_library/tests','tentacles/Meta/DSL_operators','--tb=short','-p','bots_test_observer','-o','faulthandler_timeout=60']))</code></td>
+</tr>
+<tr>
+<td>current-web-focused-tests</td>
+<td style="text-align: right;">1</td>
+<td style="text-align: right;">5.21s</td>
+<td><code>.venv/bin/python -m pytest tentacles/Services/Interfaces/web_interface/tests --tb=short</code></td>
+</tr>
+<tr>
+<td>final-build-2</td>
 <td style="text-align: right;">0</td>
 <td style="text-align: right;">3.75s</td>
 <td><code>uv build --python 3.14.8</code></td>
-<td>Successfully built dist/octobot_tentacles-0.1.0.tar.gz<br>Successfully built dist/octobot_tentacles-0.1.0-py3-none-any.whl</td>
 </tr>
 <tr>
-<td>Tentacles-final-compile</td>
+<td>final-build</td>
+<td style="text-align: right;">0</td>
+<td style="text-align: right;">8.86s</td>
+<td><code>uv build --python 3.14.8</code></td>
+</tr>
+<tr>
+<td>final-compile-2</td>
+<td style="text-align: right;">0</td>
+<td style="text-align: right;">0.28s</td>
+<td><code>.venv/bin/python -m compileall -q src</code></td>
+</tr>
+<tr>
+<td>final-compile</td>
 <td style="text-align: right;">0</td>
 <td style="text-align: right;">1.35s</td>
 <td><code>.venv/bin/python -m compileall -q src</code></td>
-<td>See exit status; no test-count assertion.</td>
 </tr>
 <tr>
-<td>Tentacles-final-compile-2</td>
+<td>final-lock-2</td>
 <td style="text-align: right;">0</td>
 <td style="text-align: right;">0.28s</td>
-<td><code>.venv/bin/python -m compileall -q src</code></td>
-<td>See exit status; no test-count assertion.</td>
+<td><code>uv lock --upgrade</code></td>
 </tr>
 <tr>
-<td>Tentacles-final-lock</td>
+<td>final-lock</td>
 <td style="text-align: right;">0</td>
 <td style="text-align: right;">0.31s</td>
 <td><code>uv lock --upgrade</code></td>
-<td>See exit status; no test-count assertion.</td>
 </tr>
 <tr>
-<td>Tentacles-final-lock-2</td>
+<td>final-selected-python315-compile</td>
 <td style="text-align: right;">0</td>
-<td style="text-align: right;">0.28s</td>
-<td><code>uv lock --upgrade</code></td>
-<td>See exit status; no test-count assertion.</td>
+<td style="text-align: right;">Nones</td>
+<td><code>.venv/bin/python -Werror -m compileall -q src conftest.py</code></td>
 </tr>
 <tr>
-<td>Tentacles-final-sync</td>
+<td>final-selected-python315-sync</td>
 <td style="text-align: right;">0</td>
-<td style="text-align: right;">0.18s</td>
-<td><code>uv sync --all-extras --frozen --python 3.14.8</code></td>
-<td>See exit status; no test-count assertion.</td>
+<td style="text-align: right;">Nones</td>
+<td><code>uv sync --all-extras --frozen --python 3.15.0</code></td>
 </tr>
 <tr>
-<td>Tentacles-final-sync-2</td>
+<td>final-sync-2</td>
 <td style="text-align: right;">0</td>
 <td style="text-align: right;">0.49s</td>
 <td><code>uv sync --all-extras --frozen --python 3.14.8</code></td>
-<td>See exit status; no test-count assertion.</td>
 </tr>
 <tr>
-<td>Tentacles-host-archive-install</td>
+<td>final-sync</td>
+<td style="text-align: right;">0</td>
+<td style="text-align: right;">0.18s</td>
+<td><code>uv sync --all-extras --frozen --python 3.14.8</code></td>
+</tr>
+<tr>
+<td>host-archive-install</td>
 <td style="text-align: right;">0</td>
 <td style="text-align: right;">11.06s</td>
 <td><code>../OctoBot/.venv/bin/OctoBot tentacles --install --location output/dist/any_platform.zip --all</code></td>
-<td>See exit status; no test-count assertion.</td>
 </tr>
 <tr>
-<td>Tentacles-host-archive-pack</td>
+<td>host-archive-pack</td>
 <td style="text-align: right;">0</td>
 <td style="text-align: right;">9.33s</td>
 <td><code>../OctoBot/.venv/bin/OctoBot tentacles -d src/octobot_tentacles -m metadata.yaml -p dist/current-host.zip</code></td>
-<td>See exit status; no test-count assertion.</td>
 </tr>
 <tr>
-<td>Tentacles-host-complete-deps-lock</td>
+<td>host-complete-deps-lock</td>
 <td style="text-align: right;">0</td>
 <td style="text-align: right;">2.98s</td>
 <td><code>uv lock --upgrade</code></td>
-<td>See exit status; no test-count assertion.</td>
 </tr>
 <tr>
-<td>Tentacles-host-complete-deps-sync</td>
+<td>host-complete-deps-sync</td>
 <td style="text-align: right;">0</td>
 <td style="text-align: right;">1.42s</td>
 <td><code>uv sync --all-extras --dev</code></td>
-<td>See exit status; no test-count assertion.</td>
 </tr>
 <tr>
-<td>Tentacles-host-interface-lock</td>
+<td>host-interface-lock</td>
 <td style="text-align: right;">0</td>
 <td style="text-align: right;">2.19s</td>
 <td><code>uv lock --upgrade</code></td>
-<td>See exit status; no test-count assertion.</td>
 </tr>
 <tr>
-<td>Tentacles-host-interface-sync</td>
+<td>host-interface-sync</td>
 <td style="text-align: right;">0</td>
 <td style="text-align: right;">1.74s</td>
 <td><code>uv sync --all-extras --frozen --python 3.14</code></td>
-<td>See exit status; no test-count assertion.</td>
 </tr>
 <tr>
-<td>Tentacles-host-port-tests</td>
-<td style="text-align: right;">1</td>
-<td style="text-align: right;">2.99s</td>
-<td><code>.venv/bin/python -c import os,sys,pytest;sys.path.insert(0,'&lt;workspace&gt;/OctoBot');import tests.test_utils.config;os.chdir('&lt;workspace&gt;/OctoBot');sys.path.insert(0,'&lt;workspace&gt;/OctoBot-Tentacles');raise SystemExit(pytest.main(['&lt;workspace&gt;/OctoBot-Tentacles/tentacles','--continue-on-collection-errors','--rootdir=&lt;workspace&gt;/OctoBot-Tentacles']))</code></td>
-<td>See exit status; no test-count assertion.</td>
-</tr>
-<tr>
-<td>Tentacles-host-port-tests-2</td>
+<td>host-port-tests-2</td>
 <td style="text-align: right;">1</td>
 <td style="text-align: right;">100.85s</td>
 <td><code>.venv/bin/python -c import os,sys,pytest;sys.path.insert(0,'&lt;workspace&gt;/OctoBot');os.chdir('&lt;workspace&gt;/OctoBot');sys.path.insert(0,'&lt;workspace&gt;/OctoBot-Tentacles');raise SystemExit(pytest.main(['&lt;workspace&gt;/OctoBot-Tentacles/tentacles','--continue-on-collection-errors','--rootdir=&lt;workspace&gt;/OctoBot-Tentacles']))</code></td>
-<td>43 failed, 386 passed, 13 errors in 97.39s (0:01:37)</td>
 </tr>
 <tr>
-<td>Tentacles-installed-archive-tests</td>
+<td>host-port-tests</td>
+<td style="text-align: right;">1</td>
+<td style="text-align: right;">2.99s</td>
+<td><code>.venv/bin/python -c import os,sys,pytest;sys.path.insert(0,'&lt;workspace&gt;/OctoBot');import tests.test_utils.config;os.chdir('&lt;workspace&gt;/OctoBot');sys.path.insert(0,'&lt;workspace&gt;/OctoBot-Tentacles');raise SystemExit(pytest.main(['&lt;workspace&gt;/OctoBot-Tentacles/tentacles','--continue-on-collection-errors','--rootdir=&lt;workspace&gt;/OctoBot-Tentacles']))</code></td>
+</tr>
+<tr>
+<td>installed-archive-tests</td>
 <td style="text-align: right;">1</td>
 <td style="text-align: right;">18.28s</td>
 <td><code>&lt;workspace&gt;/OctoBot/.venv/bin/python -c import os,sys,pytest; os.chdir('&lt;workspace&gt;/OctoBot');sys.path.insert(0,'&lt;workspace&gt;/OctoBot-Tentacles');raise SystemExit(pytest.main(['&lt;workspace&gt;/OctoBot-Tentacles/tentacles','--continue-on-collection-errors']))</code></td>
-<td>25 failed, 95 passed, 43 errors in 16.46s</td>
 </tr>
 <tr>
-<td>Tentacles-lock-3.15</td>
+<td>lock-3.15</td>
 <td style="text-align: right;">0</td>
 <td style="text-align: right;">0.24s</td>
 <td><code>uv lock --upgrade --python 3.15</code></td>
-<td>See exit status; no test-count assertion.</td>
 </tr>
 <tr>
-<td>Tentacles-sync-3.15</td>
+<td>final-selected-python315-build</td>
+<td style="text-align: right;">0</td>
+<td style="text-align: right;">Nones</td>
+<td><code>uv build --python 3.15.0</code></td>
+</tr>
+<tr>
+<td>python315-complete-original-suite</td>
+<td style="text-align: right;">1</td>
+<td style="text-align: right;">693.67s</td>
+<td><code>/tmp/octobot-tentacles-strict-fp-python315-control/bin/python -m pytest tentacles --tb=short</code></td>
+</tr>
+<tr>
+<td>scripting-existing-tests</td>
+<td style="text-align: right;">1</td>
+<td style="text-align: right;">6.24s</td>
+<td><code>env BOTS_REPO=tentacles .venv/bin/python -c import os,sys,pytest;sys.path.insert(0,'/tmp');sys.path.insert(0,'&lt;workspace&gt;/OctoBot');os.chdir('&lt;workspace&gt;/OctoBot-Tentacles');sys.path.insert(0,'&lt;workspace&gt;/OctoBot-Tentacles');raise SystemExit(pytest.main(['tentacles/Meta/Keywords/scripting_library/tests','--rootdir=&lt;workspace&gt;/OctoBot-Tentacles','--tb=short','-p','bots_test_observer']))</code></td>
+</tr>
+<tr>
+<td>sync-3.15</td>
 <td style="text-align: right;">0</td>
 <td style="text-align: right;">0.61s</td>
 <td><code>uv sync --all-extras --python 3.15</code></td>
-<td>See exit status; no test-count assertion.</td>
 </tr>
 <tr>
-<td>Tentacles-tests</td>
-<td style="text-align: right;">2</td>
-<td style="text-align: right;">4.01s</td>
-<td><code>&lt;workspace&gt;/OctoBot-Tentacles/.venv/bin/python -m pytest src/octobot_tentacles</code></td>
-<td>See exit status; no test-count assertion.</td>
-</tr>
-<tr>
-<td>Tentacles-tests-2</td>
+<td>tests-2</td>
 <td style="text-align: right;">2</td>
 <td style="text-align: right;">30.72s</td>
 <td><code>.venv/bin/python -m pytest src/octobot_tentacles</code></td>
-<td>See exit status; no test-count assertion.</td>
 </tr>
 <tr>
-<td>Tentacles-tests-3</td>
+<td>tests-3</td>
 <td style="text-align: right;">2</td>
 <td style="text-align: right;">20.43s</td>
 <td><code>.venv/bin/python -m pytest src/octobot_tentacles</code></td>
-<td>See exit status; no test-count assertion.</td>
 </tr>
 <tr>
-<td>Tentacles-tests-helper-context</td>
+<td>tests-helper-context</td>
 <td style="text-align: right;">1</td>
 <td style="text-align: right;">6.93s</td>
 <td><code>.venv/bin/python -m pytest src/octobot_tentacles --continue-on-collection-errors</code></td>
-<td>8 failed, 42 passed, 51 errors in 5.48s</td>
 </tr>
 <tr>
-<td>Tentacles-websocket-lifecycle-diagnostic-tests</td>
-<td style="text-align: right;">1</td>
-<td style="text-align: right;">84.11s</td>
-<td><code>.venv/bin/python -c import os,sys,pytest,faulthandler;faulthandler.dump_traceback_later(45,repeat=True);sys.path.insert(0,'&lt;workspace&gt;/OctoBot');os.chdir('&lt;workspace&gt;/OctoBot-Tentacles');sys.path.insert(0,'&lt;workspace&gt;/OctoBot-Tentacles');raise SystemExit(pytest.main(['tentacles/Trading/Exchange/binance_websocket_feed/tests','--rootdir=&lt;workspace&gt;/OctoBot-Tentacles','--timeout=300','--tb=short','-vv','-s']))</code></td>
-<td>See exit status; no test-count assertion.</td>
+<td>tests</td>
+<td style="text-align: right;">2</td>
+<td style="text-align: right;">4.01s</td>
+<td><code>&lt;workspace&gt;/OctoBot-Tentacles/.venv/bin/python -m pytest src/octobot_tentacles</code></td>
 </tr>
 <tr>
-<td>Tentacles-websocket-lifecycle-diagnostic-tests-2</td>
+<td>websocket-lifecycle-diagnostic-tests-2</td>
 <td style="text-align: right;">1</td>
 <td style="text-align: right;">86.86s</td>
 <td><code>.venv/bin/python -c import os,sys,pytest;sys.path.insert(0,'&lt;workspace&gt;/OctoBot');os.chdir('&lt;workspace&gt;/OctoBot-Tentacles');sys.path.insert(0,'&lt;workspace&gt;/OctoBot-Tentacles');raise SystemExit(pytest.main(['tentacles/Trading/Exchange/binance_websocket_feed/tests','--rootdir=&lt;workspace&gt;/OctoBot-Tentacles','--timeout=300','--tb=short']))</code></td>
-<td>See exit status; no test-count assertion.</td>
 </tr>
 <tr>
-<td>Tentacles-websocket-lifecycle-diagnostic-tests-3</td>
+<td>websocket-lifecycle-diagnostic-tests-3</td>
 <td style="text-align: right;">0</td>
 <td style="text-align: right;">81.81s</td>
 <td><code>.venv/bin/python -c import os,sys,pytest;sys.path.insert(0,'&lt;workspace&gt;/OctoBot');os.chdir('&lt;workspace&gt;/OctoBot-Tentacles');sys.path.insert(0,'&lt;workspace&gt;/OctoBot-Tentacles');raise SystemExit(pytest.main(['tentacles/Trading/Exchange/binance_websocket_feed/tests','--rootdir=&lt;workspace&gt;/OctoBot-Tentacles','--timeout=300','--tb=short']))</code></td>
-<td>1 passed in 78.09s (0:01:18)</td>
 </tr>
 <tr>
-<td>Tentacles-websocket-lifecycle-existing-tests</td>
+<td>websocket-lifecycle-diagnostic-tests</td>
+<td style="text-align: right;">1</td>
+<td style="text-align: right;">84.11s</td>
+<td><code>.venv/bin/python -c import os,sys,pytest,faulthandler;faulthandler.dump_traceback_later(45,repeat=True);sys.path.insert(0,'&lt;workspace&gt;/OctoBot');os.chdir('&lt;workspace&gt;/OctoBot-Tentacles');sys.path.insert(0,'&lt;workspace&gt;/OctoBot-Tentacles');raise SystemExit(pytest.main(['tentacles/Trading/Exchange/binance_websocket_feed/tests','--rootdir=&lt;workspace&gt;/OctoBot-Tentacles','--timeout=300','--tb=short','-vv','-s']))</code></td>
+</tr>
+<tr>
+<td>websocket-lifecycle-existing-tests</td>
 <td style="text-align: right;">-15</td>
 <td style="text-align: right;">387.18s</td>
 <td><code>.venv/bin/python -c import os,sys,pytest;sys.path.insert(0,'&lt;workspace&gt;/OctoBot');os.chdir('&lt;workspace&gt;/OctoBot-Tentacles');sys.path.insert(0,'&lt;workspace&gt;/OctoBot-Tentacles');raise SystemExit(pytest.main(['tentacles/Trading/Exchange/binance_websocket_feed/tests','--rootdir=&lt;workspace&gt;/OctoBot-Tentacles','--timeout=90','--tb=short']))</code></td>
-<td>See exit status; no test-count assertion.</td>
 </tr>
 <tr>
-<td>Trading-allocation-diagnosis-tests</td>
+<td>allocation-diagnosis-tests</td>
 <td style="text-align: right;">1</td>
 <td style="text-align: right;">2.69s</td>
 <td><code>.venv/bin/python -m pytest -s tests/exchanges/traders/test_trader.py::TestTrader::test_init_paused tests/exchanges/traders/test_trader.py::TestTrader::test_enabled</code></td>
-<td>1 failed, 1 passed in 1.28s</td>
 </tr>
 <tr>
-<td>Trading-backend-compat-sync</td>
+<td>backend-compat-sync</td>
 <td style="text-align: right;">0</td>
 <td style="text-align: right;">0.78s</td>
 <td><code>uv sync --all-extras --python 3.14.8</code></td>
-<td>See exit status; no test-count assertion.</td>
 </tr>
 <tr>
-<td>Trading-backend-compat-tests</td>
+<td>backend-compat-tests</td>
 <td style="text-align: right;">1</td>
 <td style="text-align: right;">58.41s</td>
 <td><code>.venv/bin/python -m pytest tests</code></td>
-<td>8 failed, 897 passed in 57.54s</td>
 </tr>
 <tr>
-<td>Trading-build</td>
+<td>build</td>
 <td style="text-align: right;">0</td>
 <td style="text-align: right;">2.28s</td>
 <td><code>uv build --python 3.14</code></td>
-<td>Successfully built dist/octobot_trading-2.5.13.tar.gz<br>Successfully built dist/octobot_trading-2.5.13-py3-none-any.whl</td>
 </tr>
 <tr>
-<td>Trading-ccxt-current-tests</td>
+<td>ccxt-current-tests</td>
 <td style="text-align: right;">1</td>
 <td style="text-align: right;">60.83s</td>
 <td><code>.venv/bin/python -m pytest tests</code></td>
-<td>8 failed, 888 passed, 10 errors in 59.93s</td>
 </tr>
 <tr>
-<td>Trading-compile</td>
+<td>compile</td>
 <td style="text-align: right;">0</td>
 <td style="text-align: right;">1.03s</td>
 <td><code>&lt;workspace&gt;/OctoBot-Trading/.venv/bin/python -m compileall -q src</code></td>
-<td>See exit status; no test-count assertion.</td>
 </tr>
 <tr>
-<td>Trading-connection-diagnosis-tests</td>
+<td>connection-diagnosis-tests</td>
 <td style="text-align: right;">1</td>
 <td style="text-align: right;">1.97s</td>
 <td><code>.venv/bin/python -m pytest -s tests/exchanges/traders/test_trader.py::TestTrader::test_init_paused tests/exchanges/traders/test_trader.py::TestTrader::test_enabled</code></td>
-<td>1 failed, 1 passed in 1.04s</td>
 </tr>
 <tr>
-<td>Trading-counter-focused-tests</td>
-<td style="text-align: right;">1</td>
-<td style="text-align: right;">49.62s</td>
-<td><code>.venv/bin/python -m pytest tests/exchanges/connectors/ccxt/test_ccxt_client_util.py tests/exchanges/util/test_exchange_util.py tests/modes/test_abstract_mode_consumer.py -x</code></td>
-<td>See exit status; no test-count assertion.</td>
-</tr>
-<tr>
-<td>Trading-counter-focused-tests-2</td>
+<td>counter-focused-tests-2</td>
 <td style="text-align: right;">1</td>
 <td style="text-align: right;">2.54s</td>
 <td><code>.venv/bin/python -m pytest tests/exchanges/connectors/ccxt/test_ccxt_client_util.py tests/exchanges/util/test_exchange_util.py tests/modes/test_abstract_mode_consumer.py -x</code></td>
-<td>See exit status; no test-count assertion.</td>
 </tr>
 <tr>
-<td>Trading-counter-focused-tests-3</td>
+<td>counter-focused-tests-3</td>
 <td style="text-align: right;">1</td>
 <td style="text-align: right;">6.07s</td>
 <td><code>.venv/bin/python -m pytest tests/exchanges/connectors/ccxt/test_ccxt_client_util.py tests/exchanges/util/test_exchange_util.py tests/modes/test_abstract_mode_consumer.py -x</code></td>
-<td>1 failed, 16 passed in 5.23s</td>
 </tr>
 <tr>
-<td>Trading-current-sync</td>
-<td style="text-align: right;">0</td>
-<td style="text-align: right;">32.8s</td>
-<td><code>uv sync --all-extras --python 3.14</code></td>
-<td>See exit status; no test-count assertion.</td>
+<td>counter-focused-tests</td>
+<td style="text-align: right;">1</td>
+<td style="text-align: right;">49.62s</td>
+<td><code>.venv/bin/python -m pytest tests/exchanges/connectors/ccxt/test_ccxt_client_util.py tests/exchanges/util/test_exchange_util.py tests/modes/test_abstract_mode_consumer.py -x</code></td>
 </tr>
 <tr>
-<td>Trading-current-sync-2</td>
+<td>current-sync-2</td>
 <td style="text-align: right;">1</td>
 <td style="text-align: right;">0.05s</td>
 <td><code>uv sync --all-extras --python 3.14</code></td>
-<td>See exit status; no test-count assertion.</td>
 </tr>
 <tr>
-<td>Trading-current-sync-3</td>
+<td>current-sync-3</td>
 <td style="text-align: right;">1</td>
 <td style="text-align: right;">0.09s</td>
 <td><code>uv sync --all-extras --python 3.14</code></td>
-<td>See exit status; no test-count assertion.</td>
 </tr>
 <tr>
-<td>Trading-current-sync-4</td>
+<td>current-sync-4</td>
 <td style="text-align: right;">1</td>
 <td style="text-align: right;">0.08s</td>
 <td><code>uv sync --all-extras --python 3.14</code></td>
-<td>See exit status; no test-count assertion.</td>
 </tr>
 <tr>
-<td>Trading-current-sync-5</td>
+<td>current-sync-5</td>
 <td style="text-align: right;">0</td>
 <td style="text-align: right;">0.88s</td>
 <td><code>uv sync --all-extras --python 3.14</code></td>
-<td>See exit status; no test-count assertion.</td>
 </tr>
 <tr>
-<td>Trading-current-sync-6</td>
+<td>current-sync-6</td>
 <td style="text-align: right;">0</td>
 <td style="text-align: right;">0.78s</td>
 <td><code>uv sync --all-extras --python 3.14</code></td>
-<td>See exit status; no test-count assertion.</td>
 </tr>
 <tr>
-<td>Trading-deadlock-diagnostic</td>
+<td>current-sync</td>
+<td style="text-align: right;">0</td>
+<td style="text-align: right;">32.8s</td>
+<td><code>uv sync --all-extras --python 3.14</code></td>
+</tr>
+<tr>
+<td>deadlock-diagnostic</td>
 <td style="text-align: right;">1</td>
 <td style="text-align: right;">18.05s</td>
 <td><code>.venv/bin/python -m pytest tests/modes/test_abstract_mode_consumer.py::test_create_order_if_possible_ensure_no_deadlock_when_canceling_orders</code></td>
-<td>See exit status; no test-count assertion.</td>
 </tr>
 <tr>
-<td>Trading-directory-resource-sync</td>
+<td>directory-resource-sync</td>
 <td style="text-align: right;">0</td>
 <td style="text-align: right;">1.15s</td>
 <td><code>uv sync --all-extras --python 3.14.8</code></td>
-<td>See exit status; no test-count assertion.</td>
 </tr>
 <tr>
-<td>Trading-final-build</td>
-<td style="text-align: right;">0</td>
-<td style="text-align: right;">2.99s</td>
-<td><code>uv build --python 3.14.8</code></td>
-<td>Successfully built dist/octobot_trading-2.5.13.tar.gz<br>Successfully built dist/octobot_trading-2.5.13-py3-none-any.whl</td>
-</tr>
-<tr>
-<td>Trading-final-build-2</td>
+<td>final-build-2</td>
 <td style="text-align: right;">0</td>
 <td style="text-align: right;">1.55s</td>
 <td><code>uv build --python 3.14.8</code></td>
-<td>Successfully built dist/octobot_trading-2.5.13.tar.gz<br>Successfully built dist/octobot_trading-2.5.13-py3-none-any.whl</td>
 </tr>
 <tr>
-<td>Trading-final-build-current</td>
+<td>final-build-current</td>
 <td style="text-align: right;">0</td>
 <td style="text-align: right;">1.41s</td>
 <td><code>uv build --python 3.14.8</code></td>
-<td>Successfully built dist/octobot_trading-2.5.13.tar.gz<br>Successfully built dist/octobot_trading-2.5.13-py3-none-any.whl</td>
 </tr>
 <tr>
-<td>Trading-final-compile</td>
+<td>final-build</td>
 <td style="text-align: right;">0</td>
-<td style="text-align: right;">0.19s</td>
-<td><code>.venv/bin/python -m compileall -q src</code></td>
-<td>See exit status; no test-count assertion.</td>
+<td style="text-align: right;">2.99s</td>
+<td><code>uv build --python 3.14.8</code></td>
 </tr>
 <tr>
-<td>Trading-final-compile-2</td>
+<td>final-compile-2</td>
 <td style="text-align: right;">0</td>
 <td style="text-align: right;">0.12s</td>
 <td><code>.venv/bin/python -m compileall -q src</code></td>
-<td>See exit status; no test-count assertion.</td>
 </tr>
 <tr>
-<td>Trading-final-compile-current</td>
+<td>final-compile-current</td>
 <td style="text-align: right;">0</td>
 <td style="text-align: right;">0.18s</td>
 <td><code>.venv/bin/python -m compileall -q src vendor</code></td>
-<td>See exit status; no test-count assertion.</td>
 </tr>
 <tr>
-<td>Trading-final-current-tests</td>
+<td>final-compile</td>
+<td style="text-align: right;">0</td>
+<td style="text-align: right;">0.19s</td>
+<td><code>.venv/bin/python -m compileall -q src</code></td>
+</tr>
+<tr>
+<td>final-current-tests</td>
 <td style="text-align: right;">1</td>
 <td style="text-align: right;">297.63s</td>
 <td><code>.venv/bin/python -m pytest tests</code></td>
-<td>2 failed, 903 passed in 296.07s (0:04:56)</td>
 </tr>
 <tr>
-<td>Trading-final-existing-tests</td>
-<td style="text-align: right;">1</td>
-<td style="text-align: right;">66.7s</td>
-<td><code>.venv/bin/python -m pytest tests</code></td>
-<td>1 failed, 902 passed, 3 errors in 65.54s (0:01:05)</td>
-</tr>
-<tr>
-<td>Trading-final-existing-tests-2</td>
+<td>final-existing-tests-2</td>
 <td style="text-align: right;">0</td>
 <td style="text-align: right;">150.7s</td>
 <td><code>.venv/bin/python -m pytest tests</code></td>
-<td>905 passed in 148.88s (0:02:28)</td>
 </tr>
 <tr>
-<td>Trading-final-lock</td>
-<td style="text-align: right;">0</td>
-<td style="text-align: right;">0.24s</td>
-<td><code>uv lock --upgrade</code></td>
-<td>See exit status; no test-count assertion.</td>
+<td>final-existing-tests</td>
+<td style="text-align: right;">1</td>
+<td style="text-align: right;">66.7s</td>
+<td><code>.venv/bin/python -m pytest tests</code></td>
 </tr>
 <tr>
-<td>Trading-final-lock-2</td>
+<td>final-lock-2</td>
 <td style="text-align: right;">0</td>
 <td style="text-align: right;">0.23s</td>
 <td><code>uv lock --upgrade</code></td>
-<td>See exit status; no test-count assertion.</td>
 </tr>
 <tr>
-<td>Trading-final-sync</td>
+<td>final-lock</td>
 <td style="text-align: right;">0</td>
-<td style="text-align: right;">0.05s</td>
-<td><code>uv sync --all-extras --frozen --python 3.14.8</code></td>
-<td>See exit status; no test-count assertion.</td>
+<td style="text-align: right;">0.24s</td>
+<td><code>uv lock --upgrade</code></td>
 </tr>
 <tr>
-<td>Trading-final-sync-2</td>
+<td>final-sync-2</td>
 <td style="text-align: right;">0</td>
 <td style="text-align: right;">0.13s</td>
 <td><code>uv sync --all-extras --frozen --python 3.14.8</code></td>
-<td>See exit status; no test-count assertion.</td>
 </tr>
 <tr>
-<td>Trading-fixture-owned-tests</td>
-<td style="text-align: right;">4</td>
-<td style="text-align: right;">0.61s</td>
-<td><code>.venv/bin/python -m pytest tests</code></td>
-<td>See exit status; no test-count assertion.</td>
+<td>final-sync</td>
+<td style="text-align: right;">0</td>
+<td style="text-align: right;">0.05s</td>
+<td><code>uv sync --all-extras --frozen --python 3.14.8</code></td>
 </tr>
 <tr>
-<td>Trading-fixture-owned-tests-2</td>
+<td>fixture-owned-tests-2</td>
 <td style="text-align: right;">1</td>
 <td style="text-align: right;">292.57s</td>
 <td><code>.venv/bin/python -m pytest tests</code></td>
-<td>3 failed, 902 passed in 291.25s (0:04:51)</td>
 </tr>
 <tr>
-<td>Trading-full-current-tests</td>
+<td>fixture-owned-tests</td>
+<td style="text-align: right;">4</td>
+<td style="text-align: right;">0.61s</td>
+<td><code>.venv/bin/python -m pytest tests</code></td>
+</tr>
+<tr>
+<td>full-current-tests</td>
 <td style="text-align: right;">1</td>
 <td style="text-align: right;">68.65s</td>
 <td><code>.venv/bin/python -m pytest tests</code></td>
-<td>2 failed, 900 passed, 3 errors in 66.94s (0:01:06)</td>
 </tr>
 <tr>
-<td>Trading-lazy-positional-tests</td>
+<td>lazy-positional-tests</td>
 <td style="text-align: right;">1</td>
 <td style="text-align: right;">15.56s</td>
 <td><code>.venv/bin/python -m pytest tests/exchanges/traders/test_trader.py</code></td>
-<td>2 failed, 33 passed in 14.00s</td>
 </tr>
 <tr>
-<td>Trading-lock-3.14</td>
+<td>lock-3.14</td>
 <td style="text-align: right;">0</td>
 <td style="text-align: right;">0.46s</td>
 <td><code>uv lock --upgrade --python 3.14</code></td>
-<td>See exit status; no test-count assertion.</td>
 </tr>
 <tr>
-<td>Trading-lock-3.15</td>
+<td>lock-3.15</td>
 <td style="text-align: right;">0</td>
 <td style="text-align: right;">6.15s</td>
 <td><code>uv lock --upgrade --python 3.15</code></td>
-<td>See exit status; no test-count assertion.</td>
 </tr>
 <tr>
-<td>Trading-manager-owned-tests</td>
+<td>manager-owned-tests</td>
 <td style="text-align: right;">0</td>
 <td style="text-align: right;">151.0s</td>
 <td><code>.venv/bin/python -m pytest tests</code></td>
-<td>905 passed in 149.65s (0:02:29)</td>
 </tr>
 <tr>
-<td>Trading-public-manager-sync</td>
+<td>public-manager-sync</td>
 <td style="text-align: right;">0</td>
 <td style="text-align: right;">1.6s</td>
 <td><code>uv sync --all-extras --python 3.14</code></td>
-<td>See exit status; no test-count assertion.</td>
 </tr>
 <tr>
-<td>Trading-scheduled-session-tests</td>
+<td>scheduled-session-tests</td>
 <td style="text-align: right;">0</td>
 <td style="text-align: right;">16.38s</td>
 <td><code>.venv/bin/python -m pytest tests/exchanges/traders/test_trader.py</code></td>
-<td>35 passed in 14.46s</td>
 </tr>
 <tr>
-<td>Trading-stopped-paused-tests</td>
+<td>stopped-paused-tests</td>
 <td style="text-align: right;">1</td>
 <td style="text-align: right;">15.08s</td>
 <td><code>.venv/bin/python -m pytest tests/exchanges/traders/test_trader.py</code></td>
-<td>2 failed, 33 passed in 13.86s</td>
 </tr>
 <tr>
-<td>Trading-sync-3.14</td>
+<td>sync-3.14</td>
 <td style="text-align: right;">0</td>
 <td style="text-align: right;">0.3s</td>
 <td><code>uv sync --all-extras --python 3.14</code></td>
-<td>See exit status; no test-count assertion.</td>
 </tr>
 <tr>
-<td>Trading-sync-3.15</td>
+<td>sync-3.15</td>
 <td style="text-align: right;">1</td>
 <td style="text-align: right;">63.71s</td>
 <td><code>uv sync --all-extras --python 3.15</code></td>
-<td>See exit status; no test-count assertion.</td>
 </tr>
 <tr>
-<td>Trading-tests</td>
-<td style="text-align: right;">2</td>
-<td style="text-align: right;">18.96s</td>
-<td><code>&lt;workspace&gt;/OctoBot-Trading/.venv/bin/python -m pytest tests</code></td>
-<td>See exit status; no test-count assertion.</td>
-</tr>
-<tr>
-<td>Trading-tests-2</td>
+<td>tests-2</td>
 <td style="text-align: right;">2</td>
 <td style="text-align: right;">8.94s</td>
 <td><code>.venv/bin/python -m pytest tests</code></td>
-<td>See exit status; no test-count assertion.</td>
 </tr>
 <tr>
-<td>Trading-tests-3</td>
+<td>tests-3</td>
 <td style="text-align: right;">1</td>
 <td style="text-align: right;">113.46s</td>
 <td><code>.venv/bin/python -m pytest tests</code></td>
-<td>16 failed, 888 passed, 1 error in 111.06s (0:01:51)</td>
 </tr>
 <tr>
-<td>Trading-tests-4</td>
+<td>tests-4</td>
 <td style="text-align: right;">1</td>
 <td style="text-align: right;">137.25s</td>
 <td><code>.venv/bin/python -m pytest tests</code></td>
-<td>8 failed, 897 passed in 134.71s (0:02:14)</td>
 </tr>
 <tr>
-<td>Trading-tests-5</td>
+<td>tests-5</td>
 <td style="text-align: right;">2</td>
 <td style="text-align: right;">23.83s</td>
 <td><code>.venv/bin/python -m pytest tests</code></td>
-<td>See exit status; no test-count assertion.</td>
 </tr>
 <tr>
-<td>Trading-tests-6</td>
+<td>tests-6</td>
 <td style="text-align: right;">2</td>
 <td style="text-align: right;">20.81s</td>
 <td><code>.venv/bin/python -m pytest tests</code></td>
-<td>See exit status; no test-count assertion.</td>
 </tr>
 <tr>
-<td>Trading-tests-7</td>
+<td>tests-7</td>
 <td style="text-align: right;">2</td>
 <td style="text-align: right;">11.76s</td>
 <td><code>.venv/bin/python -m pytest tests</code></td>
-<td>See exit status; no test-count assertion.</td>
 </tr>
 <tr>
-<td>Trading-transport-abort-tests</td>
+<td>tests</td>
+<td style="text-align: right;">2</td>
+<td style="text-align: right;">18.96s</td>
+<td><code>&lt;workspace&gt;/OctoBot-Trading/.venv/bin/python -m pytest tests</code></td>
+</tr>
+<tr>
+<td>transport-abort-tests</td>
 <td style="text-align: right;">1</td>
 <td style="text-align: right;">14.89s</td>
 <td><code>.venv/bin/python -m pytest tests/exchanges/traders/test_trader.py</code></td>
-<td>3 failed, 32 passed in 13.74s</td>
 </tr>
 <tr>
-<td>Trading-transport-diagnosis-tests</td>
+<td>transport-diagnosis-tests</td>
 <td style="text-align: right;">1</td>
 <td style="text-align: right;">117.64s</td>
 <td><code>.venv/bin/python -X tracemalloc=10 -m pytest tests/exchanges/traders/test_trader.py</code></td>
-<td>2 failed, 33 passed in 102.02s (0:01:42)</td>
 </tr>
 <tr>
-<td>Trading-transport-lazy-tests</td>
+<td>transport-lazy-tests</td>
 <td style="text-align: right;">1</td>
 <td style="text-align: right;">66.04s</td>
 <td><code>.venv/bin/python -m pytest tests</code></td>
-<td>6 failed, 896 passed, 5 errors in 64.97s (0:01:04)</td>
 </tr>
 <tr>
-<td>Trading-transport-owned-tests</td>
+<td>transport-owned-tests</td>
 <td style="text-align: right;">1</td>
 <td style="text-align: right;">16.23s</td>
 <td><code>.venv/bin/python -m pytest tests/exchanges/traders/test_trader.py</code></td>
-<td>3 failed, 32 passed in 14.67s</td>
 </tr>
 <tr>
-<td>Trading-updated-manager-sync</td>
+<td>updated-manager-sync</td>
 <td style="text-align: right;">0</td>
 <td style="text-align: right;">1.32s</td>
 <td><code>uv sync --all-extras --python 3.14</code></td>
-<td>See exit status; no test-count assertion.</td>
 </tr>
 <tr>
 <td>build</td>
 <td style="text-align: right;">0</td>
 <td style="text-align: right;">14.05s</td>
 <td><code>uv build --python 3.13</code></td>
-<td>Successfully built dist/octobot-2.0.14.tar.gz<br>Successfully built dist/octobot-2.0.14-py3-none-any.whl</td>
-</tr>
-<tr>
-<td>client-current-tests</td>
-<td style="text-align: right;">1</td>
-<td style="text-align: right;">3.67s</td>
-<td><code>npm --prefix packages/client/octobot_client_ts test</code></td>
-<td>Test Files  1 failed | 49 passed (50)<br>      Tests  1 failed | 768 passed (769)</td>
 </tr>
 <tr>
 <td>client-current-tests-2</td>
 <td style="text-align: right;">1</td>
 <td style="text-align: right;">8.06s</td>
 <td><code>npm --prefix packages/client/octobot_client_ts test</code></td>
-<td>Test Files  1 failed | 49 passed (50)<br>      Tests  1 failed | 768 passed (769)</td>
 </tr>
 <tr>
 <td>client-current-tests-3</td>
 <td style="text-align: right;">0</td>
 <td style="text-align: right;">4.61s</td>
 <td><code>npm --prefix packages/client/octobot_client_ts test</code></td>
-<td>Test Files  50 passed (50)<br>      Tests  769 passed (769)</td>
+</tr>
+<tr>
+<td>client-current-tests</td>
+<td style="text-align: right;">1</td>
+<td style="text-align: right;">3.67s</td>
+<td><code>npm --prefix packages/client/octobot_client_ts test</code></td>
 </tr>
 <tr>
 <td>client-latest-build</td>
 <td style="text-align: right;">0</td>
 <td style="text-align: right;">0.5s</td>
 <td><code>npm --prefix packages/client/octobot_client_ts run build</code></td>
-<td>See exit status; no test-count assertion.</td>
 </tr>
 <tr>
 <td>client-latest-tests</td>
 <td style="text-align: right;">1</td>
 <td style="text-align: right;">8.8s</td>
 <td><code>npm --prefix packages/client/octobot_client_ts test</code></td>
-<td>Test Files  1 failed | 49 passed (50)<br>      Tests  1 failed | 768 passed (769)</td>
-</tr>
-<tr>
-<td>client-npm-install</td>
-<td style="text-align: right;">1</td>
-<td style="text-align: right;">0.92s</td>
-<td><code>npm --prefix packages/client/octobot_client_ts install</code></td>
-<td>See exit status; no test-count assertion.</td>
 </tr>
 <tr>
 <td>client-npm-install-2</td>
 <td style="text-align: right;">0</td>
 <td style="text-align: right;">2.51s</td>
 <td><code>npm --prefix packages/client/octobot_client_ts install</code></td>
-<td>See exit status; no test-count assertion.</td>
+</tr>
+<tr>
+<td>client-npm-install</td>
+<td style="text-align: right;">1</td>
+<td style="text-align: right;">0.92s</td>
+<td><code>npm --prefix packages/client/octobot_client_ts install</code></td>
 </tr>
 <tr>
 <td>client-serial-tests</td>
 <td style="text-align: right;">1</td>
 <td style="text-align: right;">29.5s</td>
 <td><code>npm --prefix packages/client/octobot_client_ts test -- --maxWorkers=1</code></td>
-<td>Test Files  1 failed | 49 passed (50)<br>      Tests  1 failed | 768 passed (769)</td>
 </tr>
 <tr>
 <td>committed-extended-linter</td>
 <td style="text-align: right;">0</td>
 <td style="text-align: right;">36.44s</td>
 <td><code>uv run --frozen --all-extras python -m tools.extended_linter --base origin/master</code></td>
-<td>See exit status; no test-count assertion.</td>
 </tr>
 <tr>
 <td>compile</td>
 <td style="text-align: right;">0</td>
 <td style="text-align: right;">12.28s</td>
 <td><code>&lt;workspace&gt;/OctoBot/.venv/bin/python -m compileall -q src packages</code></td>
-<td>See exit status; no test-count assertion.</td>
 </tr>
 <tr>
 <td>complete-sync</td>
 <td style="text-align: right;">0</td>
 <td style="text-align: right;">4.42s</td>
 <td><code>uv sync --all-extras --python 3.14</code></td>
-<td>See exit status; no test-count assertion.</td>
 </tr>
 <tr>
 <td>current-full-sync</td>
 <td style="text-align: right;">0</td>
 <td style="text-align: right;">1.21s</td>
 <td><code>uv sync --all-extras --python 3.14.8</code></td>
-<td>See exit status; no test-count assertion.</td>
 </tr>
 <tr>
-<td>current-sync</td>
-<td style="text-align: right;">0</td>
-<td style="text-align: right;">2.55s</td>
-<td><code>uv sync --all-extras --python 3.14</code></td>
-<td>See exit status; no test-count assertion.</td>
+<td>current-host-strategy-baseline-tests</td>
+<td style="text-align: right;">1</td>
+<td style="text-align: right;">27.27s</td>
+<td><code>.venv/bin/python -m pytest tentacles/Evaluator/Strategies/dip_analyser_strategy_evaluator/tests/test_dip_analyser_strategy_evaluator.py tentacles/Evaluator/Strategies/mixed_strategies_evaluator/tests/test_technical_analysis_strategy_evaluator.py --tb=short</code></td>
 </tr>
 <tr>
 <td>current-sync-2</td>
 <td style="text-align: right;">0</td>
 <td style="text-align: right;">0.13s</td>
 <td><code>uv sync --all-extras --python 3.14</code></td>
-<td>See exit status; no test-count assertion.</td>
 </tr>
 <tr>
 <td>current-sync-3</td>
 <td style="text-align: right;">0</td>
 <td style="text-align: right;">1.15s</td>
 <td><code>uv sync --all-extras --python 3.14</code></td>
-<td>See exit status; no test-count assertion.</td>
 </tr>
 <tr>
 <td>current-sync-4</td>
 <td style="text-align: right;">0</td>
 <td style="text-align: right;">1.58s</td>
 <td><code>uv sync --all-extras --python 3.14</code></td>
-<td>See exit status; no test-count assertion.</td>
 </tr>
 <tr>
 <td>current-sync-5</td>
 <td style="text-align: right;">0</td>
 <td style="text-align: right;">1.04s</td>
 <td><code>uv sync --all-extras --python 3.14</code></td>
-<td>See exit status; no test-count assertion.</td>
 </tr>
 <tr>
 <td>current-sync-6</td>
 <td style="text-align: right;">0</td>
 <td style="text-align: right;">3.22s</td>
 <td><code>uv sync --all-extras --python 3.14</code></td>
-<td>See exit status; no test-count assertion.</td>
+</tr>
+<tr>
+<td>current-sync</td>
+<td style="text-align: right;">0</td>
+<td style="text-align: right;">2.55s</td>
+<td><code>uv sync --all-extras --python 3.14</code></td>
 </tr>
 <tr>
 <td>exchange-core-tests</td>
 <td style="text-align: right;">0</td>
 <td style="text-align: right;">117.85s</td>
 <td><code>.venv/bin/python -m pytest tests</code></td>
-<td>511 passed in 102.84s (0:01:42)</td>
 </tr>
 <tr>
 <td>exchange-final-build</td>
 <td style="text-align: right;">0</td>
 <td style="text-align: right;">155.44s</td>
 <td><code>uv build --python 3.14</code></td>
-<td>Successfully built dist/octobot-3.0.0b3.tar.gz<br>Successfully built dist/octobot-3.0.0b3-py3-none-any.whl</td>
 </tr>
 <tr>
 <td>exchange-final-compile</td>
 <td style="text-align: right;">0</td>
 <td style="text-align: right;">1.9s</td>
 <td><code>.venv/bin/python -m compileall -q src packages</code></td>
-<td>See exit status; no test-count assertion.</td>
-</tr>
-<tr>
-<td>extended-linter</td>
-<td style="text-align: right;">1</td>
-<td style="text-align: right;">0.5s</td>
-<td><code>.venv/bin/python -m tools.extended_linter --base origin/master</code></td>
-<td>See exit status; no test-count assertion.</td>
 </tr>
 <tr>
 <td>extended-linter-2</td>
 <td style="text-align: right;">1</td>
 <td style="text-align: right;">0.45s</td>
 <td><code>.venv/bin/python -m tools.extended_linter --base origin/master</code></td>
-<td>See exit status; no test-count assertion.</td>
 </tr>
 <tr>
-<td>final-build</td>
-<td style="text-align: right;">0</td>
-<td style="text-align: right;">111.64s</td>
-<td><code>uv build --python 3.14.8</code></td>
-<td>Successfully built dist/octobot-3.0.0b3.tar.gz<br>Successfully built dist/octobot-3.0.0b3-py3-none-any.whl</td>
+<td>extended-linter</td>
+<td style="text-align: right;">1</td>
+<td style="text-align: right;">0.5s</td>
+<td><code>.venv/bin/python -m tools.extended_linter --base origin/master</code></td>
 </tr>
 <tr>
 <td>final-build-3</td>
 <td style="text-align: right;">0</td>
 <td style="text-align: right;">59.56s</td>
 <td><code>uv build --python 3.14.8</code></td>
-<td>Successfully built dist/octobot-3.0.0b3.tar.gz<br>Successfully built dist/octobot-3.0.0b3-py3-none-any.whl</td>
 </tr>
 <tr>
 <td>final-build-current</td>
 <td style="text-align: right;">0</td>
 <td style="text-align: right;">58.57s</td>
 <td><code>uv build --python 3.14.8</code></td>
-<td>Successfully built dist/octobot-3.0.0b3.tar.gz<br>Successfully built dist/octobot-3.0.0b3-py3-none-any.whl</td>
 </tr>
 <tr>
-<td>final-compile</td>
+<td>final-build</td>
 <td style="text-align: right;">0</td>
-<td style="text-align: right;">0.22s</td>
-<td><code>.venv/bin/python -m compileall -q src</code></td>
-<td>See exit status; no test-count assertion.</td>
+<td style="text-align: right;">111.64s</td>
+<td><code>uv build --python 3.14.8</code></td>
 </tr>
 <tr>
 <td>final-compile-3</td>
 <td style="text-align: right;">0</td>
 <td style="text-align: right;">0.08s</td>
 <td><code>.venv/bin/python -m compileall -q src</code></td>
-<td>See exit status; no test-count assertion.</td>
 </tr>
 <tr>
 <td>final-compile-current</td>
 <td style="text-align: right;">0</td>
 <td style="text-align: right;">3.81s</td>
 <td><code>.venv/bin/python -m compileall -q src packages</code></td>
-<td>See exit status; no test-count assertion.</td>
+</tr>
+<tr>
+<td>final-compile</td>
+<td style="text-align: right;">0</td>
+<td style="text-align: right;">0.22s</td>
+<td><code>.venv/bin/python -m compileall -q src</code></td>
 </tr>
 <tr>
 <td>final-core-tests</td>
 <td style="text-align: right;">0</td>
 <td style="text-align: right;">107.72s</td>
 <td><code>.venv/bin/python -m pytest tests</code></td>
-<td>511 passed in 92.75s (0:01:32)</td>
-</tr>
-<tr>
-<td>final-extended-linter</td>
-<td style="text-align: right;">1</td>
-<td style="text-align: right;">0.3s</td>
-<td><code>uv run --frozen --all-extras python -m tools.extended_linter --base origin/master</code></td>
-<td>See exit status; no test-count assertion.</td>
 </tr>
 <tr>
 <td>final-extended-linter-2</td>
 <td style="text-align: right;">1</td>
 <td style="text-align: right;">20.25s</td>
 <td><code>uv run --frozen --all-extras python -m tools.extended_linter --base origin/master</code></td>
-<td>See exit status; no test-count assertion.</td>
 </tr>
 <tr>
 <td>final-extended-linter-3</td>
 <td style="text-align: right;">0</td>
 <td style="text-align: right;">38.84s</td>
 <td><code>uv run --frozen --all-extras python -m tools.extended_linter --base origin/master</code></td>
-<td>See exit status; no test-count assertion.</td>
 </tr>
 <tr>
-<td>final-lock</td>
-<td style="text-align: right;">0</td>
-<td style="text-align: right;">0.36s</td>
-<td><code>uv lock --upgrade</code></td>
-<td>See exit status; no test-count assertion.</td>
+<td>final-extended-linter</td>
+<td style="text-align: right;">1</td>
+<td style="text-align: right;">0.3s</td>
+<td><code>uv run --frozen --all-extras python -m tools.extended_linter --base origin/master</code></td>
 </tr>
 <tr>
 <td>final-lock-2</td>
 <td style="text-align: right;">0</td>
 <td style="text-align: right;">0.39s</td>
 <td><code>uv lock --upgrade</code></td>
-<td>See exit status; no test-count assertion.</td>
 </tr>
 <tr>
-<td>final-sync</td>
+<td>final-lock</td>
 <td style="text-align: right;">0</td>
-<td style="text-align: right;">0.84s</td>
-<td><code>uv sync --all-extras --frozen --python 3.14.8</code></td>
-<td>See exit status; no test-count assertion.</td>
+<td style="text-align: right;">0.36s</td>
+<td><code>uv lock --upgrade</code></td>
+</tr>
+<tr>
+<td>final-selected-python315-compile</td>
+<td style="text-align: right;">0</td>
+<td style="text-align: right;">Nones</td>
+<td><code>.venv/bin/python -Werror -m compileall -q src packages</code></td>
+</tr>
+<tr>
+<td>final-selected-python315-sync</td>
+<td style="text-align: right;">0</td>
+<td style="text-align: right;">Nones</td>
+<td><code>uv sync --all-extras --frozen --python 3.15.0</code></td>
 </tr>
 <tr>
 <td>final-sync-2</td>
 <td style="text-align: right;">0</td>
 <td style="text-align: right;">0.08s</td>
 <td><code>uv sync --all-extras --frozen --python 3.14.8</code></td>
-<td>See exit status; no test-count assertion.</td>
 </tr>
 <tr>
-<td>fixture-final-tests</td>
-<td style="text-align: right;">2</td>
-<td style="text-align: right;">12.05s</td>
-<td><code>.venv/bin/python -m pytest tests</code></td>
-<td>See exit status; no test-count assertion.</td>
+<td>final-sync</td>
+<td style="text-align: right;">0</td>
+<td style="text-align: right;">0.84s</td>
+<td><code>uv sync --all-extras --frozen --python 3.14.8</code></td>
 </tr>
 <tr>
 <td>fixture-final-tests-2</td>
 <td style="text-align: right;">0</td>
 <td style="text-align: right;">68.36s</td>
 <td><code>.venv/bin/python -m pytest tests</code></td>
-<td>511 passed in 60.17s (0:01:00)</td>
+</tr>
+<tr>
+<td>fixture-final-tests</td>
+<td style="text-align: right;">2</td>
+<td style="text-align: right;">12.05s</td>
+<td><code>.venv/bin/python -m pytest tests</code></td>
 </tr>
 <tr>
 <td>frontend-build</td>
 <td style="text-align: right;">0</td>
 <td style="text-align: right;">9.4s</td>
 <td><code>npm --prefix packages/tentacles/Services/Interfaces/node_web_interface run build</code></td>
-<td>See exit status; no test-count assertion.</td>
 </tr>
 <tr>
 <td>frontend-compatible-generator-2</td>
 <td style="text-align: right;">0</td>
 <td style="text-align: right;">1.03s</td>
 <td><code>npm --prefix packages/tentacles/Services/Interfaces/node_web_interface run generate-client</code></td>
-<td>See exit status; no test-count assertion.</td>
 </tr>
 <tr>
 <td>frontend-compatible-generator-install</td>
 <td style="text-align: right;">0</td>
 <td style="text-align: right;">3.57s</td>
 <td><code>npm --prefix packages/tentacles/Services/Interfaces/node_web_interface install</code></td>
-<td>See exit status; no test-count assertion.</td>
 </tr>
 <tr>
 <td>frontend-compatible-tests</td>
 <td style="text-align: right;">0</td>
 <td style="text-align: right;">6.85s</td>
 <td><code>npm --prefix packages/tentacles/Services/Interfaces/node_web_interface test -- --run</code></td>
-<td>Test Files  79 passed (79)<br>      Tests  897 passed (897)</td>
 </tr>
 <tr>
 <td>frontend-current-generator</td>
 <td style="text-align: right;">0</td>
 <td style="text-align: right;">0.98s</td>
 <td><code>npm --prefix packages/tentacles/Services/Interfaces/node_web_interface run generate-client</code></td>
-<td>See exit status; no test-count assertion.</td>
-</tr>
-<tr>
-<td>frontend-generated-build</td>
-<td style="text-align: right;">1</td>
-<td style="text-align: right;">0.93s</td>
-<td><code>npm --prefix packages/tentacles/Services/Interfaces/node_web_interface run build</code></td>
-<td>See exit status; no test-count assertion.</td>
 </tr>
 <tr>
 <td>frontend-generated-build-2</td>
 <td style="text-align: right;">0</td>
 <td style="text-align: right;">2.85s</td>
 <td><code>npm --prefix packages/tentacles/Services/Interfaces/node_web_interface run build</code></td>
-<td>See exit status; no test-count assertion.</td>
+</tr>
+<tr>
+<td>frontend-generated-build</td>
+<td style="text-align: right;">1</td>
+<td style="text-align: right;">0.93s</td>
+<td><code>npm --prefix packages/tentacles/Services/Interfaces/node_web_interface run build</code></td>
 </tr>
 <tr>
 <td>frontend-generated-tests</td>
 <td style="text-align: right;">1</td>
 <td style="text-align: right;">3.38s</td>
 <td><code>npm --prefix packages/tentacles/Services/Interfaces/node_web_interface test -- --run</code></td>
-<td>Test Files  15 failed | 64 passed (79)<br>      Tests  775 passed (775)</td>
-</tr>
-<tr>
-<td>frontend-generator-api-install</td>
-<td style="text-align: right;">1</td>
-<td style="text-align: right;">0.97s</td>
-<td><code>npm --prefix packages/tentacles/Services/Interfaces/node_web_interface install</code></td>
-<td>See exit status; no test-count assertion.</td>
 </tr>
 <tr>
 <td>frontend-generator-api-install-2</td>
 <td style="text-align: right;">0</td>
 <td style="text-align: right;">1.61s</td>
 <td><code>npm --prefix packages/tentacles/Services/Interfaces/node_web_interface install</code></td>
-<td>See exit status; no test-count assertion.</td>
+</tr>
+<tr>
+<td>frontend-generator-api-install</td>
+<td style="text-align: right;">1</td>
+<td style="text-align: right;">0.97s</td>
+<td><code>npm --prefix packages/tentacles/Services/Interfaces/node_web_interface install</code></td>
 </tr>
 <tr>
 <td>frontend-latest-build</td>
 <td style="text-align: right;">1</td>
 <td style="text-align: right;">0.77s</td>
 <td><code>npm --prefix packages/tentacles/Services/Interfaces/node_web_interface run build</code></td>
-<td>See exit status; no test-count assertion.</td>
 </tr>
 <tr>
 <td>frontend-latest-install</td>
 <td style="text-align: right;">0</td>
 <td style="text-align: right;">11.47s</td>
 <td><code>npm --prefix packages/tentacles/Services/Interfaces/node_web_interface install</code></td>
-<td>See exit status; no test-count assertion.</td>
 </tr>
 <tr>
 <td>frontend-latest-tests</td>
 <td style="text-align: right;">0</td>
 <td style="text-align: right;">4.56s</td>
 <td><code>npm --prefix packages/tentacles/Services/Interfaces/node_web_interface test</code></td>
-<td>Test Files  79 passed (79)<br>      Tests  897 passed (897)</td>
-</tr>
-<tr>
-<td>frontend-table9-build</td>
-<td style="text-align: right;">1</td>
-<td style="text-align: right;">1.26s</td>
-<td><code>npm --prefix packages/tentacles/Services/Interfaces/node_web_interface run build</code></td>
-<td>See exit status; no test-count assertion.</td>
 </tr>
 <tr>
 <td>frontend-table9-build-2</td>
 <td style="text-align: right;">0</td>
 <td style="text-align: right;">3.23s</td>
 <td><code>npm --prefix packages/tentacles/Services/Interfaces/node_web_interface run build</code></td>
-<td>See exit status; no test-count assertion.</td>
+</tr>
+<tr>
+<td>frontend-table9-build</td>
+<td style="text-align: right;">1</td>
+<td style="text-align: right;">1.26s</td>
+<td><code>npm --prefix packages/tentacles/Services/Interfaces/node_web_interface run build</code></td>
 </tr>
 <tr>
 <td>frontend-table9-tests</td>
 <td style="text-align: right;">0</td>
 <td style="text-align: right;">6.26s</td>
 <td><code>npm --prefix packages/tentacles/Services/Interfaces/node_web_interface test -- --run</code></td>
-<td>Test Files  79 passed (79)<br>      Tests  897 passed (897)</td>
 </tr>
 <tr>
 <td>frontend-tests</td>
 <td style="text-align: right;">0</td>
 <td style="text-align: right;">7.22s</td>
 <td><code>npm --prefix packages/tentacles/Services/Interfaces/node_web_interface test</code></td>
-<td>Test Files  79 passed (79)<br>      Tests  897 passed (897)</td>
 </tr>
 <tr>
 <td>frontend-ts7-build</td>
 <td style="text-align: right;">1</td>
 <td style="text-align: right;">1.05s</td>
 <td><code>npm --prefix packages/tentacles/Services/Interfaces/node_web_interface run build</code></td>
-<td>See exit status; no test-count assertion.</td>
-</tr>
-<tr>
-<td>latest-exchange-lock</td>
-<td style="text-align: right;">0</td>
-<td style="text-align: right;">1.58s</td>
-<td><code>uv lock --upgrade</code></td>
-<td>See exit status; no test-count assertion.</td>
 </tr>
 <tr>
 <td>latest-exchange-lock-2</td>
 <td style="text-align: right;">0</td>
 <td style="text-align: right;">13.07s</td>
 <td><code>uv lock --upgrade</code></td>
-<td>See exit status; no test-count assertion.</td>
 </tr>
 <tr>
-<td>latest-exchange-sync</td>
-<td style="text-align: right;">-15</td>
-<td style="text-align: right;">222.31s</td>
-<td><code>uv sync --all-extras --frozen --python 3.14</code></td>
-<td>See exit status; no test-count assertion.</td>
+<td>latest-exchange-lock</td>
+<td style="text-align: right;">0</td>
+<td style="text-align: right;">1.58s</td>
+<td><code>uv lock --upgrade</code></td>
 </tr>
 <tr>
 <td>latest-exchange-sync-2</td>
 <td style="text-align: right;">0</td>
 <td style="text-align: right;">10.46s</td>
 <td><code>uv sync --all-extras --frozen --python 3.14</code></td>
-<td>See exit status; no test-count assertion.</td>
+</tr>
+<tr>
+<td>latest-exchange-sync</td>
+<td style="text-align: right;">-15</td>
+<td style="text-align: right;">222.31s</td>
+<td><code>uv sync --all-extras --frozen --python 3.14</code></td>
 </tr>
 <tr>
 <td>latest-sync</td>
 <td style="text-align: right;">0</td>
 <td style="text-align: right;">1.67s</td>
 <td><code>uv sync --all-extras --python 3.14</code></td>
-<td>See exit status; no test-count assertion.</td>
 </tr>
 <tr>
 <td>lock-3.13</td>
 <td style="text-align: right;">0</td>
 <td style="text-align: right;">0.4s</td>
 <td><code>uv lock --upgrade --python 3.13</code></td>
-<td>See exit status; no test-count assertion.</td>
 </tr>
 <tr>
 <td>lock-3.14</td>
 <td style="text-align: right;">0</td>
 <td style="text-align: right;">0.83s</td>
 <td><code>uv lock --upgrade --python 3.14</code></td>
-<td>See exit status; no test-count assertion.</td>
 </tr>
 <tr>
 <td>lock-3.15</td>
 <td style="text-align: right;">0</td>
 <td style="text-align: right;">0.6s</td>
 <td><code>uv lock --upgrade --python 3.15</code></td>
-<td>See exit status; no test-count assertion.</td>
 </tr>
 <tr>
 <td>maintenance-final-build</td>
 <td style="text-align: right;">0</td>
 <td style="text-align: right;">21.06s</td>
 <td><code>uv build --python 3.14.8</code></td>
-<td>Successfully built dist/octobot-3.0.0b3.tar.gz<br>Successfully built dist/octobot-3.0.0b3-py3-none-any.whl</td>
 </tr>
 <tr>
 <td>maintenance-final-compile</td>
 <td style="text-align: right;">0</td>
 <td style="text-align: right;">1.83s</td>
 <td><code>uv run --frozen --all-extras python -m compileall -q src packages</code></td>
-<td>See exit status; no test-count assertion.</td>
+</tr>
+<tr>
+<td>manager-import-existing-tests-2</td>
+<td style="text-align: right;">0</td>
+<td style="text-align: right;">10.45s</td>
+<td><code>.venv/bin/python -c import os,pytest;os.chdir('packages/tentacles_manager');raise SystemExit(pytest.main(['tests']))</code></td>
+</tr>
+<tr>
+<td>manager-import-existing-tests</td>
+<td style="text-align: right;">1</td>
+<td style="text-align: right;">6.32s</td>
+<td><code>.venv/bin/python -m pytest packages/tentacles_manager/tests --tb=short</code></td>
+</tr>
+<tr>
+<td>manager-import-extended-linter</td>
+<td style="text-align: right;">0</td>
+<td style="text-align: right;">29.62s</td>
+<td><code>uv run --frozen --all-extras python -m tools.extended_linter --base origin/master</code></td>
+</tr>
+<tr>
+<td>manager-import-strict-compile</td>
+<td style="text-align: right;">0</td>
+<td style="text-align: right;">0.14s</td>
+<td><code>uv run --frozen --all-extras python -W error -m compileall -q packages/tentacles_manager/octobot_tentacles_manager/api/inspector.py</code></td>
 </tr>
 <tr>
 <td>package-agents-exchange-tests</td>
 <td style="text-align: right;">0</td>
 <td style="text-align: right;">13.14s</td>
 <td><code>.venv/bin/python -c import os,pytest;os.chdir('packages/agents');raise SystemExit(pytest.main(['tests']))</code></td>
-<td>14 passed in 8.27s</td>
-</tr>
-<tr>
-<td>package-agents-tests</td>
-<td style="text-align: right;">2</td>
-<td style="text-align: right;">11.14s</td>
-<td><code>&lt;workspace&gt;/OctoBot/.venv/bin/python -m pytest tests</code></td>
-<td>See exit status; no test-count assertion.</td>
 </tr>
 <tr>
 <td>package-agents-tests-current</td>
 <td style="text-align: right;">0</td>
 <td style="text-align: right;">3.27s</td>
 <td><code>&lt;workspace&gt;/OctoBot/.venv/bin/python -m pytest tests</code></td>
-<td>14 passed in 2.31s</td>
+</tr>
+<tr>
+<td>package-agents-tests</td>
+<td style="text-align: right;">2</td>
+<td style="text-align: right;">11.14s</td>
+<td><code>&lt;workspace&gt;/OctoBot/.venv/bin/python -m pytest tests</code></td>
 </tr>
 <tr>
 <td>package-async_channel-exchange-tests</td>
 <td style="text-align: right;">0</td>
 <td style="text-align: right;">1.84s</td>
 <td><code>.venv/bin/python -c import os,pytest;os.chdir('packages/async_channel');raise SystemExit(pytest.main(['tests']))</code></td>
-<td>55 passed in 0.72s</td>
-</tr>
-<tr>
-<td>package-async_channel-tests</td>
-<td style="text-align: right;">0</td>
-<td style="text-align: right;">2.77s</td>
-<td><code>&lt;workspace&gt;/OctoBot/.venv/bin/python -m pytest tests</code></td>
-<td>55 passed in 1.55s</td>
 </tr>
 <tr>
 <td>package-async_channel-tests-current</td>
 <td style="text-align: right;">0</td>
 <td style="text-align: right;">0.6s</td>
 <td><code>&lt;workspace&gt;/OctoBot/.venv/bin/python -m pytest tests</code></td>
-<td>55 passed in 0.29s</td>
+</tr>
+<tr>
+<td>package-async_channel-tests</td>
+<td style="text-align: right;">0</td>
+<td style="text-align: right;">2.77s</td>
+<td><code>&lt;workspace&gt;/OctoBot/.venv/bin/python -m pytest tests</code></td>
 </tr>
 <tr>
 <td>package-backtesting-exchange-tests</td>
 <td style="text-align: right;">0</td>
 <td style="text-align: right;">13.47s</td>
 <td><code>.venv/bin/python -c import os,pytest;os.chdir('packages/backtesting');raise SystemExit(pytest.main(['tests']))</code></td>
-<td>78 passed in 10.46s</td>
-</tr>
-<tr>
-<td>package-backtesting-tests</td>
-<td style="text-align: right;">1</td>
-<td style="text-align: right;">11.49s</td>
-<td><code>&lt;workspace&gt;/OctoBot/.venv/bin/python -m pytest tests</code></td>
-<td>28 failed, 50 passed in 8.60s</td>
 </tr>
 <tr>
 <td>package-backtesting-tests-current</td>
 <td style="text-align: right;">0</td>
 <td style="text-align: right;">2.81s</td>
 <td><code>&lt;workspace&gt;/OctoBot/.venv/bin/python -m pytest tests</code></td>
-<td>78 passed in 2.11s</td>
+</tr>
+<tr>
+<td>package-backtesting-tests</td>
+<td style="text-align: right;">1</td>
+<td style="text-align: right;">11.49s</td>
+<td><code>&lt;workspace&gt;/OctoBot/.venv/bin/python -m pytest tests</code></td>
 </tr>
 <tr>
 <td>package-commons-exchange-tests</td>
 <td style="text-align: right;">0</td>
 <td style="text-align: right;">57.99s</td>
 <td><code>.venv/bin/python -c import os,pytest;os.chdir('packages/commons');raise SystemExit(pytest.main(['tests']))</code></td>
-<td>875 passed, 5 skipped in 55.16s</td>
-</tr>
-<tr>
-<td>package-commons-final</td>
-<td style="text-align: right;">1</td>
-<td style="text-align: right;">33.51s</td>
-<td><code>.venv/bin/python -c import os,pytest;os.chdir('packages/commons');raise SystemExit(pytest.main(['tests']))</code></td>
-<td>1 failed, 874 passed, 5 skipped in 30.97s</td>
 </tr>
 <tr>
 <td>package-commons-final-2</td>
 <td style="text-align: right;">0</td>
 <td style="text-align: right;">19.21s</td>
 <td><code>.venv/bin/python -c import os,pytest;os.chdir('packages/commons');raise SystemExit(pytest.main(['tests']))</code></td>
-<td>875 passed, 5 skipped in 17.83s</td>
 </tr>
 <tr>
-<td>package-commons-tests</td>
-<td style="text-align: right;">2</td>
-<td style="text-align: right;">17.7s</td>
-<td><code>&lt;workspace&gt;/OctoBot/.venv/bin/python -m pytest tests</code></td>
-<td>See exit status; no test-count assertion.</td>
+<td>package-commons-final</td>
+<td style="text-align: right;">1</td>
+<td style="text-align: right;">33.51s</td>
+<td><code>.venv/bin/python -c import os,pytest;os.chdir('packages/commons');raise SystemExit(pytest.main(['tests']))</code></td>
 </tr>
 <tr>
 <td>package-commons-tests-current</td>
 <td style="text-align: right;">1</td>
 <td style="text-align: right;">20.07s</td>
 <td><code>&lt;workspace&gt;/OctoBot/.venv/bin/python -m pytest tests</code></td>
-<td>1 failed, 874 passed, 5 skipped in 18.96s</td>
+</tr>
+<tr>
+<td>package-commons-tests</td>
+<td style="text-align: right;">2</td>
+<td style="text-align: right;">17.7s</td>
+<td><code>&lt;workspace&gt;/OctoBot/.venv/bin/python -m pytest tests</code></td>
 </tr>
 <tr>
 <td>package-copy-current</td>
 <td style="text-align: right;">1</td>
 <td style="text-align: right;">5.37s</td>
 <td><code>.venv/bin/python -c import os,pytest;os.chdir('packages/copy');raise SystemExit(pytest.main(['tests']))</code></td>
-<td>129 passed, 7 errors in 4.16s</td>
 </tr>
 <tr>
 <td>package-copy-exchange-tests</td>
 <td style="text-align: right;">0</td>
 <td style="text-align: right;">15.31s</td>
 <td><code>.venv/bin/python -c import os,pytest;os.chdir('packages/copy');raise SystemExit(pytest.main(['tests']))</code></td>
-<td>136 passed in 9.72s</td>
-</tr>
-<tr>
-<td>package-copy-final</td>
-<td style="text-align: right;">0</td>
-<td style="text-align: right;">3.61s</td>
-<td><code>.venv/bin/python -c import os,pytest;os.chdir('packages/copy');raise SystemExit(pytest.main(['tests']))</code></td>
-<td>136 passed in 2.73s</td>
 </tr>
 <tr>
 <td>package-copy-final-tests</td>
 <td style="text-align: right;">0</td>
 <td style="text-align: right;">10.1s</td>
 <td><code>.venv/bin/python -c import os,pytest;os.chdir('packages/copy');raise SystemExit(pytest.main(['tests']))</code></td>
-<td>136 passed in 6.67s</td>
 </tr>
 <tr>
-<td>package-copy-tests</td>
-<td style="text-align: right;">1</td>
-<td style="text-align: right;">13.85s</td>
-<td><code>&lt;workspace&gt;/OctoBot/.venv/bin/python -m pytest tests</code></td>
-<td>129 passed, 7 errors in 10.22s</td>
+<td>package-copy-final</td>
+<td style="text-align: right;">0</td>
+<td style="text-align: right;">3.61s</td>
+<td><code>.venv/bin/python -c import os,pytest;os.chdir('packages/copy');raise SystemExit(pytest.main(['tests']))</code></td>
 </tr>
 <tr>
 <td>package-copy-tests-current</td>
 <td style="text-align: right;">1</td>
 <td style="text-align: right;">3.89s</td>
 <td><code>&lt;workspace&gt;/OctoBot/.venv/bin/python -m pytest tests</code></td>
-<td>129 passed, 7 errors in 2.95s</td>
+</tr>
+<tr>
+<td>package-copy-tests</td>
+<td style="text-align: right;">1</td>
+<td style="text-align: right;">13.85s</td>
+<td><code>&lt;workspace&gt;/OctoBot/.venv/bin/python -m pytest tests</code></td>
 </tr>
 <tr>
 <td>package-evaluators-exchange-tests</td>
 <td style="text-align: right;">0</td>
 <td style="text-align: right;">15.93s</td>
 <td><code>.venv/bin/python -c import os,pytest;os.chdir('packages/evaluators');raise SystemExit(pytest.main(['tests']))</code></td>
-<td>86 passed in 6.53s</td>
-</tr>
-<tr>
-<td>package-evaluators-tests</td>
-<td style="text-align: right;">0</td>
-<td style="text-align: right;">13.29s</td>
-<td><code>&lt;workspace&gt;/OctoBot/.venv/bin/python -m pytest tests</code></td>
-<td>86 passed in 5.48s</td>
 </tr>
 <tr>
 <td>package-evaluators-tests-current</td>
 <td style="text-align: right;">0</td>
 <td style="text-align: right;">3.6s</td>
 <td><code>&lt;workspace&gt;/OctoBot/.venv/bin/python -m pytest tests</code></td>
-<td>86 passed in 1.63s</td>
 </tr>
 <tr>
-<td>package-flow-current-tests</td>
-<td style="text-align: right;">1</td>
-<td style="text-align: right;">68.59s</td>
-<td><code>.venv/bin/python -c import os,pytest;os.chdir('packages/flow');raise SystemExit(pytest.main(['tests']))</code></td>
-<td>12 failed, 476 passed, 7 skipped in 60.56s (0:01:00)</td>
+<td>package-evaluators-tests</td>
+<td style="text-align: right;">0</td>
+<td style="text-align: right;">13.29s</td>
+<td><code>&lt;workspace&gt;/OctoBot/.venv/bin/python -m pytest tests</code></td>
 </tr>
 <tr>
 <td>package-flow-current-tests-2</td>
 <td style="text-align: right;">1</td>
 <td style="text-align: right;">76.83s</td>
 <td><code>.venv/bin/python -c import os,pytest;os.chdir('packages/flow');raise SystemExit(pytest.main(['tests']))</code></td>
-<td>8 failed, 480 passed, 7 skipped in 65.09s (0:01:05)</td>
+</tr>
+<tr>
+<td>package-flow-current-tests</td>
+<td style="text-align: right;">1</td>
+<td style="text-align: right;">68.59s</td>
+<td><code>.venv/bin/python -c import os,pytest;os.chdir('packages/flow');raise SystemExit(pytest.main(['tests']))</code></td>
 </tr>
 <tr>
 <td>package-flow-exchange-tests</td>
 <td style="text-align: right;">0</td>
 <td style="text-align: right;">148.08s</td>
 <td><code>.venv/bin/python -c import os,pytest;os.chdir('packages/flow');raise SystemExit(pytest.main(['tests']))</code></td>
-<td>488 passed, 7 skipped in 120.04s (0:02:00)</td>
-</tr>
-<tr>
-<td>package-flow-final</td>
-<td style="text-align: right;">1</td>
-<td style="text-align: right;">10.03s</td>
-<td><code>.venv/bin/python -c import os,pytest;os.chdir('packages/flow');raise SystemExit(pytest.main(['tests']))</code></td>
-<td>See exit status; no test-count assertion.</td>
 </tr>
 <tr>
 <td>package-flow-final-2</td>
 <td style="text-align: right;">1</td>
 <td style="text-align: right;">8.59s</td>
 <td><code>.venv/bin/python -c import os,pytest;os.chdir('packages/flow');raise SystemExit(pytest.main(['tests']))</code></td>
-<td>See exit status; no test-count assertion.</td>
 </tr>
 <tr>
 <td>package-flow-final-3</td>
 <td style="text-align: right;">1</td>
 <td style="text-align: right;">19.95s</td>
 <td><code>.venv/bin/python -c import os,pytest;os.chdir('packages/flow');raise SystemExit(pytest.main(['tests']))</code></td>
-<td>68 failed, 420 passed, 7 skipped in 10.19s</td>
 </tr>
 <tr>
 <td>package-flow-final-4</td>
 <td style="text-align: right;">1</td>
 <td style="text-align: right;">72.46s</td>
 <td><code>.venv/bin/python -c import os,pytest;os.chdir('packages/flow');raise SystemExit(pytest.main(['tests']))</code></td>
-<td>22 failed, 466 passed, 7 skipped in 65.35s (0:01:05)</td>
 </tr>
 <tr>
 <td>package-flow-final-tests</td>
 <td style="text-align: right;">1</td>
 <td style="text-align: right;">102.95s</td>
 <td><code>.venv/bin/python -c import os,pytest;os.chdir('packages/flow');raise SystemExit(pytest.main(['tests']))</code></td>
-<td>3 failed, 485 passed, 7 skipped in 85.27s (0:01:25)</td>
 </tr>
 <tr>
-<td>package-flow-tests</td>
-<td style="text-align: right;">2</td>
-<td style="text-align: right;">20.68s</td>
-<td><code>&lt;workspace&gt;/OctoBot/.venv/bin/python -m pytest tests</code></td>
-<td>See exit status; no test-count assertion.</td>
+<td>package-flow-final</td>
+<td style="text-align: right;">1</td>
+<td style="text-align: right;">10.03s</td>
+<td><code>.venv/bin/python -c import os,pytest;os.chdir('packages/flow');raise SystemExit(pytest.main(['tests']))</code></td>
 </tr>
 <tr>
 <td>package-flow-tests-current</td>
 <td style="text-align: right;">2</td>
 <td style="text-align: right;">5.86s</td>
 <td><code>&lt;workspace&gt;/OctoBot/.venv/bin/python -m pytest tests</code></td>
-<td>See exit status; no test-count assertion.</td>
 </tr>
 <tr>
-<td>package-manager-final</td>
-<td style="text-align: right;">1</td>
-<td style="text-align: right;">12.52s</td>
-<td><code>.venv/bin/python -c import os,pytest;os.chdir('packages/tentacles_manager');raise SystemExit(pytest.main(['tests']))</code></td>
-<td>================== 1 failed, 32 passed, 3 warnings in 10.39s ===================</td>
+<td>package-flow-tests</td>
+<td style="text-align: right;">2</td>
+<td style="text-align: right;">20.68s</td>
+<td><code>&lt;workspace&gt;/OctoBot/.venv/bin/python -m pytest tests</code></td>
 </tr>
 <tr>
 <td>package-manager-final-2</td>
 <td style="text-align: right;">0</td>
 <td style="text-align: right;">11.7s</td>
 <td><code>.venv/bin/python -c import os,pytest;os.chdir('packages/tentacles_manager');raise SystemExit(pytest.main(['tests']))</code></td>
-<td>======================= 166 passed, 3 warnings in 10.77s =======================</td>
+</tr>
+<tr>
+<td>package-manager-final</td>
+<td style="text-align: right;">1</td>
+<td style="text-align: right;">12.52s</td>
+<td><code>.venv/bin/python -c import os,pytest;os.chdir('packages/tentacles_manager');raise SystemExit(pytest.main(['tests']))</code></td>
 </tr>
 <tr>
 <td>package-node-final-tests</td>
 <td style="text-align: right;">0</td>
 <td style="text-align: right;">422.58s</td>
 <td><code>.venv/bin/python -c import os,pytest;os.chdir('packages/node');raise SystemExit(pytest.main(['tests']))</code></td>
-<td>995 passed, 3 skipped in 405.68s (0:06:45)</td>
-</tr>
-<tr>
-<td>package-node-tests</td>
-<td style="text-align: right;">1</td>
-<td style="text-align: right;">660.54s</td>
-<td><code>&lt;workspace&gt;/OctoBot/.venv/bin/python -m pytest tests</code></td>
-<td>38 failed, 957 passed, 3 skipped in 650.83s (0:10:50)</td>
 </tr>
 <tr>
 <td>package-node-tests-current</td>
 <td style="text-align: right;">1</td>
 <td style="text-align: right;">652.61s</td>
 <td><code>&lt;workspace&gt;/OctoBot/.venv/bin/python -m pytest tests</code></td>
-<td>25 failed, 970 passed, 3 skipped in 647.52s (0:10:47)</td>
+</tr>
+<tr>
+<td>package-node-tests</td>
+<td style="text-align: right;">1</td>
+<td style="text-align: right;">660.54s</td>
+<td><code>&lt;workspace&gt;/OctoBot/.venv/bin/python -m pytest tests</code></td>
 </tr>
 <tr>
 <td>package-services-exchange-tests</td>
 <td style="text-align: right;">0</td>
 <td style="text-align: right;">10.91s</td>
 <td><code>.venv/bin/python -c import os,pytest;os.chdir('packages/services');raise SystemExit(pytest.main(['tests']))</code></td>
-<td>19 passed in 4.03s</td>
-</tr>
-<tr>
-<td>package-services-tests</td>
-<td style="text-align: right;">1</td>
-<td style="text-align: right;">10.92s</td>
-<td><code>&lt;workspace&gt;/OctoBot/.venv/bin/python -m pytest tests</code></td>
-<td>3 failed, 16 passed in 0.92s</td>
 </tr>
 <tr>
 <td>package-services-tests-current</td>
 <td style="text-align: right;">0</td>
 <td style="text-align: right;">4.57s</td>
 <td><code>&lt;workspace&gt;/OctoBot/.venv/bin/python -m pytest tests</code></td>
-<td>19 passed in 1.46s</td>
+</tr>
+<tr>
+<td>package-services-tests</td>
+<td style="text-align: right;">1</td>
+<td style="text-align: right;">10.92s</td>
+<td><code>&lt;workspace&gt;/OctoBot/.venv/bin/python -m pytest tests</code></td>
 </tr>
 <tr>
 <td>package-source-final-build</td>
 <td style="text-align: right;">0</td>
 <td style="text-align: right;">13.96s</td>
 <td><code>uv build --python 3.14</code></td>
-<td>Successfully built dist/octobot-3.0.0b3.tar.gz<br>Successfully built dist/octobot-3.0.0b3-py3-none-any.whl</td>
 </tr>
 <tr>
 <td>package-sync-current-tests</td>
 <td style="text-align: right;">1</td>
 <td style="text-align: right;">20.63s</td>
 <td><code>.venv/bin/python -c import os,pytest;os.chdir('packages/sync');raise SystemExit(pytest.main(['tests']))</code></td>
-<td>============ 1 failed, 319 passed, 1 skipped, 5 warnings in 13.33s =============</td>
 </tr>
 <tr>
 <td>package-sync-exchange-tests</td>
 <td style="text-align: right;">0</td>
 <td style="text-align: right;">24.78s</td>
 <td><code>.venv/bin/python -c import os,pytest;os.chdir('packages/sync');raise SystemExit(pytest.main(['tests']))</code></td>
-<td>================= 320 passed, 1 skipped, 5 warnings in 16.46s ==================</td>
 </tr>
 <tr>
 <td>package-sync-final-tests</td>
 <td style="text-align: right;">0</td>
 <td style="text-align: right;">10.98s</td>
 <td><code>.venv/bin/python -c import os,pytest;os.chdir('packages/sync');raise SystemExit(pytest.main(['tests']))</code></td>
-<td>================== 320 passed, 1 skipped, 5 warnings in 7.07s ==================</td>
-</tr>
-<tr>
-<td>package-sync-tests</td>
-<td style="text-align: right;">2</td>
-<td style="text-align: right;">17.41s</td>
-<td><code>&lt;workspace&gt;/OctoBot/.venv/bin/python -m pytest tests</code></td>
-<td>See exit status; no test-count assertion.</td>
 </tr>
 <tr>
 <td>package-sync-tests-current</td>
 <td style="text-align: right;">1</td>
 <td style="text-align: right;">14.09s</td>
 <td><code>&lt;workspace&gt;/OctoBot/.venv/bin/python -m pytest tests</code></td>
-<td>============ 10 failed, 310 passed, 1 skipped, 5 warnings in 10.51s ============</td>
+</tr>
+<tr>
+<td>package-sync-tests</td>
+<td style="text-align: right;">2</td>
+<td style="text-align: right;">17.41s</td>
+<td><code>&lt;workspace&gt;/OctoBot/.venv/bin/python -m pytest tests</code></td>
 </tr>
 <tr>
 <td>package-tentacles_manager-exchange-tests</td>
 <td style="text-align: right;">0</td>
 <td style="text-align: right;">39.89s</td>
 <td><code>.venv/bin/python -c import os,pytest;os.chdir('packages/tentacles_manager');raise SystemExit(pytest.main(['tests']))</code></td>
-<td>============================= 166 passed in 36.52s =============================</td>
-</tr>
-<tr>
-<td>package-tentacles_manager-tests</td>
-<td style="text-align: right;">1</td>
-<td style="text-align: right;">14.49s</td>
-<td><code>&lt;workspace&gt;/OctoBot/.venv/bin/python -m pytest tests</code></td>
-<td>================== 1 failed, 11 passed, 3 warnings in 11.59s ===================</td>
 </tr>
 <tr>
 <td>package-tentacles_manager-tests-current</td>
 <td style="text-align: right;">1</td>
 <td style="text-align: right;">3.38s</td>
 <td><code>&lt;workspace&gt;/OctoBot/.venv/bin/python -m pytest tests</code></td>
-<td>=================== 1 failed, 11 passed, 3 warnings in 2.56s ===================</td>
 </tr>
 <tr>
-<td>package-trading-current</td>
+<td>package-tentacles_manager-tests</td>
 <td style="text-align: right;">1</td>
-<td style="text-align: right;">92.44s</td>
-<td><code>.venv/bin/python -c import os,pytest;os.chdir('packages/trading');raise SystemExit(pytest.main(['tests']))</code></td>
-<td>4 failed, 1313 passed, 1 error in 88.72s (0:01:28)</td>
+<td style="text-align: right;">14.49s</td>
+<td><code>&lt;workspace&gt;/OctoBot/.venv/bin/python -m pytest tests</code></td>
 </tr>
 <tr>
 <td>package-trading-current-tests</td>
 <td style="text-align: right;">1</td>
 <td style="text-align: right;">426.78s</td>
 <td><code>.venv/bin/python -c import os,pytest;os.chdir('packages/trading');raise SystemExit(pytest.main(['tests']))</code></td>
-<td>4 failed, 1314 passed in 423.68s (0:07:03)</td>
 </tr>
 <tr>
-<td>package-trading-exchange-tests</td>
+<td>package-trading-current</td>
 <td style="text-align: right;">1</td>
-<td style="text-align: right;">203.57s</td>
+<td style="text-align: right;">92.44s</td>
 <td><code>.venv/bin/python -c import os,pytest;os.chdir('packages/trading');raise SystemExit(pytest.main(['tests']))</code></td>
-<td>1 failed, 1317 passed in 198.49s (0:03:18)</td>
 </tr>
 <tr>
 <td>package-trading-exchange-tests-2</td>
 <td style="text-align: right;">0</td>
 <td style="text-align: right;">214.41s</td>
 <td><code>.venv/bin/python -c import os,pytest;os.chdir('packages/trading');raise SystemExit(pytest.main(['tests']))</code></td>
-<td>1318 passed in 207.86s (0:03:27)</td>
 </tr>
 <tr>
-<td>package-trading-final-tests</td>
+<td>package-trading-exchange-tests</td>
 <td style="text-align: right;">1</td>
-<td style="text-align: right;">248.11s</td>
+<td style="text-align: right;">203.57s</td>
 <td><code>.venv/bin/python -c import os,pytest;os.chdir('packages/trading');raise SystemExit(pytest.main(['tests']))</code></td>
-<td>1 failed, 1317 passed in 236.60s (0:03:56)</td>
 </tr>
 <tr>
 <td>package-trading-final-tests-2</td>
 <td style="text-align: right;">0</td>
 <td style="text-align: right;">197.25s</td>
 <td><code>.venv/bin/python -c import os,pytest;os.chdir('packages/trading');raise SystemExit(pytest.main(['tests']))</code></td>
-<td>1318 passed in 188.78s (0:03:08)</td>
+</tr>
+<tr>
+<td>package-trading-final-tests</td>
+<td style="text-align: right;">1</td>
+<td style="text-align: right;">248.11s</td>
+<td><code>.venv/bin/python -c import os,pytest;os.chdir('packages/trading');raise SystemExit(pytest.main(['tests']))</code></td>
 </tr>
 <tr>
 <td>package-trading-owned-tests</td>
 <td style="text-align: right;">1</td>
 <td style="text-align: right;">407.77s</td>
 <td><code>.venv/bin/python -c import os,pytest;os.chdir('packages/trading');raise SystemExit(pytest.main(['tests']))</code></td>
-<td>75 failed, 856 passed, 387 errors in 404.79s (0:06:44)</td>
-</tr>
-<tr>
-<td>package-trading-tests</td>
-<td style="text-align: right;">1</td>
-<td style="text-align: right;">156.02s</td>
-<td><code>&lt;workspace&gt;/OctoBot/.venv/bin/python -m pytest tests</code></td>
-<td>66 failed, 1251 passed, 1 error in 147.70s (0:02:27)</td>
 </tr>
 <tr>
 <td>package-trading-tests-current</td>
 <td style="text-align: right;">1</td>
 <td style="text-align: right;">82.47s</td>
 <td><code>&lt;workspace&gt;/OctoBot/.venv/bin/python -m pytest tests</code></td>
-<td>9 failed, 1309 passed in 80.50s (0:01:20)</td>
 </tr>
 <tr>
-<td>protocol-codegen-tests</td>
+<td>package-trading-tests</td>
 <td style="text-align: right;">1</td>
-<td style="text-align: right;">1.43s</td>
-<td><code>npm --prefix packages/protocol run test:postprocess:codegen</code></td>
-<td>See exit status; no test-count assertion.</td>
+<td style="text-align: right;">156.02s</td>
+<td><code>&lt;workspace&gt;/OctoBot/.venv/bin/python -m pytest tests</code></td>
 </tr>
 <tr>
 <td>protocol-codegen-tests-2</td>
 <td style="text-align: right;">1</td>
 <td style="text-align: right;">0.86s</td>
 <td><code>npm --prefix packages/protocol run test:postprocess:codegen</code></td>
-<td>See exit status; no test-count assertion.</td>
 </tr>
 <tr>
 <td>protocol-codegen-tests-3</td>
 <td style="text-align: right;">0</td>
 <td style="text-align: right;">0.65s</td>
 <td><code>npm --prefix packages/protocol run test:postprocess:codegen</code></td>
-<td>See exit status; no test-count assertion.</td>
+</tr>
+<tr>
+<td>protocol-codegen-tests</td>
+<td style="text-align: right;">1</td>
+<td style="text-align: right;">1.43s</td>
+<td><code>npm --prefix packages/protocol run test:postprocess:codegen</code></td>
 </tr>
 <tr>
 <td>protocol-existing-tests</td>
 <td style="text-align: right;">0</td>
 <td style="text-align: right;">2.83s</td>
 <td><code>.venv/bin/python -c import os,pytest;os.chdir('packages/protocol');raise SystemExit(pytest.main(['test']))</code></td>
-<td>============================= 179 passed in 2.00s ==============================</td>
 </tr>
 <tr>
 <td>protocol-latest-install</td>
 <td style="text-align: right;">0</td>
 <td style="text-align: right;">3.57s</td>
 <td><code>npm --prefix packages/protocol install</code></td>
-<td>See exit status; no test-count assertion.</td>
 </tr>
 <tr>
 <td>protocol-node-tests</td>
 <td style="text-align: right;">0</td>
 <td style="text-align: right;">1.24s</td>
 <td><code>npm --prefix packages/protocol run test:postprocess</code></td>
-<td>See exit status; no test-count assertion.</td>
+</tr>
+<tr>
+<td>python315-complete-host-root</td>
+<td style="text-align: right;">0</td>
+<td style="text-align: right;">33.9s</td>
+<td><code>/tmp/octobot-tentacles-strict-fp-python315-control/bin/python -m pytest tests --tb=short</code></td>
+</tr>
+<tr>
+<td>final-selected-python315-build</td>
+<td style="text-align: right;">0</td>
+<td style="text-align: right;">Nones</td>
+<td><code>uv build --python 3.15.0</code></td>
+</tr>
+<tr>
+<td>python315-package-tentacles_manager</td>
+<td style="text-align: right;">0</td>
+<td style="text-align: right;">7.55s</td>
+<td><code>/tmp/octobot-tentacles-strict-fp-python315-control/bin/python -m pytest tests --tb=short</code></td>
+</tr>
+<tr>
+<td>python315-package-agents</td>
+<td style="text-align: right;">0</td>
+<td style="text-align: right;">2.2s</td>
+<td><code>/tmp/octobot-tentacles-strict-fp-python315-control/bin/python -m pytest tests --tb=short</code></td>
+</tr>
+<tr>
+<td>python315-package-async_channel</td>
+<td style="text-align: right;">0</td>
+<td style="text-align: right;">0.52s</td>
+<td><code>/tmp/octobot-tentacles-strict-fp-python315-control/bin/python -m pytest tests --tb=short</code></td>
+</tr>
+<tr>
+<td>python315-package-backtesting</td>
+<td style="text-align: right;">0</td>
+<td style="text-align: right;">2.41s</td>
+<td><code>/tmp/octobot-tentacles-strict-fp-python315-control/bin/python -m pytest tests --tb=short</code></td>
+</tr>
+<tr>
+<td>python315-package-commons</td>
+<td style="text-align: right;">0</td>
+<td style="text-align: right;">19.23s</td>
+<td><code>/tmp/octobot-tentacles-strict-fp-python315-control/bin/python -m pytest tests --tb=short</code></td>
+</tr>
+<tr>
+<td>python315-package-copy</td>
+<td style="text-align: right;">0</td>
+<td style="text-align: right;">2.67s</td>
+<td><code>/tmp/octobot-tentacles-strict-fp-python315-control/bin/python -m pytest tests --tb=short</code></td>
+</tr>
+<tr>
+<td>python315-package-evaluators</td>
+<td style="text-align: right;">0</td>
+<td style="text-align: right;">2.98s</td>
+<td><code>/tmp/octobot-tentacles-strict-fp-python315-control/bin/python -m pytest tests --tb=short</code></td>
+</tr>
+<tr>
+<td>python315-package-flow</td>
+<td style="text-align: right;">0</td>
+<td style="text-align: right;">77.84s</td>
+<td><code>/tmp/octobot-tentacles-strict-fp-python315-control/bin/python -m pytest tests --tb=short</code></td>
+</tr>
+<tr>
+<td>python315-package-node</td>
+<td style="text-align: right;">0</td>
+<td style="text-align: right;">355.56s</td>
+<td><code>/tmp/octobot-tentacles-strict-fp-python315-control/bin/python -m pytest tests --tb=short</code></td>
+</tr>
+<tr>
+<td>python315-package-services</td>
+<td style="text-align: right;">0</td>
+<td style="text-align: right;">4.07s</td>
+<td><code>/tmp/octobot-tentacles-strict-fp-python315-control/bin/python -m pytest tests --tb=short</code></td>
+</tr>
+<tr>
+<td>python315-package-sync</td>
+<td style="text-align: right;">0</td>
+<td style="text-align: right;">10.5s</td>
+<td><code>/tmp/octobot-tentacles-strict-fp-python315-control/bin/python -m pytest tests --tb=short</code></td>
+</tr>
+<tr>
+<td>python315-package-trading</td>
+<td style="text-align: right;">0</td>
+<td style="text-align: right;">185.96s</td>
+<td><code>/tmp/octobot-tentacles-strict-fp-python315-control/bin/python -m pytest tests --tb=short</code></td>
+</tr>
+<tr>
+<td>OctoBot-python315-protocol-tests.log</td>
+<td style="text-align: right;">0</td>
+<td style="text-align: right;">1.58s</td>
+<td><code>/tmp/octobot-tentacles-strict-fp-python315-control/bin/python -m pytest test --tb=short</code></td>
 </tr>
 <tr>
 <td>root-final-tests</td>
 <td style="text-align: right;">1</td>
 <td style="text-align: right;">44.93s</td>
 <td><code>.venv/bin/python -m pytest tests</code></td>
-<td>510 passed, 1 error in 40.98s</td>
-</tr>
-<tr>
-<td>root-tests</td>
-<td style="text-align: right;">4</td>
-<td style="text-align: right;">13.89s</td>
-<td><code>.venv/bin/python -m pytest tests</code></td>
-<td>See exit status; no test-count assertion.</td>
 </tr>
 <tr>
 <td>root-tests-2</td>
 <td style="text-align: right;">4</td>
 <td style="text-align: right;">19.27s</td>
 <td><code>.venv/bin/python -m pytest tests</code></td>
-<td>See exit status; no test-count assertion.</td>
 </tr>
 <tr>
 <td>root-tests-4</td>
 <td style="text-align: right;">2</td>
 <td style="text-align: right;">24.25s</td>
 <td><code>.venv/bin/python -m pytest tests</code></td>
-<td>See exit status; no test-count assertion.</td>
 </tr>
 <tr>
 <td>root-tests-5</td>
 <td style="text-align: right;">2</td>
 <td style="text-align: right;">14.99s</td>
 <td><code>.venv/bin/python -m pytest tests</code></td>
-<td>See exit status; no test-count assertion.</td>
 </tr>
 <tr>
 <td>root-tests-6</td>
 <td style="text-align: right;">1</td>
 <td style="text-align: right;">110.13s</td>
 <td><code>.venv/bin/python -m pytest tests</code></td>
-<td>56 failed, 454 passed, 1 error in 98.47s (0:01:38)</td>
 </tr>
 <tr>
 <td>root-tests-7</td>
 <td style="text-align: right;">1</td>
 <td style="text-align: right;">73.08s</td>
 <td><code>.venv/bin/python -m pytest tests</code></td>
-<td>56 failed, 454 passed, 1 error in 60.72s (0:01:00)</td>
+</tr>
+<tr>
+<td>root-tests</td>
+<td style="text-align: right;">4</td>
+<td style="text-align: right;">13.89s</td>
+<td><code>.venv/bin/python -m pytest tests</code></td>
 </tr>
 <tr>
 <td>sync-3.13</td>
 <td style="text-align: right;">1</td>
 <td style="text-align: right;">2.03s</td>
 <td><code>uv sync --all-extras --python 3.13</code></td>
-<td>See exit status; no test-count assertion.</td>
 </tr>
 <tr>
 <td>sync-3.14</td>
 <td style="text-align: right;">1</td>
 <td style="text-align: right;">2.23s</td>
 <td><code>uv sync --all-extras --python 3.14</code></td>
-<td>See exit status; no test-count assertion.</td>
 </tr>
 <tr>
 <td>sync-3.15</td>
 <td style="text-align: right;">1</td>
 <td style="text-align: right;">3.84s</td>
 <td><code>uv sync --all-extras --python 3.15</code></td>
-<td>See exit status; no test-count assertion.</td>
 </tr>
 <tr>
 <td>tentacles-install</td>
 <td style="text-align: right;">0</td>
 <td style="text-align: right;">17.0s</td>
 <td><code>env ALLOW_UNSIGNED_TENTACLES=true .venv/bin/OctoBot tentacles --install --location output/any_platform.zip --all</code></td>
-<td>See exit status; no test-count assertion.</td>
-</tr>
-<tr>
-<td>tentacles-pack</td>
-<td style="text-align: right;">255</td>
-<td style="text-align: right;">7.55s</td>
-<td><code>.venv/bin/python src/start.py tentacles -d packages/tentacles -p any_platform.zip</code></td>
-<td>See exit status; no test-count assertion.</td>
 </tr>
 <tr>
 <td>tentacles-pack-2</td>
 <td style="text-align: right;">255</td>
 <td style="text-align: right;">10.79s</td>
 <td><code>env ALLOW_UNSIGNED_TENTACLES=true .venv/bin/OctoBot tentacles -d packages/tentacles -p any_platform.zip</code></td>
-<td>See exit status; no test-count assertion.</td>
 </tr>
 <tr>
 <td>tentacles-pack-3</td>
 <td style="text-align: right;">0</td>
 <td style="text-align: right;">55.05s</td>
 <td><code>env ALLOW_UNSIGNED_TENTACLES=true .venv/bin/OctoBot tentacles -d packages/tentacles -p any_platform.zip</code></td>
-<td>See exit status; no test-count assertion.</td>
 </tr>
 <tr>
-<td>tests</td>
-<td style="text-align: right;">1</td>
-<td style="text-align: right;">0.04s</td>
-<td><code>&lt;workspace&gt;/OctoBot/.venv/bin/python -m pytest tests</code></td>
-<td>See exit status; no test-count assertion.</td>
+<td>tentacles-pack</td>
+<td style="text-align: right;">255</td>
+<td style="text-align: right;">7.55s</td>
+<td><code>.venv/bin/python src/start.py tentacles -d packages/tentacles -p any_platform.zip</code></td>
 </tr>
 <tr>
 <td>tests-current-api</td>
 <td style="text-align: right;">1</td>
 <td style="text-align: right;">43.62s</td>
 <td><code>.venv/bin/python -m pytest tests</code></td>
-<td>3 failed, 508 passed, 1 error in 39.24s</td>
 </tr>
 <tr>
 <td>tests-markers</td>
 <td style="text-align: right;">1</td>
 <td style="text-align: right;">44.71s</td>
 <td><code>.venv/bin/python -m pytest tests</code></td>
-<td>9 failed, 502 passed in 39.53s</td>
+</tr>
+<tr>
+<td>tests</td>
+<td style="text-align: right;">1</td>
+<td style="text-align: right;">0.04s</td>
+<td><code>&lt;workspace&gt;/OctoBot/.venv/bin/python -m pytest tests</code></td>
 </tr>
 <tr>
 <td>websocket-final-build</td>
 <td style="text-align: right;">0</td>
 <td style="text-align: right;">14.56s</td>
 <td><code>uv build</code></td>
-<td>Successfully built dist/octobot-3.0.0b3.tar.gz<br>Successfully built dist/octobot-3.0.0b3-py3-none-any.whl</td>
 </tr>
 <tr>
 <td>websocket-final-compile</td>
 <td style="text-align: right;">0</td>
 <td style="text-align: right;">0.14s</td>
 <td><code>uv run --no-sync python -W error -m compileall -q packages/trading/octobot_trading/exchanges packages/trading/octobot_trading/util/test_tools/websocket_test_tools.py</code></td>
-<td>See exit status; no test-count assertion.</td>
 </tr>
 <tr>
 <td>websocket-final-extended-linter</td>
 <td style="text-align: right;">0</td>
 <td style="text-align: right;">28.3s</td>
 <td><code>uv run --frozen --all-extras python -m tools.extended_linter --base origin/master</code></td>
-<td>See exit status; no test-count assertion.</td>
 </tr>
 <tr>
-<td>websocket-lifecycle-build</td>
+<td>websocket-helper-diagnostic-existing-tests</td>
 <td style="text-align: right;">0</td>
-<td style="text-align: right;">14.34s</td>
-<td><code>uv build</code></td>
-<td>Successfully built dist/octobot-3.0.0b3.tar.gz<br>Successfully built dist/octobot-3.0.0b3-py3-none-any.whl</td>
+<td style="text-align: right;">51.08s</td>
+<td><code>.venv/bin/python -c import os,pytest;os.chdir('packages/trading');raise SystemExit(pytest.main(['tests/exchanges/test_abstract_websocket_exchange.py','tests/exchanges/implementations/test_default_websocket_exchange.py','tests/exchanges/types/test_websocket_exchange.py','tests/exchanges/connectors/ccxt','--tb=short']))</code></td>
 </tr>
 <tr>
 <td>websocket-lifecycle-build-2</td>
 <td style="text-align: right;">0</td>
 <td style="text-align: right;">14.73s</td>
 <td><code>uv build</code></td>
-<td>Successfully built dist/octobot-3.0.0b3.tar.gz<br>Successfully built dist/octobot-3.0.0b3-py3-none-any.whl</td>
+</tr>
+<tr>
+<td>websocket-lifecycle-build</td>
+<td style="text-align: right;">0</td>
+<td style="text-align: right;">14.34s</td>
+<td><code>uv build</code></td>
 </tr>
 <tr>
 <td>websocket-lifecycle-compile</td>
 <td style="text-align: right;">0</td>
 <td style="text-align: right;">0.13s</td>
 <td><code>uv run --no-sync python -W error -m compileall -q packages/trading/octobot_trading/exchanges</code></td>
-<td>See exit status; no test-count assertion.</td>
-</tr>
-<tr>
-<td>websocket-lifecycle-focused-tests</td>
-<td style="text-align: right;">0</td>
-<td style="text-align: right;">4.75s</td>
-<td><code>uv run --no-sync pytest packages/trading/tests/exchanges/test_abstract_websocket_exchange.py packages/trading/tests/exchanges/implementations/test_default_websocket_exchange.py packages/trading/tests/exchanges/types/test_websocket_exchange.py --tb=short</code></td>
-<td>2 passed in 0.74s</td>
 </tr>
 <tr>
 <td>websocket-lifecycle-focused-tests-2</td>
 <td style="text-align: right;">1</td>
 <td style="text-align: right;">26.69s</td>
 <td><code>uv run --no-sync pytest packages/trading/tests/exchanges/test_abstract_websocket_exchange.py packages/trading/tests/exchanges/implementations/test_default_websocket_exchange.py packages/trading/tests/exchanges/types/test_websocket_exchange.py packages/trading/tests/exchanges/connectors/ccxt --tb=short</code></td>
-<td>57 passed, 1 error in 22.58s</td>
 </tr>
 <tr>
-<td>websocket-lifecycle-package-tests</td>
+<td>websocket-lifecycle-focused-tests</td>
 <td style="text-align: right;">0</td>
-<td style="text-align: right;">26.83s</td>
-<td><code>.venv/bin/python -c import os,pytest;os.chdir('packages/trading');raise SystemExit(pytest.main(['tests/exchanges/test_abstract_websocket_exchange.py','tests/exchanges/implementations/test_default_websocket_exchange.py','tests/exchanges/types/test_websocket_exchange.py','tests/exchanges/connectors/ccxt','--tb=short']))</code></td>
-<td>58 passed in 22.90s</td>
+<td style="text-align: right;">4.75s</td>
+<td><code>uv run --no-sync pytest packages/trading/tests/exchanges/test_abstract_websocket_exchange.py packages/trading/tests/exchanges/implementations/test_default_websocket_exchange.py packages/trading/tests/exchanges/types/test_websocket_exchange.py --tb=short</code></td>
 </tr>
 <tr>
 <td>websocket-lifecycle-package-tests-2</td>
 <td style="text-align: right;">0</td>
 <td style="text-align: right;">24.23s</td>
 <td><code>.venv/bin/python -c import os,pytest;os.chdir('packages/trading');raise SystemExit(pytest.main(['tests/exchanges/test_abstract_websocket_exchange.py','tests/exchanges/implementations/test_default_websocket_exchange.py','tests/exchanges/types/test_websocket_exchange.py','tests/exchanges/connectors/ccxt','--tb=short']))</code></td>
-<td>58 passed in 21.77s</td>
+</tr>
+<tr>
+<td>websocket-lifecycle-package-tests</td>
+<td style="text-align: right;">0</td>
+<td style="text-align: right;">26.83s</td>
+<td><code>.venv/bin/python -c import os,pytest;os.chdir('packages/trading');raise SystemExit(pytest.main(['tests/exchanges/test_abstract_websocket_exchange.py','tests/exchanges/implementations/test_default_websocket_exchange.py','tests/exchanges/types/test_websocket_exchange.py','tests/exchanges/connectors/ccxt','--tb=short']))</code></td>
 </tr>
 </tbody>
 </table></main>
