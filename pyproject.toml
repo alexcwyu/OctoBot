@@ -83,6 +83,7 @@ default-groups = ["dev"]
 override-dependencies = ["multidict>=6.9.1"]
 
 [tool.uv.sources]
+octobot-tulipy = { path = "vendor/octobot-tulipy" }
 octobot-ccxt = { url = "https://github.com/Drakkar-Software/ccxt/archive/791e42d60faaa27306405919c27918dc056466f7.tar.gz" }
 
 [project.urls]

@@ -1,0 +1,11 @@
+# OctoBot-Tulipy 0.4.11b13 compatibility source
+
+This is the current OctoBot-Tulipy source from [Drakkar-Software/tulipy revision 7a34c54e076bfd6ee121cbe8e366afa716cd57fa](https://github.com/Drakkar-Software/tulipy/tree/7a34c54e076bfd6ee121cbe8e366afa716cd57fa), on its `feature/add-mobile-wheels` branch. The LGPL v3 license, original authors, complete Python/Cython runtime source and Tulip Indicators C source/header are retained. Generated binaries, generated Cython C, build caches and Git metadata are excluded.
+
+The upstream version remains **0.4.11b13** and its required runtime NumPy version remains **2.4.2**. Build isolation now uses that same NumPy version. The source manifest explicitly includes the C header and Cython declarations so rebuilding a source distribution works.
+
+The only numerical compatibility change is the extension's compiler configuration: optimized `-O3 -fno-fast-math -ffp-contract=off` on GCC/Clang, or `/O2 /fp:strict` on MSVC. No indicator formulas, period defaults, data, trade events or financial expected results are changed. The current ARM release wheel contracts the Wilder RSI multiply/add recurrence into fused instructions; the historical wheel performed separate operations. One-ULP RSI differences can change strict minimum and moving-average comparisons and hence actual strategy signals.
+
+The retained `libindicators/tiamalgamation.c` SHA256 is `1e74864ad3c308536eb170b7f2d3553e5db7adedbacb421463d6e1798504e949`, identical to the original published 0.4.10 C source. The latest optimized strict-FP build reproduced all **18,860** real RSI input arrays captured from the repository's original financial cases bit for bit against that historical numerical control. An exact temporary numerical replay yielded four original financial cases passing with **18,860 hits and zero missing inputs**; installing the latest native strict-FP wheel then yielded **14 original financial cases passing**, without replay hooks. These are compatibility controls, not new test cases or replacement assertions.
+
+The host and adjacent Tentacles project both declare this source explicitly in `tool.uv.sources`. See their validation documents for final interpreter, source build and complete-suite results. MSVC flags are included for portability; this maintenance run verified the macOS ARM compiler path.

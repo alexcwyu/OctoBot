@@ -1,0 +1,3 @@
+include pyproject.toml README.md LICENSE AUTHORS
+recursive-include libindicators *.c *.h
+recursive-include tulipy *.py *.pyx *.pxd

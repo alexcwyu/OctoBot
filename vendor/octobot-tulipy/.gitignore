@@ -1,0 +1,6 @@
+build/
+*.egg-info/
+__pycache__/
+tulipy/lib/__init__.c
+*.so
+*.pyd
