@@ -1,5 +1,11 @@
 # OctoBot: validation results
 
+<!-- current-documentation-provenance -->
+Documentation reviewed: 2026-10-13 · Git source base: `5cc86ef09d81da82a1227d590ba4ec7d374c0fa2` · [Current architecture and feature guide](ayu-develop.md).
+Historical execution commands/results below retain their original dates and scope; this metadata update is not a new application test run.
+<!-- /current-documentation-provenance -->
+
+
 The current monorepo builds with managed Python **3.15.0**, uv **0.13.0** and current compatible locked dependencies. Complete native source builds, source-distribution-to-wheel builds and strict compilation pass. Source commit: `a77468479eda47d959afa87cef5ea1b216184921`. The older Python 3.14 fallback was superseded by the licensed Tulipy source build and pycares’ supported system c-ares configuration.
 
 ## Existing suites

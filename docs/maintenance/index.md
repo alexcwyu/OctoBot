@@ -1,5 +1,11 @@
 # OctoBot: portable verification records
 
+<!-- current-documentation-provenance -->
+Documentation reviewed: 2026-10-13 · Git source base: `5cc86ef09d81da82a1227d590ba4ec7d374c0fa2` · [Current architecture and feature guide](../ayu-develop.md).
+Historical execution commands/results below retain their original dates and scope; this metadata update is not a new application test run.
+<!-- /current-documentation-provenance -->
+
+
 These records retain exact commands, outcomes, original-log hashes and available source snapshots. Failed, interrupted and earlier exploratory commands remain visible. A later focused pass proves only its own scope.
 
 [Machine-readable records](verification.json) · [Validation](../validation.md) · [Engineering guide](../ayu-develop.md)
